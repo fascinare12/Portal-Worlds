@@ -75,6 +75,20 @@ export const WORDS: Word[] = [
   { id: 'kago', kana: 'かご', romaji: 'kago', english: 'basket', food: true, store: true },
   { id: 'okane', kana: 'おかね', romaji: 'okane', english: 'money', store: true },
   { id: 'tenin', kana: 'てんいん', romaji: "ten'in", english: 'shop clerk', store: true },
+  // More on the store's shelves.
+  { id: 'enpitsu', kana: 'えんぴつ', romaji: 'enpitsu', english: 'pencil', food: true, store: true },
+  { id: 'hasami', kana: 'はさみ', romaji: 'hasami', english: 'scissors', food: true, store: true },
+  { id: 'sekken', kana: 'せっけん', romaji: 'sekken', english: 'soap', food: true, store: true },
+  { id: 'haburashi', kana: 'はぶらし', romaji: 'haburashi', english: 'toothbrush', food: true, store: true },
+  { id: 'kutsushita', kana: 'くつした', romaji: 'kutsushita', english: 'socks', food: true, store: true },
+  { id: 'tebukuro', kana: 'てぶくろ', romaji: 'tebukuro', english: 'gloves', food: true, store: true },
+  { id: 'boushi', kana: 'ぼうし', romaji: 'bōshi', english: 'hat', food: true, store: true },
+  { id: 'denchi', kana: 'でんち', romaji: 'denchi', english: 'battery', food: true, store: true },
+  { id: 'shinbun', kana: 'しんぶん', romaji: 'shinbun', english: 'newspaper', food: true, store: true },
+  { id: 'toufu', kana: 'とうふ', romaji: 'tōfu', english: 'tofu', food: true, store: true },
+  { id: 'shouyu', kana: 'しょうゆ', romaji: 'shōyu', english: 'soy sauce', food: true, store: true },
+  { id: 'senbei', kana: 'せんべい', romaji: 'senbei', english: 'rice cracker', food: true, store: true },
+  { id: 'dango', kana: 'だんご', romaji: 'dango', english: 'sweet dumplings on a stick', food: true, store: true },
 ];
 
 export const wordById = (id: string) => WORDS.find((w) => w.id === id)!;
@@ -92,6 +106,10 @@ export interface Progress {
   tagged: string[];
   /** Words she has written herself with the spray can: these are filled in. */
   sprayed?: string[];
+  /** Shopping lists completed in the store: one stamp each. */
+  stamps?: number;
+  /** Every test taken: when, and how many right out of how many. */
+  tests?: { date: string; right: number; total: number }[];
 }
 
 const STORE = 'portal-worlds-shibuya-v1';
@@ -125,6 +143,13 @@ export function nextWord(p: Progress, last: string | null, here: Set<string>): W
   const lowest = Math.min(...from.map((id) => p.box[id] ?? 0));
   const shaky = from.filter((id) => (p.box[id] ?? 0) === lowest);
   return wordById(shaky[Math.floor(Math.random() * shaky.length)]);
+}
+
+/** Several different words to ask for at once, shakiest first. */
+export function nextFew(p: Progress, here: Set<string>, count: number, want: (w: Word) => boolean): Word[] {
+  const pool = p.heard.filter((id) => here.has(id) && want(wordById(id)));
+  pool.sort((a, b) => (p.box[a] ?? 0) - (p.box[b] ?? 0) + (Math.random() - 0.5) * 0.9);
+  return pool.slice(0, count).map(wordById);
 }
 
 /** Notes whether a word was found at the first try. */

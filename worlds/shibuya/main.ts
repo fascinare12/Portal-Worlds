@@ -7,10 +7,11 @@ import { KERB, ROAD, buildCity } from './city';
 import type { Thing } from './city';
 import { hasVoice, say, sound } from './speak';
 import { buildStore } from './store';
+import { PASS, openQuiz } from './quiz';
 import { openTrace } from './trace';
 import { describe, tokyoWeather } from './weather';
 import type { Weather } from './weather';
-import { WORDS, loadProgress, nextWord, record, saveProgress, wordById } from './words';
+import { WORDS, loadProgress, nextFew, nextWord, record, saveProgress, wordById } from './words';
 import type { Word } from './words';
 
 /**
@@ -40,7 +41,7 @@ const city = await buildCity();
 // Its drawing surface smooths edges itself; without that, every edge would be a staircase.
 const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
 composer.addPass(new RenderPass(city.scene, camera));
-composer.addPass(new UnrealBloomPass(new THREE.Vector2(1, 1), 0.62, 0.65, 0.7));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(1, 1), 0.5, 0.65, 0.8));
 composer.addPass(new OutputPass());
 let quality = new URLSearchParams(window.location.search).has('plain') ? 0 : 2; // 2 = everything, 1 = no glow, 0 = no glow, reflections or rain
 const progress = loadProgress();
@@ -165,9 +166,21 @@ const PRAISE: [string, string][] = [
 ];
 
 let shown: { thing: Thing; until: number } | null = null;
-let quest: { word: Word; firstTry: boolean } | null = null;
+
+/**
+ * What she is being asked to find. Usually one thing; in the store, sometimes a shopping list
+ * of three. Words she knows well are sometimes asked by ear alone or by reading alone.
+ */
+interface Quest {
+  words: Word[];
+  found: Set<string>;
+  firstTry: boolean;
+  mode: 'both' | 'listen' | 'read';
+}
+let quest: Quest | null = null;
 let lastAsked: string | null = null;
 let questTimer = 0;
+let sinceList = 0;
 
 /** Romaji is a crutch: it is shown while a word is new and dropped once she knows it. */
 const needsRomaji = (id: string) => (progress.box[id] ?? 0) < 2;
@@ -188,25 +201,43 @@ function touch(thing: Thing): void {
   if (!progress.heard.includes(w.id)) progress.heard.push(w.id);
 
   if (quest) {
-    if (quest.word.id === w.id) {
-      // Found it.
+    if (quest.words.some((x) => x.id === w.id) && !quest.found.has(w.id)) {
+      // Found one.
+      quest.found.add(w.id);
       record(progress, w.id, quest.firstTry);
+      quest.firstTry = true;
       sound.right();
-      city.firework();
-      setTimeout(() => sound.boom(), 250);
-      if (!progress.tagged.includes(w.id)) {
+      const first = !progress.tagged.includes(w.id);
+      if (first) {
         progress.tagged.push(w.id);
         city.tag(w.id, w.kana, false, true);
         sound.spray();
       }
-      ask.classList.add('right');
-      const first = !progress.tagged.includes(w.id);
-      const cheer = PRAISE[Math.floor(Math.random() * PRAISE.length)];
-      ask.querySelector('.hint')!.textContent = `${cheer[0]} (${cheer[1]})` + (first ? (inside ? '  Its outline is waiting on a wall outside, for you to spray.' : '  Now tap its outline on the wall to spray it.') : '');
-      setTimeout(() => say(cheer[0].replace('！', '')), 900);
-      quest = null;
-      questTimer = 2.6;
-    } else {
+      if (quest.found.size < quest.words.length) {
+        drawAsk(); // more of the list still to find
+      } else {
+        const list = quest.words.length > 1;
+        city.firework();
+        setTimeout(() => sound.boom(), 250);
+        ask.classList.add('right');
+        const cheer = PRAISE[Math.floor(Math.random() * PRAISE.length)];
+        let note = `${cheer[0]} (${cheer[1]})`;
+        if (list) {
+          // A finished shopping list earns a stamp on her card; every fifth is a celebration.
+          progress.stamps = (progress.stamps ?? 0) + 1;
+          note = `はんこ！ (hanko: a stamp)  You have ${progress.stamps}.`;
+          if (progress.stamps % 5 === 0) for (let i = 1; i < 6; i++) setTimeout(() => city.firework(), i * 350);
+          setTimeout(() => say('ありがとうございます'), 900);
+        } else {
+          if (first) note += inside ? '  Its outline is waiting on a wall outside, for you to spray.' : '  Now tap its outline on the wall to spray it.';
+          setTimeout(() => say(cheer[0].replace('！', '')), 900);
+        }
+        drawAsk();
+        ask.querySelector('.hint')!.textContent = note;
+        quest = null;
+        questTimer = 2.8;
+      }
+    } else if (!quest.found.has(w.id)) {
       // Not that one: it tells her its own name, and the question stands.
       quest.firstTry = false;
     }
@@ -219,7 +250,7 @@ function touch(thing: Thing): void {
 
 function drawCount(): void {
   // Found, and of those, written by her own hand.
-  count.textContent = `🔎 ${progress.tagged.length}  ✍ ${progress.sprayed!.length} / ${WORDS.length}`;
+  count.textContent = `🔎 ${progress.tagged.length}  ✍ ${progress.sprayed!.length} / ${WORDS.length}` + (progress.stamps ? `  ·  はんこ ${progress.stamps}` : '');
 }
 
 let writing = false;
@@ -240,24 +271,55 @@ function write(id: string): void {
   });
 }
 
+/** Writes the question along the bottom of the screen, ticking off what has been found. */
+function drawAsk(): void {
+  if (!quest) return;
+  const q = quest;
+  const list = q.words.length > 1;
+  const food = list || !!q.words[0].food;
+  const frame = food ? { kana: 'を ください', romaji: 'o kudasai' } : { kana: 'は どこ？', romaji: 'wa doko?' };
+  const noun = (w: Word) => (q.found.has(w.id) ? `✓${w.kana}` : q.mode === 'listen' ? '？？？' : w.kana);
+  ask.querySelector('.kana')!.textContent = `${q.words.map(noun).join(' と ')} ${frame.kana}`;
+  const romaji = q.words.map((w) => (q.mode === 'both' && needsRomaji(w.id) ? w.romaji : '…')).join(' to ');
+  ask.querySelector('.romaji')!.textContent = q.mode === 'both' ? `${romaji} ${frame.romaji}` : '';
+  $('again').hidden = q.mode === 'read';
+}
+
 function newQuest(): void {
-  const w = nextWord(progress, lastAsked, new Set(thingsHere().map((t) => t.word)));
-  if (!w) return;
-  quest = { word: w, firstTry: true };
-  lastAsked = w.id;
+  const here = new Set(thingsHere().map((t) => t.word));
+  // In the store, every third question is a shopping list of three things, joined with と ("and").
+  const several = inside && sinceList >= 2 ? nextFew(progress, here, 3, (w) => !!w.food) : [];
+  let words: Word[];
+  if (several.length === 3) {
+    words = several;
+    sinceList = 0;
+  } else {
+    const w = nextWord(progress, lastAsked, here);
+    if (!w) return;
+    words = [w];
+    sinceList++;
+  }
+  const one = words[0];
+  lastAsked = one.id;
+  // A word she has found twice running is sometimes asked by ear alone, or by reading alone.
+  const known = words.length === 1 && (progress.box[one.id] ?? 0) >= 2;
+  const mode: Quest['mode'] = known ? (Math.random() < 0.5 ? 'listen' : 'read') : 'both';
+  quest = { words, found: new Set(), firstTry: true, mode };
   ask.classList.remove('right');
-  // Things in the street are looked for; food at the stall is asked for, as a customer would.
-  const frame = w.food
-    ? { kana: 'を ください', romaji: 'o kudasai', spoken: 'をください', hint: '〜 を ください means “〜, please.”  Find it and tap it.' }
-    : { kana: 'は どこ？', romaji: 'wa doko?', spoken: 'はどこ？', hint: '〜 は どこ？ means “where is 〜?”  Find it and tap it.' };
-  questSpoken = `${w.kana}${frame.spoken}`;
-  ask.querySelector('.kana')!.textContent = `${w.kana} ${frame.kana}`;
-  ask.querySelector('.romaji')!.textContent = needsRomaji(w.id) ? `${w.romaji} ${frame.romaji}` : `… ${frame.romaji}`;
-  // The frame of the question is explained the first few times; the word itself is hers to remember.
-  const seen = w.food ? (progress.box['_kudasai'] = (progress.box['_kudasai'] ?? 0) + 1) : progress.asked + 1;
-  ask.querySelector('.hint')!.textContent = seen <= 3 ? frame.hint : '';
+  const food = words.length > 1 || !!one.food;
+  questSpoken = words.map((w) => w.kana).join('と') + (food ? 'をください' : 'はどこ？');
+  drawAsk();
+  // The frame of the question is explained the first few times; the words themselves are hers to remember.
+  const count = (key: string) => (progress.box[key] = (progress.box[key] ?? 0) + 1);
+  let hint = '';
+  if (words.length > 1) hint = count('_list') <= 3 ? 'A shopping list. と means “and”. Find all three for a stamp.' : '';
+  else if (mode === 'listen') hint = 'Listening only this time. Tap 🔊 to hear it again.';
+  else if (mode === 'read') hint = 'Reading only this time.';
+  else if (food) hint = count('_kudasai') <= 3 ? '〜 を ください means “〜, please.”  Find it and tap it.' : '';
+  else hint = progress.asked < 3 ? '〜 は どこ？ means “where is 〜?”  Find it and tap it.' : '';
+  ask.querySelector('.hint')!.textContent = hint;
   ask.hidden = false;
-  say(questSpoken);
+  if (mode !== 'read') say(questSpoken);
 }
 let questSpoken = '';
 $('again').onclick = () => {
@@ -307,6 +369,34 @@ function goThrough(entering: boolean): void {
     setTimeout(() => (veil.style.transition = ''), 500);
   }, 380);
 }
+
+// For automated checks only: with ?debug in the address, a script can "tap" a thing by its word.
+if (new URLSearchParams(window.location.search).has('debug')) {
+  (window as unknown as { tapWord(id: string): boolean }).tapWord = (id) => {
+    const t = thingsHere().find((x) => x.word === id);
+    if (t) touch(t);
+    return !!t;
+  };
+}
+
+// ---- The test ----
+
+function testLine(): string {
+  const last = progress.tests?.[progress.tests.length - 1];
+  if (!last) return '';
+  const pct = Math.round((last.right / last.total) * 100);
+  return `Last test: ${pct}% (${last.right} of ${last.total}) on ${last.date}` + (last.right / last.total >= PASS ? ', passed' : '');
+}
+$('test').onclick = () => {
+  if (writing) return;
+  openQuiz(WORDS, (right, total) => {
+    (progress.tests ??= []).push({ date: new Date().toISOString().slice(0, 10), right, total });
+    saveProgress(progress);
+    $('last-test').textContent = testLine();
+    if (right / total >= PASS) for (let i = 0; i < 6; i++) setTimeout(() => city.firework(), i * 300);
+  });
+};
+$('last-test').textContent = testLine();
 
 // ---- Weather ----
 

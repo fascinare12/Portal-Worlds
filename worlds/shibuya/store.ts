@@ -160,7 +160,8 @@ export function buildStore(): Store {
 
   // Shelving: a long unit against the back wall, and one down the middle of the floor.
   const steel = lambert(0xdfe3e6);
-  const shelfUnit = (x: number, z: number, w: number, turn: number) => {
+  // `stocked` says which shelves (bottom, middle, top) hold ordinary goods; the others are kept for named things.
+  const shelfUnit = (x: number, z: number, w: number, turn: number, stocked: boolean[]) => {
     const g = new THREE.Group();
     g.add(box(steel, w, 2, 0.08, 0, 1, -0.28));
     for (const y of [0.35, 0.95, 1.55]) g.add(box(steel, w, 0.05, 0.6, 0, y, 0), box(lambert(0xf4a23a), w, 0.07, 0.03, 0, y - 0.01, 0.3));
@@ -170,7 +171,8 @@ export function buildStore(): Store {
     block(x, z, w, 0.6);
     // Rows of ordinary stock, so the named things sit among other goods.
     const colours = [0xff7a8a, 0x6fc3ff, 0xffe27a, 0x9be08a, 0xc9a2ff, 0xffb070];
-    for (const y of [0.35, 0.95, 1.55]) {
+    for (const [row, y] of [0.35, 0.95, 1.55].entries()) {
+      if (!stocked[row]) continue;
       for (let i = 0; i < w / 0.34 - 1; i++) {
         if ((i * 7 + Math.round(y * 10)) % 5 === 0) continue;
         const b = box(lambert(colours[(i + Math.round(y * 3)) % colours.length]), 0.22, 0.26 + ((i * 3) % 3) * 0.05, 0.2, -w / 2 + 0.3 + i * 0.34, y + 0.17, 0.05);
@@ -179,9 +181,9 @@ export function buildStore(): Store {
     }
     return g;
   };
-  shelfUnit(-1.5, -D / 2 + 0.55, 7.4, 0);
-  shelfUnit(-0.6, -0.6, 4.6, 0);
-  shelfUnit(-0.6, -1.25, 4.6, Math.PI);
+  shelfUnit(-1.5, -D / 2 + 0.55, 7.4, 0, [true, false, true]);
+  shelfUnit(-0.6, -0.6, 4.6, 0, [true, false, false]);
+  shelfUnit(-0.6, -1.25, 4.6, Math.PI, [true, false, true]);
 
   /** Puts something on show on a small stand at shelf height, where it is easy to see and tap. */
   const stand = (x: number, z: number, colour = 0xffffff) => {
@@ -376,6 +378,206 @@ export function buildStore(): Store {
     clerk.scale.setScalar(1.15);
     thing('tenin', clerk, 2.6);
   }
+
+  // ---- More named things, set out along the shelves ----
+  const cyl = (mat: THREE.Material, rTop: number, rBottom: number, h: number, x = 0, y = 0, z = 0, sides = 14) => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBottom, h, sides), mat);
+    m.position.set(x, y, z);
+    return m;
+  };
+  const made: Record<string, () => THREE.Group> = {
+    // えんぴつ: three pencils standing in a pot.
+    enpitsu() {
+      const g = new THREE.Group();
+      g.add(cyl(lambert(0x4a78d9), 0.13, 0.11, 0.2, 0, 0.1, 0));
+      for (const [x, lean, colour] of [[-0.05, 0.16, 0xffd23a], [0.03, -0.1, 0xff6a5a], [0.07, 0.22, 0x5ac08a]] as const) {
+        const pencil = new THREE.Group();
+        pencil.add(cyl(lambert(colour), 0.025, 0.025, 0.42, 0, 0.21, 0, 6), cyl(lambert(0xf0d8b0), 0.001, 0.025, 0.07, 0, 0.455, 0, 6), cyl(lambert(0x2a2622), 0.001, 0.01, 0.025, 0, 0.485, 0, 6));
+        pencil.position.set(x, 0.06, 0);
+        pencil.rotation.z = lean;
+        g.add(pencil);
+      }
+      return g;
+    },
+    // はさみ: a pair of scissors, blades open.
+    hasami() {
+      const g = new THREE.Group();
+      for (const side of [1, -1]) {
+        const half = new THREE.Group();
+        half.add(box(lambert(0xd8dde2), 0.05, 0.36, 0.015, 0, 0.2, 0));
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.022, 8, 16), lambert(0xe0383a));
+        ring.position.set(side * 0.03, -0.06, 0);
+        half.add(ring);
+        half.rotation.z = side * 0.28;
+        half.position.z = side * 0.01;
+        g.add(half);
+      }
+      g.position.y = 0.12;
+      g.rotation.x = -0.25;
+      const wrap = new THREE.Group();
+      wrap.add(g);
+      return wrap;
+    },
+    // せっけん: a bar of soap with bubbles on it.
+    sekken() {
+      const g = new THREE.Group();
+      g.add(box(lambert(0xbfe8d0), 0.42, 0.14, 0.26, 0, 0.07, 0));
+      for (const [x, y, z, r] of [[0.1, 0.17, 0.02, 0.06], [-0.04, 0.2, -0.04, 0.045], [0.02, 0.24, 0.05, 0.03], [-0.14, 0.16, 0.05, 0.04]]) {
+        g.add(ball(new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.75 }), r, x, y, z));
+      }
+      return g;
+    },
+    // はぶらし: two toothbrushes in a cup.
+    haburashi() {
+      const g = new THREE.Group();
+      g.add(cyl(lambert(0xf4f0e6), 0.11, 0.09, 0.2, 0, 0.1, 0));
+      for (const [lean, colour] of [[0.2, 0x39b6ff], [-0.22, 0xff4fa3]] as const) {
+        const brush = new THREE.Group();
+        brush.add(box(lambert(colour), 0.035, 0.44, 0.03, 0, 0.22, 0), box(lambert(0xffffff), 0.05, 0.1, 0.06, 0, 0.42, 0.03));
+        brush.position.y = 0.05;
+        brush.rotation.z = lean;
+        g.add(brush);
+      }
+      return g;
+    },
+    // くつした: a pair of striped socks.
+    kutsushita() {
+      const g = new THREE.Group();
+      for (const x of [-0.12, 0.12]) {
+        g.add(box(lambert(0xff7a8a), 0.14, 0.32, 0.1, x, 0.24, 0), box(lambert(0xff7a8a), 0.26, 0.13, 0.1, x + 0.06, 0.065, 0));
+        g.add(box(lambert(0xffffff), 0.145, 0.05, 0.105, x, 0.37, 0), box(lambert(0xffffff), 0.145, 0.04, 0.105, x, 0.26, 0));
+      }
+      return g;
+    },
+    // てぶくろ: a pair of gloves.
+    tebukuro() {
+      const g = new THREE.Group();
+      for (const side of [1, -1]) {
+        const glove = new THREE.Group();
+        const wool = lambert(0x5a8ad8);
+        glove.add(box(wool, 0.2, 0.2, 0.07, 0, 0.16, 0), box(lambert(0xffffff), 0.2, 0.07, 0.075, 0, 0.035, 0));
+        for (let i = 0; i < 4; i++) {
+          const finger = new THREE.Mesh(new THREE.CapsuleGeometry(0.022, 0.1, 4, 8), wool);
+          finger.position.set(-0.07 + i * 0.047, 0.32, 0);
+          glove.add(finger);
+        }
+        const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.024, 0.07, 4, 8), wool);
+        thumb.position.set(side * 0.12, 0.2, 0);
+        thumb.rotation.z = -side * 0.8;
+        glove.add(thumb);
+        glove.position.x = side * 0.14;
+        glove.rotation.z = -side * 0.12;
+        g.add(glove);
+      }
+      return g;
+    },
+    // ぼうし: a cap with a peak.
+    boushi() {
+      const g = new THREE.Group();
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), lambert(0xe0383a));
+      dome.position.y = 0.04;
+      const peak = cyl(lambert(0xc02a2a), 0.16, 0.16, 0.025, 0, 0.05, 0.16, 20);
+      peak.scale.z = 0.8;
+      g.add(dome, peak, ball(lambert(0xffffff), 0.03, 0, 0.24, 0));
+      return g;
+    },
+    // でんち: two batteries.
+    denchi() {
+      const g = new THREE.Group();
+      for (const x of [-0.08, 0.08]) {
+        g.add(cyl(lambert(0x2a2622), 0.06, 0.06, 0.26, x, 0.13, 0), cyl(lambert(0xf2b84b), 0.061, 0.061, 0.09, x, 0.24, 0), cyl(lambert(0xd8dde2), 0.022, 0.022, 0.03, x, 0.3, 0));
+      }
+      return g;
+    },
+    // しんぶん: a folded newspaper.
+    shinbun() {
+      const g = new THREE.Group();
+      g.add(box(lambert(0xeeeae0), 0.46, 0.06, 0.32, 0, 0.03, 0), box(lambert(0x2a2622), 0.4, 0.062, 0.05, 0, 0.03, -0.1));
+      for (let i = 0; i < 4; i++) g.add(box(lambert(0x8a8a8a), 0.17, 0.062, 0.012, i % 2 ? 0.11 : -0.11, 0.03, -0.02 + Math.floor(i / 2) * 0.07));
+      g.rotation.x = 0.5;
+      const wrap = new THREE.Group();
+      wrap.add(g);
+      wrap.position.y = 0.06;
+      return wrap;
+    },
+    // とうふ: a block of tofu in a tray, with a little green on top.
+    toufu() {
+      const g = new THREE.Group();
+      g.add(box(lambert(0x6fb6e0), 0.4, 0.08, 0.32, 0, 0.04, 0), box(lambert(0xfffdf4), 0.3, 0.18, 0.24, 0, 0.14, 0), ball(lambert(0x5aa85a), 0.04, 0.02, 0.24, 0, 1.6, 0.5, 1.2));
+      return g;
+    },
+    // しょうゆ: a bottle of soy sauce with a red cap.
+    shouyu() {
+      const g = new THREE.Group();
+      g.add(cyl(lambert(0x3a1c10), 0.09, 0.1, 0.28, 0, 0.14, 0), cyl(lambert(0x3a1c10), 0.04, 0.09, 0.1, 0, 0.33, 0), cyl(lambert(0xe0383a), 0.05, 0.045, 0.07, 0, 0.41, 0));
+      g.add(box(lambert(0xfff6dc), 0.14, 0.12, 0.01, 0, 0.14, 0.098));
+      return g;
+    },
+    // せんべい: round rice crackers, one wrapped in a square of seaweed.
+    senbei() {
+      const g = new THREE.Group();
+      for (let i = 0; i < 3; i++) g.add(cyl(lambert(0xc98a4a), 0.15, 0.15, 0.03, (i - 1) * 0.03, 0.02 + i * 0.035, 0, 20));
+      const front = cyl(lambert(0xd89a5a), 0.15, 0.15, 0.03, 0.02, 0.2, 0.1, 20);
+      front.rotation.x = Math.PI / 2 - 0.3;
+      g.add(front, box(lambert(0x16241c), 0.14, 0.14, 0.012, 0.02, 0.2, 0.125));
+      return g;
+    },
+    // だんご: two skewers, each with a pink, a white and a green dumpling.
+    dango() {
+      const g = new THREE.Group();
+      for (const x of [-0.11, 0.11]) {
+        g.add(cyl(lambert(0xd8b888), 0.012, 0.012, 0.56, x, 0.28, 0, 6));
+        [0xf7a8c0, 0xfffdf4, 0x9fd08a].forEach((colour, i) => g.add(ball(lambert(colour), 0.085, x, 0.43 - i * 0.15, 0)));
+      }
+      return g;
+    },
+    // Things she has already met outside, on sale here too.
+    ocha() {
+      const g = new THREE.Group();
+      g.add(cyl(new THREE.MeshLambertMaterial({ color: 0x8fbf4a, transparent: true, opacity: 0.9 }), 0.085, 0.085, 0.34, 0, 0.17, 0), cyl(lambert(0xffffff), 0.045, 0.045, 0.05, 0, 0.365, 0), box(lambert(0x2a6a2a), 0.172, 0.12, 0.172, 0, 0.17, 0));
+      return g;
+    },
+    mizu() {
+      const g = new THREE.Group();
+      g.add(cyl(new THREE.MeshLambertMaterial({ color: 0x9fe0ff, transparent: true, opacity: 0.8 }), 0.085, 0.085, 0.34, 0, 0.17, 0), cyl(lambert(0x2f7fd0), 0.045, 0.045, 0.05, 0, 0.365, 0), box(lambert(0xffffff), 0.172, 0.1, 0.172, 0, 0.19, 0));
+      return g;
+    },
+    onigiri() {
+      const g = new THREE.Group();
+      const rice = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.14, 3).rotateX(Math.PI / 2).rotateZ(Math.PI), lambert(0xffffff));
+      rice.position.y = 0.17;
+      g.add(rice, box(lambert(0x16241c), 0.15, 0.16, 0.155, 0, 0.08, 0));
+      return g;
+    },
+    kasa() {
+      const g = new THREE.Group();
+      const closed = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.5, 10), lambert(0xff4fa3));
+      closed.position.y = 0.33;
+      const crook = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.012, 6, 12, Math.PI), lambert(0x2a2622));
+      crook.rotation.z = Math.PI;
+      crook.position.set(0.04, 0.045, 0);
+      g.add(closed, crook, cyl(lambert(0x2a2622), 0.012, 0.012, 0.06, 0, 0.06, 0));
+      g.rotation.z = 0.2;
+      const wrap = new THREE.Group();
+      wrap.add(g);
+      return wrap;
+    },
+  };
+  /** Sets a thing on a shelf, with a small price-card stand under it so it reads as on display. */
+  const onShelf = (word: string, x: number, y: number, z: number, faceBack = false) => {
+    const g = made[word]();
+    g.scale.setScalar(1.45);
+    g.position.set(x, y, z);
+    if (faceBack) g.rotation.y = Math.PI;
+    thing(word, g, 0.85);
+  };
+  // Back wall, middle shelf.
+  ['enpitsu', 'hasami', 'sekken', 'haburashi', 'denchi', 'shinbun'].forEach((w, i) => onShelf(w, -3.1 + i * 0.95, 0.98, -D / 2 + 0.6));
+  // The middle unit, facing the door: middle and top shelves.
+  ['toufu', 'shouyu', 'senbei', 'dango'].forEach((w, i) => onShelf(w, -2.3 + i * 1.1, 0.98, -0.55));
+  ['ocha', 'mizu', 'onigiri', 'kasa'].forEach((w, i) => onShelf(w, -2.3 + i * 1.1, 1.58, -0.55));
+  // Its other side, facing the back wall.
+  ['kutsushita', 'tebukuro', 'boushi'].forEach((w, i) => onShelf(w, -1.8 + i * 1.2, 0.98, -1.3, true));
 
   const upper = scene.getObjectByName('upper')!;
   return {

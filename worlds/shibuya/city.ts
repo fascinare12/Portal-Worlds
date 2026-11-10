@@ -472,7 +472,8 @@ export async function buildCity(): Promise<City> {
   const faces = Array.from({ length: 7 }, () => facade());
   const floors = Array.from({ length: 9 }, () => {
     const f = groundFloor();
-    return { mat: new THREE.MeshBasicMaterial({ map: f.map }), shutter: f.shutter };
+    // Shops are lit, but held well below full white so the glow does not blow them out.
+    return { mat: new THREE.MeshBasicMaterial({ map: f.map, color: f.shutter ? 0xffffff : 0x8c8c8c }), shutter: f.shutter };
   });
   const [bc, bg] = canvas(128, 128);
   surface(bg, photo.concrete, 128, 128, '#3a3852');
@@ -505,16 +506,75 @@ export async function buildCity(): Promise<City> {
     // One building near where she arrives is the convenience store: a bright glass front she can walk into.
     if (!storeBuilt && faceX === 1 && z > 27 && z < 40) {
       storeBuilt = true;
-      const lit = new THREE.MeshBasicMaterial({ color: 0xf4fbff });
-      const frame = lambert(0xe8ecef);
-      storeDoor.add(box(lit, wide - 0.8, 2.7, 0.1, 0, 1.55, 0)); // the glass, glowing from inside
-      for (const a of [-(wide - 0.8) / 2, -1.1, 1.1, (wide - 0.8) / 2]) storeDoor.add(box(frame, 0.12, 2.7, 0.16, a, 1.55, 0.03));
-      // Shelves glimpsed through the glass.
-      for (let i = 0; i < 9; i++) {
-        const a = -(wide - 2) / 2 + (i / 8) * (wide - 2);
-        if (Math.abs(a) < 1.2) continue;
-        storeDoor.add(box(lambert(pick([0xff7a8a, 0x6fc3ff, 0xffe27a, 0x9be08a]), 0.5), 0.5, 0.5 + rnd() * 0.5, 0.05, a, 0.9, 0.06));
+      // The glass: a view in to the shelves, the fridge and the clerk at the till, with a
+      // marked doorway in the middle. Kept below full white so the glow does not wash it out.
+      const [vc, vg] = canvas(768, 288);
+      vg.fillStyle = '#cfdcd6';
+      vg.fillRect(0, 0, 768, 288);
+      vg.fillStyle = '#e6ebe6';
+      vg.fillRect(0, 200, 768, 88); // the floor
+      for (const [x0, x1] of [[20, 290], [478, 600]]) {
+        for (let row = 0; row < 3; row++) {
+          vg.fillStyle = '#9aa6a6';
+          vg.fillRect(x0, 92 + row * 50, x1 - x0, 6);
+          for (let x = x0 + 6; x < x1 - 14; x += 22) {
+            vg.fillStyle = pick(['#e86a7a', '#5ab0e8', '#e8c85a', '#7ac87a', '#b08ae0', '#e89a5a']);
+            const h = 22 + rnd() * 18;
+            vg.fillRect(x, 92 + row * 50 - h, 16, h);
+          }
+        }
       }
+      // The clerk behind the till, on the right.
+      vg.fillStyle = '#e8e2d2';
+      vg.fillRect(620, 170, 130, 70);
+      vg.fillStyle = '#2f9a6a';
+      vg.fillRect(620, 226, 130, 14);
+      vg.fillStyle = '#f0c9a0';
+      vg.beginPath();
+      vg.arc(684, 118, 17, 0, 6.3);
+      vg.fill();
+      vg.fillStyle = '#2f9a6a';
+      vg.fillRect(664, 96, 40, 10);
+      vg.fillStyle = '#ffffff';
+      vg.fillRect(660, 136, 48, 36);
+      // The doorway: darker glass with a handle bar on each leaf.
+      vg.fillStyle = 'rgba(40, 70, 80, 0.35)';
+      vg.fillRect(318, 30, 132, 258);
+      vg.fillStyle = '#5a6a70';
+      vg.fillRect(382, 30, 4, 258);
+      vg.fillRect(364, 150, 6, 50);
+      vg.fillRect(398, 150, 6, 50);
+      // Posters in the window, and the reflection of the street across the glass.
+      for (const [x, colour] of [[40, '#e0383a'], [520, '#f4a23a']] as const) {
+        vg.fillStyle = colour;
+        vg.fillRect(x, 20, 70, 44);
+        vg.fillStyle = '#ffffff';
+        vg.fillRect(x + 8, 30, 54, 8);
+        vg.fillRect(x + 8, 46, 34, 6);
+      }
+      vg.strokeStyle = 'rgba(255,255,255,0.3)';
+      vg.lineWidth = 22;
+      for (const x of [120, 560]) {
+        vg.beginPath();
+        vg.moveTo(x, 288);
+        vg.lineTo(x + 130, 0);
+        vg.stroke();
+      }
+      const lit = new THREE.MeshBasicMaterial({ map: texture(vc), color: 0xb0b0b0 });
+      const frame = lambert(0x8a9296);
+      const glass = new THREE.Mesh(new THREE.PlaneGeometry(wide - 0.8, 2.7), lit);
+      glass.position.set(0, 1.55, 0.06);
+      storeDoor.add(glass);
+      for (const a of [-(wide - 0.8) / 2, -1.1, 1.1, (wide - 0.8) / 2]) storeDoor.add(box(frame, 0.12, 2.7, 0.16, a, 1.55, 0.03));
+      storeDoor.add(box(frame, wide - 0.8, 0.14, 0.16, 0, 0.26, 0.03));
+      // A mat at the door and a rack of umbrellas beside it.
+      storeDoor.add(box(lambert(0x2f9a6a), 2, 0.04, 0.9, 0, 0.02, 0.7));
+      for (let i = 0; i < 3; i++) {
+        const u = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.8, 8), lambert(pick([0xff4fa3, 0x39b6ff, 0xffe14a]), 0.3));
+        u.position.set(1.7 + i * 0.16, 0.5, 0.5);
+        storeDoor.add(u);
+      }
+      storeDoor.add(box(lambert(0x55506a), 0.6, 0.3, 0.3, 1.86, 0.15, 0.5));
       // The sign band: green, white and orange stripes, with the shop's name. Convenience store is
       // written コンビニ, in the other script, so its reading is given underneath in hiragana.
       const [c, g] = canvas(768, 160);
@@ -540,8 +600,7 @@ export async function buildCity(): Promise<City> {
       city.add(storeDoor);
       city.add(box(roofStuff, w, 3.4, d, x, 1.7, z));
       const [lx, lz] = onFace(0, 2.4);
-      spills.push({ x: lx, z: lz, color: '#eaffff' });
-      light(lx, 2.4, lz, '#eaffff', 7);
+      spills.push({ x: lx, z: lz, color: '#cfe6e0' });
       return;
     }
     const floor = pick(floors);
@@ -1081,7 +1140,7 @@ export async function buildCity(): Promise<City> {
   // みせ: a small shop with an awning and a bright window.
   {
     const g = new THREE.Group();
-    g.add(box(lambert(0xffe2a8, 1), 5, 2.6, 0.4, 0, 1.5, 0));
+    g.add(box(lambert(0xd8b070, 0.55), 5, 2.6, 0.4, 0, 1.5, 0));
     g.add(box(lambert(0xff4fa3, 0.5), 5.4, 0.25, 1.6, 0, 3, 0.7));
     for (let i = 0; i < 5; i++) g.add(box(lambert(pick([0xff7a3a, 0x8cff6a, 0x39e6ff, 0xffe14a]), 0.6), 0.5, 0.5, 0.5, -1.8 + i * 0.9, 0.55, 0.6));
     const board = sign('みせ', '#ffe14a', false);

@@ -19,7 +19,8 @@
       #weather .kana { font: 800 19px/1.2 var(--kana); }
       #weather .romaji { font-size: 12px; opacity: 0.75; }
       #count { position: fixed; top: 16px; right: 14px; font-size: 18px; font-variant-numeric: tabular-nums; z-index: 3; }
-      #mute { position: fixed; top: 70px; right: 14px; font-size: 14px; max-width: 46vw; border-color: var(--pink); box-shadow: 0 0 14px rgba(255, 79, 163, 0.45); z-index: 3; }
+      #test { position: fixed; top: 64px; right: 14px; font-size: 16px; border-color: #ffe14a; box-shadow: 0 0 14px rgba(255, 225, 74, 0.45); z-index: 3; }
+      #mute { position: fixed; top: 112px; right: 14px; font-size: 14px; max-width: 46vw; border-color: var(--pink); box-shadow: 0 0 14px rgba(255, 79, 163, 0.45); z-index: 3; }
 
       /* Something said to her as she comes and goes. */
       #toast { position: fixed; left: 50%; top: 84px; transform: translateX(-50%); text-align: center; border-radius: 20px; padding: 8px 20px; max-width: 90vw; z-index: 4; }
@@ -54,6 +55,22 @@
       #trace .close { border: 2px solid var(--paper); }
       #trace .tip { font-size: 14px; opacity: 0.65; text-align: center; padding: 0 16px; }
 
+      /* The test. */
+      #quiz { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(12, 6, 30, 0.9); z-index: 7; }
+      #quiz .card { position: relative; width: min(92vw, 560px); box-sizing: border-box; border-radius: 26px; padding: 22px 22px 26px; text-align: center; border-color: #ffe14a; box-shadow: 0 0 30px rgba(255, 225, 74, 0.4); }
+      #quiz .close { position: absolute; right: 14px; top: 10px; font-size: 22px; opacity: 0.6; }
+      #quiz .tally { font-size: 14px; opacity: 0.7; font-variant-numeric: tabular-nums; }
+      #quiz .kind { font-size: 16px; opacity: 0.85; margin-top: 4px; }
+      #quiz .prompt { font: 800 clamp(40px, 12vw, 76px)/1.25 var(--kana); margin: 8px 0; text-shadow: 0 0 16px #ffe14a; }
+      #quiz .hear { width: 54px; height: 54px; border-radius: 50%; background: var(--cyan); color: var(--night); font-size: 24px; margin-bottom: 10px; }
+      #quiz .options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      #quiz .options button { border: 2px solid var(--cyan); border-radius: 16px; padding: 14px 8px; font-size: 18px; background: rgba(57, 230, 255, 0.08); }
+      #quiz .options button.kana { font: 800 26px var(--kana); }
+      #quiz .options button.yes { background: #2f9a5a; border-color: #8cff6a; }
+      #quiz .options button.no { background: #a8303a; border-color: #ff7a8a; }
+      #quiz .options p { grid-column: 1 / -1; font-size: 18px; margin: 4px 0 8px; }
+      #quiz .options p + button { grid-column: 1 / -1; background: var(--pink); border-color: var(--pink); font-weight: 800; }
+
       #intro { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(20, 10, 46, 0.72); z-index: 6; }
       #intro .card { text-align: center; padding: 28px 34px; border-radius: 26px; max-width: 86vw; border-color: var(--pink); box-shadow: 0 0 30px rgba(255, 79, 163, 0.6); }
       #intro .kana { font: 800 clamp(40px, 11vw, 72px)/1.2 var(--kana); text-shadow: 0 0 18px var(--pink); }
@@ -66,6 +83,7 @@
     <button id="home" aria-label="Back to the wood"></button>
     <button id="weather" class="chip" hidden><div class="kana"></div><div class="romaji"></div></button>
     <div id="count" class="chip"></div>
+    <button id="test" class="chip">✎ Test</button>
     <div id="mute" class="chip" hidden>No Japanese voice on this device, so words are shown but not spoken.</div>
     <div id="toast" class="chip" hidden><div class="kana"></div><div class="romaji"></div></div>
     <div id="label" hidden><div class="kana"></div><div class="romaji"></div><div class="english"></div></div>
@@ -80,6 +98,7 @@
         <p>Tap things in the street to hear their names.<br />Drag to look around. Tap the road to walk a few steps.<br />Find a word, then spray it on the wall yourself.</p>
         <button id="start">はじめる</button>
         <div class="romaji" style="margin-top: 0.5em; opacity: 0.6">hajimeru: start</div>
+        <div class="romaji" id="last-test" style="margin-top: 1em; opacity: 0.75"></div>
       </div>
     </div>
     <div id="trace" hidden>
@@ -90,6 +109,16 @@
       </div>
       <canvas></canvas>
       <div class="tip">Start at the white dot and follow the dashes. Strokes go in order: 1, 2, 3…</div>
+    </div>
+    <div id="quiz" hidden>
+      <div class="card chip">
+        <button class="close" aria-label="Close">✕</button>
+        <div class="tally"></div>
+        <div class="kind"></div>
+        <div class="prompt"></div>
+        <button class="hear" aria-label="Hear it again">🔊</button>
+        <div class="options"></div>
+      </div>
     </div>
     <div id="veil"></div>
     <script type="module" src="./main.ts"></script>

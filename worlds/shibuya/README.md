@@ -17,7 +17,7 @@ Japanese is learned from zero. It is a separate page with its own code.
    turn, each stroke in the proper order and direction. Paint only goes on
    while she follows the stroke. Finishing the word fills the tag with colour.
 
-The counter shows words found and words written, out of 50.
+The counter shows words found and words written, out of 63.
 
 Only words she has already heard are asked. Words missed at the first try
 come back soonest; words she knows come back later. Romaji under a word is
@@ -25,6 +25,24 @@ dropped once she has found it twice running.
 
 Drag to look around; tap the road to walk; arrows or WASD also work. The green
 puddle, or the green button, leads back to the wood.
+
+## Other ways she is asked
+
+- **Shopping lists.** In the store, every third question is a list of three
+  things joined with と ("and"). Each is ticked as she finds it. A finished
+  list earns a stamp (はんこ); every fifth stamp sets off fireworks.
+- **Listening only / reading only.** Once she has found a word twice running,
+  it is sometimes asked with the word hidden (she must go by ear) or with no
+  sound (she must read it).
+
+## The test
+
+The ✎ Test button gives twenty questions drawn from every word in the world,
+with no romaji: hear a word and pick its meaning, read a word and pick its
+meaning, or see a meaning and pick the word. A miss shows the right answer.
+Sixteen right (80%) passes, and the screen then says: "Show this to your mom,
+and she will build you out an additional level." Every result is kept, and
+the latest is shown on the opening card.
 
 ## Places and words
 
@@ -41,6 +59,11 @@ puddle, or the green button, leads back to the wood.
   おべんとう boxed lunch, おかし snacks, たまご egg, ぎゅうにゅう milk,
   みかん mandarin orange, もも peach, いちご strawberry, やさい vegetables,
   ざっし magazine, かご basket, おかね money, てんいん shop clerk.
+  Also on the shelves: えんぴつ pencil, はさみ scissors, せっけん soap,
+  はぶらし toothbrush, くつした socks, てぶくろ gloves, ぼうし hat,
+  でんち battery, しんぶん newspaper, とうふ tofu, しょうゆ soy sauce,
+  せんべい rice cracker, だんご dumplings, and tea, water, a rice ball and
+  an umbrella, which she also meets outside.
   Inside, she is only asked for things that are in the store.
 - **Murals** (pictures painted on building fronts, for common words with no
   place in a city street): やま mountain, うみ sea, たいよう sun, くも cloud,
@@ -106,6 +129,8 @@ on a tablet.
 - `strokes.json`: the strokes of every hiragana, in writing order (KanjiVG, CC BY-SA 3.0).
 - `store.ts`: the inside of the convenience store.
 - `murals.ts`: the pictures painted on the walls.
+- `quiz.ts`: the test.
+- `weather.ts`: Tokyo's weather.
 - `main.ts`: walking, tapping, and the listen-and-find game.
 
 Progress is kept in the browser on each device. Nothing about her is sent
