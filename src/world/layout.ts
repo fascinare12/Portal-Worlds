@@ -82,6 +82,10 @@ export interface Tree {
   h: number;
   /** Canopy radius. */
   r: number;
+  /** Height of the ground at the foot of the tree. */
+  base: number;
+  /** The masses of leaves that make up the crown: one on top, three around. */
+  clumps: { x: number; y: number; z: number; size: number }[];
 }
 
 function makeTrees(): Tree[] {
@@ -95,7 +99,21 @@ function makeTrees(): Tree[] {
     if (poolAt(x, z, 7)) continue;
     if (fbm(x * 0.03 + 9, z * 0.03 + 9, 2) < 0.4) continue; // glades
     if (trees.some((t) => Math.hypot(t.x - x, t.z - z) < 3)) continue;
-    trees.push({ x, z, h: 7 + rand() * 7, r: 2.4 + rand() * 1.8 });
+    trees.push({ x, z, h: 7 + rand() * 7, r: 2.4 + rand() * 1.8, base: groundHeight(x, z) - 0.25, clumps: [] });
+  }
+  const shape = mulberry32(22);
+  for (const t of trees) {
+    for (let c = 0; c < 4; c++) {
+      const top = c === 0;
+      const a = (c / 3) * 6.28 + shape();
+      const spread = top ? 0 : t.r * 0.75;
+      t.clumps.push({
+        x: t.x + Math.cos(a) * spread,
+        y: t.base + t.h + (top ? t.r * 0.35 : -t.r * 0.15 + shape() * t.r * 0.35),
+        z: t.z + Math.sin(a) * spread,
+        size: t.r * (top ? 1 : 0.62 + shape() * 0.2),
+      });
+    }
   }
   return trees;
 }

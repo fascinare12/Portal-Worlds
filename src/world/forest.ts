@@ -1,8 +1,9 @@
 import * as THREE from 'three';
-import { fbm, lerp, mulberry32, noise2, smoothstep } from '../noise';
+import { fbm, lerp, mulberry32, smoothstep } from '../noise';
 import grassUrl from '../textures/grass.webp';
 import spikeUrl from '../textures/spike.webp';
 import sprigUrl from '../textures/sprig.webp';
+import { daylight } from './daylight';
 import { createFoliage } from './foliage';
 import { groundHeight, poolAt, pools, trees } from './layout';
 import { paint, wind } from './paint';
@@ -28,41 +29,29 @@ function addSway(mat: THREE.Material, amount: number, byHeight: boolean): void {
   };
 }
 
-/** A lumpy leaf mass, shaded cool underneath and warm on top like a painted tree. */
-function blobGeometry(): THREE.BufferGeometry {
-  const geo = new THREE.IcosahedronGeometry(1, 1);
-  const pos = geo.attributes.position;
-  const nor = geo.attributes.normal;
-  const colors = new Float32Array(pos.count * 3);
-  const n = new THREE.Vector3();
-  for (let i = 0; i < pos.count; i++) {
-    n.fromBufferAttribute(pos, i).normalize();
-    const bump = 0.78 + noise2(n.x * 2.3 + n.z * 1.7 + 4, n.y * 2.3 - n.z * 1.1 + 4) * 0.5;
-    pos.setXYZ(i, n.x * bump, n.y * bump, n.z * bump);
-    nor.setXYZ(i, n.x, n.y, n.z);
-    const t = smoothstep(-0.7, 0.9, n.y);
-    colors[i * 3] = lerp(0.42, 1.2, t);
-    colors[i * 3 + 1] = lerp(0.6, 1.16, t);
-    colors[i * 3 + 2] = lerp(0.72, 0.92, t);
-  }
-  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  return geo;
-}
-
-/** A tapering trunk with flared, mossy roots and a slight lean. */
+/**
+ * A trunk drawn by hand rather than turned on a lathe: it leans and curves a
+ * little, tapers towards the crown, and spreads into uneven roots at the foot.
+ */
 function trunkGeometry(): THREE.BufferGeometry {
-  const geo = new THREE.CylinderGeometry(0.2, 0.4, 1, 8, 6, true);
+  const geo = new THREE.CylinderGeometry(0.16, 0.4, 1, 10, 10, true);
   geo.translate(0, 0.5, 0);
   const pos = geo.attributes.position;
   const colors = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) {
     const y = pos.getY(i);
-    const flare = 1 + 2.4 * Math.pow(Math.max(0, 0.16 - y) / 0.16, 2);
-    pos.setX(i, pos.getX(i) * flare + Math.sin(y * 3) * 0.07);
-    pos.setZ(i, pos.getZ(i) * flare);
-    const t = smoothstep(0, 0.3, y);
-    colors[i * 3] = lerp(0.45, 1, t);
-    colors[i * 3 + 1] = lerp(0.75, 1, t);
+    const angle = Math.atan2(pos.getZ(i), pos.getX(i));
+    // Five roots of different sizes reach out at the base.
+    const root = 0.35 + 0.65 * Math.pow(Math.abs(Math.sin(angle * 2.5 + 0.6)), 1.5);
+    const flare = 1 + 3.2 * root * Math.pow(Math.max(0, 0.2 - y) / 0.2, 2);
+    // The girth wavers slightly all the way up.
+    const waver = 1 + 0.08 * Math.sin(y * 9 + angle * 2);
+    pos.setX(i, pos.getX(i) * flare * waver + Math.sin(y * 2.6) * 0.11 + Math.sin(y * 7) * 0.02);
+    pos.setZ(i, pos.getZ(i) * flare * waver + Math.sin(y * 3.4 + 1) * 0.07);
+    // Moss creeps up from the roots.
+    const t = smoothstep(0.02, 0.26, y);
+    colors[i * 3] = lerp(0.5, 1, t);
+    colors[i * 3 + 1] = lerp(0.85, 1, t);
     colors[i * 3 + 2] = lerp(0.5, 1, t);
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -72,48 +61,44 @@ function trunkGeometry(): THREE.BufferGeometry {
 
 function createTrees(): THREE.Group {
   const rand = mulberry32(22);
-  const trunks = new THREE.InstancedMesh(
-    trunkGeometry(),
-    paint({ vertexColors: true, dab: 0.7 }),
-    trees.length,
-  );
-  const barks = [0x5c4635, 0x6f5a47, 0x6f5a47, 0x8b8577, 0xd6cfbd];
+  const bark = paint({ vertexColors: true, dab: 0.7, bark: true });
+  const trunks = new THREE.InstancedMesh(trunkGeometry(), bark, trees.length);
+  const barks = [0x6a4a36, 0x7a5a44, 0x5d4a3e, 0x8a7868, 0xb9ab95];
 
-  const BLOBS = 4;
-  const leafMat = paint({ vertexColors: true, sway: 0.09, dab: 1.3 });
-  const leaves = new THREE.InstancedMesh(blobGeometry(), leafMat, trees.length * BLOBS);
-  // Dark cores inside the painted leaf cards (see foliage.ts), giving the crown depth.
+  // Three boughs per tree reach from the trunk up into the side masses of leaves.
+  const boughGeo = new THREE.CylinderGeometry(0.05, 0.15, 1, 6, 1, true);
+  boughGeo.translate(0, 0.5, 0);
+  const boughs = new THREE.InstancedMesh(boughGeo, bark, trees.length * 3);
+  const up = new THREE.Vector3(0, 1, 0);
+  const from = new THREE.Vector3();
+  const to = new THREE.Vector3();
 
   trees.forEach((t, i) => {
-    const y = groundHeight(t.x, t.z) - 0.25;
     const width = 1 + t.h * 0.07;
-    dummy.position.set(t.x, y, t.z);
+    dummy.position.set(t.x, t.base, t.z);
     dummy.rotation.set((rand() - 0.5) * 0.1, rand() * 6.28, (rand() - 0.5) * 0.1);
-    dummy.scale.set(width, t.h, width);
+    dummy.scale.set(width, t.h + t.r * 0.3, width);
     dummy.updateMatrix();
     trunks.setMatrixAt(i, dummy.matrix);
-    trunks.setColorAt(i, color.set(barks[Math.floor(rand() * barks.length)]));
+    color.set(barks[Math.floor(rand() * barks.length)]);
+    trunks.setColorAt(i, color);
 
-    for (let b = 0; b < BLOBS; b++) {
-      const centre = b === 0;
-      const a = (b / (BLOBS - 1)) * 6.28 + rand();
-      const spread = centre ? 0 : t.r * 0.75;
-      const size = t.r * (centre ? 1 : 0.62 + rand() * 0.2);
-      dummy.position.set(
-        t.x + Math.cos(a) * spread,
-        y + t.h + (centre ? t.r * 0.35 : -t.r * 0.15 + rand() * t.r * 0.35),
-        t.z + Math.sin(a) * spread,
-      );
-      dummy.rotation.set(0, rand() * 6.28, 0);
-      dummy.scale.set(size * 0.62, size * 0.45, size * 0.62);
+    for (let b = 0; b < 3; b++) {
+      const c = t.clumps[b + 1];
+      from.set(t.x, t.base + t.h * (0.62 + rand() * 0.18), t.z);
+      to.set(c.x, c.y, c.z).sub(from);
+      dummy.position.copy(from);
+      dummy.quaternion.setFromUnitVectors(up, to.clone().normalize());
+      dummy.scale.set(width, to.length(), width);
       dummy.updateMatrix();
-      leaves.setMatrixAt(i * BLOBS + b, dummy.matrix);
-      leaves.setColorAt(i * BLOBS + b, color.set(0x2f7350));
+      boughs.setMatrixAt(i * 3 + b, dummy.matrix);
+      boughs.setColorAt(i * 3 + b, color);
     }
   });
+  dummy.rotation.set(0, 0, 0);
 
   const group = new THREE.Group();
-  group.add(trunks, leaves);
+  group.add(trunks, boughs);
   return group;
 }
 
@@ -148,11 +133,12 @@ interface PlantKind {
 }
 
 /** Hand-painted grass and flowering plants scattered over the forest floor. */
-function createGroundCover(): THREE.Group {
+function createGroundCover(): { group: THREE.Group; meshes: THREE.InstancedMesh[] } {
   const rand = mulberry32(314);
   const group = new THREE.Group();
   const loader = new THREE.TextureLoader();
   const geo = plantGeometry();
+  const meshes: THREE.InstancedMesh[] = [];
 
   const kinds: PlantKind[] = [
     {
@@ -182,6 +168,7 @@ function createGroundCover(): THREE.Group {
     const map = loader.load(kind.url);
     map.colorSpace = THREE.SRGBColorSpace;
     const mat = new THREE.MeshBasicMaterial({ map, alphaTest: 0.5, side: THREE.DoubleSide });
+    mat.color = daylight.ambient; // painted plants dim and cool with the light
     addSway(mat, 0.07, true);
     const mesh = new THREE.InstancedMesh(geo, mat, kind.count);
     let n = 0;
@@ -204,9 +191,11 @@ function createGroundCover(): THREE.Group {
       n++;
     }
     mesh.count = n;
+    mesh.userData.full = n;
+    meshes.push(mesh);
     group.add(mesh);
   }
-  return group;
+  return { group, meshes };
 }
 
 /** Stones round the pools and mushrooms under the trees. */
@@ -240,15 +229,44 @@ function createDetails(): THREE.Group {
   }
   group.add(stones);
 
-  const count = 420;
-  const stemGeo = new THREE.CylinderGeometry(0.045, 0.07, 0.3, 6);
+  const count = 520;
+  // A stem that swells towards the foot, with a ring left by the cap.
+  const stemGeo = new THREE.CylinderGeometry(0.04, 0.075, 0.3, 8, 4);
   stemGeo.translate(0, 0.15, 0);
-  const capGeo = new THREE.SphereGeometry(0.2, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2);
-  capGeo.scale(1, 0.75, 1);
-  capGeo.translate(0, 0.27, 0);
-  const stems = new THREE.InstancedMesh(stemGeo, new THREE.MeshLambertMaterial({ color: 0xf2ead8 }), count);
-  const caps = new THREE.InstancedMesh(capGeo, paint({ dab: 0.4 }), count);
-  const capColors = [0xc9584a, 0xd99a4a, 0xb59ad6, 0xefe6d2, 0xc9584a];
+  {
+    const sp = stemGeo.attributes.position;
+    for (let i = 0; i < sp.count; i++) {
+      const y = sp.getY(i);
+      const swell = 1 + 0.5 * Math.pow(1 - y / 0.3, 3) + (Math.abs(y - 0.19) < 0.03 ? 0.45 : 0);
+      sp.setX(i, sp.getX(i) * swell + Math.sin(y * 9) * 0.012);
+      sp.setZ(i, sp.getZ(i) * swell);
+    }
+    stemGeo.computeVertexNormals();
+  }
+  // A domed cap with a wavy rim, darker towards the edge and pale underneath.
+  const capGeo = new THREE.SphereGeometry(0.2, 14, 7, 0, Math.PI * 2, 0, Math.PI * 0.58);
+  capGeo.scale(1, 0.72, 1);
+  {
+    const cp = capGeo.attributes.position;
+    const cc = new Float32Array(cp.count * 3);
+    for (let i = 0; i < cp.count; i++) {
+      const y = cp.getY(i);
+      const angle = Math.atan2(cp.getZ(i), cp.getX(i));
+      const edge = 1 - smoothstep(-0.02, 0.1, y); // 1 at the rim, 0 at the crown
+      const wave = 1 + edge * 0.1 * Math.sin(angle * 5);
+      cp.setX(i, cp.getX(i) * wave);
+      cp.setZ(i, cp.getZ(i) * wave);
+      cp.setY(i, y + edge * 0.02 * Math.sin(angle * 3 + 1));
+      const tone = y < -0.005 ? 1.25 : lerp(1.1, 0.72, edge);
+      cc.set([tone, tone, tone * (y < -0.005 ? 0.9 : 1)], i * 3);
+    }
+    capGeo.setAttribute('color', new THREE.BufferAttribute(cc, 3));
+    capGeo.computeVertexNormals();
+  }
+  capGeo.translate(0, 0.28, 0);
+  const stems = new THREE.InstancedMesh(stemGeo, paint({ color: 0xf2ead8, dab: 0.3 }), count);
+  const caps = new THREE.InstancedMesh(capGeo, paint({ vertexColors: true, dab: 0.4, spots: true }), count);
+  const capColors = [0xc9584a, 0xd99a4a, 0xb59ad6, 0xefe6d2, 0xc9584a, 0x6fa8c9];
   for (let i = 0; i < count; i++) {
     // Mushrooms gather at the feet of trees.
     const t = trees[Math.floor(rand() * trees.length)];
@@ -256,9 +274,11 @@ function createDetails(): THREE.Group {
     const d = 0.9 + rand() * 2.2;
     const x = t.x + Math.cos(a) * d;
     const z = t.z + Math.sin(a) * d;
-    const s = poolAt(x, z, 3) || Math.hypot(x, z) > 110 ? 0 : 0.7 + rand() * 1.5;
+    // Most are small; now and then one grows as tall as a child's knee.
+    const grown = rand() < 0.1 ? 2.6 + rand() * 1.6 : 0.9 + rand() * 1.6;
+    const s = poolAt(x, z, 3) || Math.hypot(x, z) > 110 ? 0 : grown;
     dummy.position.set(x, groundHeight(x, z) - 0.02, z);
-    dummy.rotation.set(0, rand() * 6.28, 0);
+    dummy.rotation.set((rand() - 0.5) * 0.3, rand() * 6.28, (rand() - 0.5) * 0.3);
     dummy.scale.setScalar(s);
     dummy.updateMatrix();
     stems.setMatrixAt(i, dummy.matrix);
@@ -269,8 +289,22 @@ function createDetails(): THREE.Group {
   return group;
 }
 
-export function createForest(): THREE.Group {
+export interface Forest {
+  group: THREE.Group;
+  /** 1 = everything; lower values thin leaves and plants for slower devices. */
+  setDensity(amount: number): void;
+}
+
+export function createForest(): Forest {
   const group = new THREE.Group();
-  group.add(createTrees(), createFoliage(), createGroundCover(), createDetails());
-  return group;
+  const foliage = createFoliage();
+  const cover = createGroundCover();
+  group.add(createTrees(), foliage.mesh, cover.group, createDetails());
+  return {
+    group,
+    setDensity(amount) {
+      foliage.setDensity(amount);
+      for (const m of cover.meshes) m.count = Math.round(m.userData.full * amount);
+    },
+  };
 }

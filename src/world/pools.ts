@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mulberry32 } from '../noise';
+import { daylight } from './daylight';
 import { pools } from './layout';
 import { noiseTexture } from './noiseTexture';
 
@@ -23,12 +24,15 @@ const waterVertex = /* glsl */ `
 const waterFragment = /* glsl */ `
   uniform float uTime;
   uniform float uOpen;
+  uniform float uPulse;
   uniform float uRadius;
   uniform vec3 uColor;
   varying vec2 vPos;
   varying vec3 vWorld;
 
   uniform sampler2D uNoise;
+  uniform vec3 uSky;
+  uniform vec3 uAmbient;
 
   // Soft, slowly shifting clouds: leaves and sky seen in moving water.
   float blot(vec2 p) {
@@ -40,12 +44,23 @@ const waterFragment = /* glsl */ `
     vec3 toEye = normalize(cameraPosition - vWorld);
     // Water mirrors more at a glancing angle and shows its depth from above.
     float glance = pow(1.0 - clamp(toEye.y, 0.0, 1.0), 3.0);
-    vec2 rip = vPos + 0.18 * vec2(sin(vPos.y * 2.0 + uTime * 0.5), cos(vPos.x * 2.0 + uTime * 0.4));
+    // Everything in the water turns slowly about the centre, faster towards the middle,
+    // wound into a fixed spiral that turns as a whole, like a stirred cup.
+    float twist = uTime * 0.22 + 2.6 * exp(-r * 1.4);
+    vec2 spun = mat2(cos(twist), sin(twist), -sin(twist), cos(twist)) * vPos;
+    vec2 rip = spun + 0.18 * vec2(sin(spun.y * 2.0 + uTime * 0.5), cos(spun.x * 2.0 + uTime * 0.4));
+    // Spiral arms winding inwards.
+    float arms = sin(atan(vPos.y, vPos.x) * 3.0 + r * 5.5 - uTime * 1.1) * 0.5 + 0.5;
+    arms *= smoothstep(1.5, 0.3, r);
 
     // Closed: a dark mirror holding the canopy and the pale sky between the leaves.
     float canopy = blot(rip * 0.8 + 3.0) * 0.7 + blot(rip * 2.1 + 9.0) * 0.3;
-    vec3 mirror = mix(vec3(0.13, 0.30, 0.24), vec3(0.94, 0.95, 0.80), smoothstep(0.42, 0.68, canopy));
-    vec3 closed = mix(vec3(0.04, 0.13, 0.15), mirror, 0.38 + 0.55 * glance);
+    // The water holds whatever sky is overhead right now, day or night.
+    vec3 sky = pow(uSky, vec3(0.4545));
+    vec3 amb = pow(uAmbient, vec3(0.4545));
+    vec3 mirror = mix(vec3(0.13, 0.30, 0.24) * amb, sky, smoothstep(0.42, 0.68, canopy));
+    vec3 closed = mix(vec3(0.04, 0.13, 0.15) * amb, mirror, 0.38 + 0.55 * glance);
+    closed += mirror * arms * 0.22;
 
     // Open: lit from below in the colour of the other world, brightest at the heart.
     float heart = smoothstep(1.3, 0.0, r);
@@ -53,9 +68,15 @@ const waterFragment = /* glsl */ `
     float rings = sin(r * 10.0 - uTime * 1.2) * 0.5 + 0.5;
     vec3 open = mix(uColor * 0.8, mix(uColor, vec3(1.0), 0.75), heart * heart);
     open += uColor * (0.2 * shimmer + 0.07 * rings);
+    open = mix(open, mix(uColor, vec3(1.0), 0.55), arms * 0.5);
     open = mix(open, mirror, 0.2 * glance);
 
-    gl_FragColor = vec4(mix(closed, open, uOpen), 1.0);
+    vec3 col = mix(closed, open, uOpen);
+    // Woken by a touch: a ring of light runs outward and the whole pool brightens.
+    float wake = uPulse * (1.0 - uOpen);
+    float ring = smoothstep(0.25, 0.0, abs(r - (1.0 - uPulse) * 1.6));
+    col += mix(sky, vec3(1.0), 0.6) * wake * (0.35 * smoothstep(1.4, 0.0, r) + 0.6 * ring);
+    gl_FragColor = vec4(col, 1.0);
 
     gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(2.2)); // authored in display colour, stored linear
   }
@@ -132,6 +153,10 @@ export interface PoolsView {
   openness: number[];
   /** Open or close a pool; it eases between the two states. */
   setOpen(index: number, open: boolean, color?: number): void;
+  /** How brightly each pool lights its surroundings right now, 0..1. */
+  glow: number[];
+  /** Wake any pool this line of sight passes over; it answers with a burst of light. */
+  touch(ray: THREE.Ray): void;
   update(time: number, dt: number, viewportHeight: number, eye: THREE.Vector3): void;
 }
 
@@ -163,7 +188,10 @@ export function createPools(): PoolsView {
           uTime: { value: 0 },
           uOpen: { value: openness[i] },
           uRadius: { value: p.radius },
+          uPulse: { value: 0 },
           uNoise: { value: noiseTexture },
+          uSky: { value: daylight.zenith },
+          uAmbient: { value: daylight.ambient },
           uColor,
         },
       }),
@@ -219,9 +247,22 @@ export function createPools(): PoolsView {
   sparks.frustumCulled = false;
   group.add(sparks);
 
+  const pulse = pools.map(() => 0);
+  const glow = pools.map(() => 0);
+  const hit = new THREE.Vector3();
+
   return {
     group,
     openness,
+    glow,
+    touch(ray) {
+      if (ray.direction.y >= -0.02) return;
+      pools.forEach((p, i) => {
+        const t = (p.level - ray.origin.y) / ray.direction.y;
+        hit.copy(ray.origin).addScaledVector(ray.direction, t);
+        if (Math.hypot(hit.x - p.x, hit.z - p.z) < p.radius + 1.2) pulse[i] = 1;
+      });
+    },
     setOpen(index, open, colorHex) {
       const p = pools[index];
       p.open = open;
@@ -245,10 +286,19 @@ export function createPools(): PoolsView {
           for (let s = 0; s < SPARKS; s++) sparkOpen[i * SPARKS + s] = openness[i];
           sparksDirty = true;
         }
+        // A woken pool sends up light for a couple of seconds, then settles.
+        if (pulse[i] > 0) {
+          pulse[i] = Math.max(0, pulse[i] - dt / 2.2);
+          sparksDirty = true;
+        }
+        const lit = Math.max(openness[i], Math.sqrt(pulse[i]));
+        glow[i] = Math.max(openness[i], pulse[i] * 0.7);
+        if (sparksDirty) for (let s = 0; s < SPARKS; s++) sparkOpen[i * SPARKS + s] = lit;
         waterMats[i].uniforms.uTime.value = time + i * 3;
         waterMats[i].uniforms.uOpen.value = openness[i];
+        waterMats[i].uniforms.uPulse.value = pulse[i];
         beamMats[i].uniforms.uTime.value = time + i * 3;
-        beamMats[i].uniforms.uOpen.value = openness[i];
+        beamMats[i].uniforms.uOpen.value = lit;
         // Standing inside the column would wash the whole view out, so it thins as you approach.
         const away = Math.hypot(eye.x - p.x, eye.z - p.z) / p.radius;
         beamMats[i].uniforms.uNear.value = 0.2 + 0.8 * Math.min(1, Math.max(0, (away - 1.5) / 4));
