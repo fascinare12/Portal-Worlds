@@ -80,6 +80,16 @@ from the KanjiVG project (see `CREDITS.md`).
 
 Surface photographs are CC0 from Poly Haven (see `CREDITS.md`).
 
+## Weather
+
+The street has Tokyo's real weather: rain, snow, fog, thunder, cloud or clear
+skies, shown on a chip that also teaches the word (はれ, くもり, あめ, ゆき,
+きり, かみなり). It is always night. This is the only outside request the
+project makes: her browser asks Open-Meteo, a free public weather service
+with no account, for the conditions at a point in Tokyo. Nothing about her is
+sent. If the service cannot be reached, the street keeps its usual rain and
+the chip stays hidden. `?sky=snow` and the like override it for testing.
+
 ## Sound
 
 Japanese is spoken by the voice built into the device, at a slightly slowed
@@ -98,4 +108,5 @@ on a tablet.
 - `murals.ts`: the pictures painted on the walls.
 - `main.ts`: walking, tapping, and the listen-and-find game.
 
-Progress is kept in the browser on each device. Nothing is sent anywhere.
+Progress is kept in the browser on each device. Nothing about her is sent
+anywhere; the only outside request is the weather lookup described above.

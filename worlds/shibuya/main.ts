@@ -8,6 +8,8 @@ import type { Thing } from './city';
 import { hasVoice, say, sound } from './speak';
 import { buildStore } from './store';
 import { openTrace } from './trace';
+import { describe, tokyoWeather } from './weather';
+import type { Weather } from './weather';
 import { WORDS, loadProgress, nextWord, record, saveProgress, wordById } from './words';
 import type { Word } from './words';
 
@@ -305,6 +307,26 @@ function goThrough(entering: boolean): void {
     setTimeout(() => (veil.style.transition = ''), 500);
   }, 380);
 }
+
+// ---- Weather ----
+
+// The street has whatever weather Tokyo has at this moment, and a chip says what it is.
+// Tapping the chip says the word. `?sky=snow` (or clear, cloudy, rain, fog, storm) overrides it for testing.
+const weatherChip = $('weather');
+let weather: Weather | null = null;
+function setWeather(w: Weather): void {
+  weather = w;
+  city.setWeather(w.sky);
+  weatherChip.querySelector('.kana')!.textContent = `とうきょう · ${w.kana}`;
+  weatherChip.querySelector('.romaji')!.textContent = `Tōkyō now: ${w.romaji}, ${w.english}` + (w.degrees === null ? '' : `, ${w.degrees}°C`);
+  weatherChip.hidden = false;
+}
+weatherChip.onclick = () => {
+  if (weather) say(weather.kana);
+};
+const forcedSky = new URLSearchParams(window.location.search).get('sky');
+if (forcedSky && ['clear', 'cloudy', 'rain', 'snow', 'fog', 'storm'].includes(forcedSky)) setWeather(describe(forcedSky as Weather['sky']));
+else void tokyoWeather().then((w) => w && setWeather(w));
 
 // ---- Arriving and leaving ----
 

@@ -14,6 +14,9 @@ import { WORDS } from './words';
  * Twelve things in the street carry a word. Tapping one says its name.
  */
 
+/** What the sky is doing. */
+export type Sky = 'clear' | 'cloudy' | 'rain' | 'snow' | 'fog' | 'storm';
+
 export interface Thing {
   word: string;
   object: THREE.Object3D;
@@ -38,6 +41,8 @@ export interface City {
   firework(): void;
   /** Turns the costly extras (reflections, rain) on or off, for slower devices. */
   setRich(on: boolean): void;
+  /** Makes the street's weather match the real thing. */
+  setWeather(sky: Sky): void;
   update(time: number, dt: number, eye: THREE.Vector3): void;
 }
 
@@ -398,7 +403,8 @@ export async function buildCity(): Promise<City> {
   const [asphalt, concrete, shutter] = await Promise.all([loadImage(asphaltUrl), loadImage(concreteUrl), loadImage(shutterUrl)]);
   photo = { asphalt, concrete, shutter };
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x241046, 0.011);
+  const haze = new THREE.FogExp2(0x241046, 0.011);
+  scene.fog = haze;
   scene.add(new THREE.HemisphereLight(0x8f7bff, 0x3a1a4a, 1.5));
   const moonlight = new THREE.DirectionalLight(0xb8c4ff, 0.7);
   moonlight.position.set(-40, 60, -60);
@@ -473,7 +479,8 @@ export async function buildCity(): Promise<City> {
   const baseMap = texture(bc);
   const roofStuff = new THREE.MeshLambertMaterial({ map: baseMap });
   const signWords = WORDS.filter((w) => !w.store).map((w) => w.kana);
-  const building = (x: number, z: number, w: number, d: number, h: number, faceX: number, faceZ: number) => {
+  // `backdrop` buildings close off the ends of the streets; she cannot reach them, so they carry no murals or tags.
+  const building = (x: number, z: number, w: number, d: number, h: number, faceX: number, faceZ: number, backdrop = false) => {
     const wide = faceX ? d : w; // how long the street face is
     const turn = faceX ? (faceX * Math.PI) / 2 : faceZ > 0 ? 0 : Math.PI;
     /** A point on the street face: `along` runs across it, `out` is how far it stands proud of the wall. */
@@ -545,7 +552,7 @@ export async function buildCity(): Promise<City> {
     city.add(front);
     // Every other building front carries a mural: a picture with its word. The rest hold her tags
     // and smaller wordless pieces, all kept inside the width of the wall.
-    const mural = fronts++ % 2 === 1 ? muralQueue.shift() : undefined;
+    const mural = !backdrop && fronts++ % 2 === 1 ? muralQueue.shift() : undefined;
     if (mural) {
       const [c, g] = canvas(384, 288);
       MURALS[mural.id](g);
@@ -566,7 +573,7 @@ export async function buildCity(): Promise<City> {
       picture.renderOrder = 2;
       thing(mural.id, picture, 2);
     } else {
-      for (const along of wide >= 6.8 ? [-wide / 4, wide / 4] : [0]) {
+      for (const along of backdrop ? [] : wide >= 6.8 ? [-wide / 4, wide / 4] : [0]) {
         const [tx, tz] = onFace(along, 0.09);
         slots.push({ x: tx, z: tz, turn });
       }
@@ -657,6 +664,17 @@ export async function buildCity(): Promise<City> {
         x += w;
       }
     }
+  }
+
+  // Every street ends in more city, never in open ground: a row of buildings across each end of
+  // the main street, and a block at each end of the street that crosses it.
+  for (const end of [1, -1]) {
+    for (let x = -26; x < 26; ) {
+      const w = 8 + rnd() * 6;
+      building(x + w / 2, end * (end > 0 ? 54 : 63), w - 0.4, 10, 12 + rnd() * 26, 0, -end, true);
+      x += w;
+    }
+    building(end * 66, 0, 10, 26, 14 + rnd() * 20, -end, 0, true);
   }
 
   // ---- The far city: dim towers in the haze all round, each with a red light on top.
@@ -818,6 +836,17 @@ export async function buildCity(): Promise<City> {
   ground.rotation.x = -Math.PI / 2;
   ground.renderOrder = 1;
   scene.add(ground);
+
+  // Beyond the edge of the wet road the ground carries on, dark and dry, out to the far towers.
+  {
+    const beyond = new THREE.MeshBasicMaterial({ color: 0x120e24 });
+    for (const [x, z, w, d] of [[0, 164, 600, 200], [0, -164, 600, 200], [182, 0, 236, 128], [-182, 0, 236, 128]]) {
+      const slab = new THREE.Mesh(new THREE.PlaneGeometry(w, d), beyond);
+      slab.rotation.x = -Math.PI / 2;
+      slab.position.set(x, -0.02, z);
+      scene.add(slab);
+    }
+  }
 
   // Rain on the road: rings spreading where drops land.
   const rippleTime = { value: 0 };
@@ -1557,6 +1586,21 @@ export async function buildCity(): Promise<City> {
   fire.frustumCulled = false;
   scene.add(fire);
 
+  // Weather. Rain and snow fall only when they are falling for real; fog thickens the air.
+  // The road stays wet-looking in any weather: that is how this street is painted.
+  let rich = true;
+  let weatherNow: Sky = 'rain';
+  const apply = () => {
+    const falling = weatherNow === 'rain' || weatherNow === 'storm' || weatherNow === 'snow';
+    mirror.visible = rich;
+    rain.visible = rich && falling;
+    ripples.visible = rich && (weatherNow === 'rain' || weatherNow === 'storm');
+    const drops = rain.material as THREE.LineBasicMaterial;
+    drops.color.set(weatherNow === 'snow' ? 0xffffff : 0xa8b4ff);
+    drops.opacity = weatherNow === 'snow' ? 0.85 : weatherNow === 'storm' ? 0.45 : 0.3;
+    haze.density = weatherNow === 'fog' ? 0.03 : weatherNow === 'snow' ? 0.016 : 0.011;
+  };
+
   // A few of the signs are on their last legs.
   const dying = signs.filter(() => Math.random() < 0.14).map((mesh) => ({ mat: mesh.material as THREE.MeshBasicMaterial, seed: Math.random() * 100 }));
   const train = city.getObjectByName('train')!;
@@ -1612,9 +1656,12 @@ export async function buildCity(): Promise<City> {
       }
     },
     setRich(on) {
-      mirror.visible = on;
-      rain.visible = on;
-      ripples.visible = on;
+      rich = on;
+      apply();
+    },
+    setWeather(next) {
+      weatherNow = next;
+      apply();
     },
     update(time, dt, eye) {
       puddleTime.value = time;
@@ -1658,12 +1705,14 @@ export async function buildCity(): Promise<City> {
       puffGeo.attributes.position.needsUpdate = true;
       if (rain.visible) {
         for (let i = 0; i < DROPS; i++) {
-          rainAt[i * 3 + 1] -= dt * 26;
+          // Rain streaks down fast; snow drifts slowly and sways.
+          const snow = weatherNow === 'snow';
+          rainAt[i * 3 + 1] -= dt * (snow ? 2.2 : weatherNow === 'storm' ? 34 : 26);
           if (rainAt[i * 3 + 1] < 0) rainAt[i * 3 + 1] += 22;
-          const x = eye.x + rainAt[i * 3];
+          const x = eye.x + rainAt[i * 3] + (snow ? Math.sin(time * 0.8 + i) * 0.6 : 0);
           const y = rainAt[i * 3 + 1];
           const z = eye.z + rainAt[i * 3 + 2];
-          rainPos.set([x, y, z, x + 0.03, y + 0.7, z], i * 6);
+          rainPos.set([x, y, z, x + (snow ? 0.07 : 0.03), y + (snow ? 0.07 : 0.7), z], i * 6);
         }
         rainGeo.attributes.position.needsUpdate = true;
       }
