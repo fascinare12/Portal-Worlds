@@ -1,221 +1,449 @@
-import * as THREE from 'three';
-import { Finish } from '../../src/finish';
-import { fbm, lerp, smoothstep } from '../../src/noise';
+import { Builder } from './builder';
+import type { BuildSave } from './builder';
+import { freshProgress, nextProblem, record, stretchProblem, summary } from './facts';
+import type { ChildId, Problem, Progress } from './facts';
+import { MODES } from './modes';
+import type { Mode, ModeId } from './modes';
 
 /**
- * Arrival in the desert. Deliberately small: dunes, a sky, and the pool you
- * came through, which is also the way home. Everything else about this world
- * is still to be decided, and nothing here is shared with the wood's rules.
+ * The desert: a building site where blocks are earned by answering sums.
+ *
+ * A child picks who they are, picks what to build, and builds it. Blocks run
+ * out quickly; ordering more means answering a question at that child's level.
+ * The sphinx paces the site and, if approached, asks three harder questions
+ * for blocks that cannot be had any other way.
+ *
+ * There is almost no writing on screen: letters for the three children,
+ * numbers, and pictures.
  */
 
-const canvas = document.getElementById('world') as HTMLCanvasElement;
+// ---- What is remembered between visits (on this device only) ----
+
+interface Saved {
+  progress: Record<ChildId, Progress>;
+  builds: Partial<Record<ChildId, Partial<Record<ModeId, BuildSave & { plan: boolean }>>>>;
+}
+const STORE = 'portal-worlds-desert-v1';
+function loadSaved(): Saved {
+  try {
+    const raw = localStorage.getItem(STORE);
+    if (raw) return JSON.parse(raw) as Saved;
+  } catch {
+    // Private windows and blocked storage: play still works, it just is not remembered.
+  }
+  return { progress: { C: freshProgress(), R: freshProgress(), S: freshProgress() }, builds: {} };
+}
+const saved = loadSaved();
+function persist(): void {
+  try {
+    localStorage.setItem(STORE, JSON.stringify(saved));
+  } catch {
+    // See above.
+  }
+}
+
+// ---- Small helpers for building the screens ----
+
+const ui = document.getElementById('ui') as HTMLDivElement;
 const veil = document.getElementById('veil') as HTMLDivElement;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
-const SKY_LOW = new THREE.Color(0xf6e2b8);
-const SKY_HIGH = new THREE.Color(0x7fb6e6);
-const SUN = new THREE.Vector3(0.5, 0.62, -0.6).normalize();
-const POOL_RADIUS = 3.4;
-
-const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(SKY_LOW, 0.006);
-scene.add(new THREE.HemisphereLight(0xfff1d0, 0xc99a5a, 1.2));
-const sun = new THREE.DirectionalLight(0xfff0cf, 2.2);
-sun.position.copy(SUN).multiplyScalar(100);
-scene.add(sun);
-
-/** Height of the sand; flat and slightly sunken around the pool. */
-function sandHeight(x: number, z: number): number {
-  const d = Math.hypot(x, z);
-  const dunes = Math.max(0, fbm(x * 0.012 + 5, z * 0.012 + 5, 3) * 30 - 9) + Math.sin(x * 0.05 + z * 0.03) * 1.5;
-  // A shallow basin holds the water; beyond its rim the dunes begin.
-  const rim = 0.25 + dunes * smoothstep(8, 70, d);
-  return lerp(-0.7, rim, smoothstep(POOL_RADIUS * 0.85, POOL_RADIUS + 2, d));
+function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', html = ''): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (html) node.innerHTML = html;
+  return node;
 }
+const hex = (n: number) => '#' + n.toString(16).padStart(6, '0');
+const wait = (ms: number) => new Promise<void>((done) => setTimeout(done, ms));
 
-// Sand.
-const sandGeo = new THREE.PlaneGeometry(420, 420, 300, 300);
-sandGeo.rotateX(-Math.PI / 2);
-const sp = sandGeo.attributes.position;
-const sc = new Float32Array(sp.count * 3);
-const light = new THREE.Color(0xf0d49a);
-const dark = new THREE.Color(0xd9b06c);
-const tone = new THREE.Color();
-for (let i = 0; i < sp.count; i++) {
-  const x = sp.getX(i);
-  const z = sp.getZ(i);
-  sp.setY(i, sandHeight(x, z));
-  tone.copy(dark).lerp(light, fbm(x * 0.05, z * 0.05, 3));
-  sc.set([tone.r, tone.g, tone.b], i * 3);
-}
-sandGeo.setAttribute('color', new THREE.BufferAttribute(sc, 3));
-sandGeo.computeVertexNormals();
-scene.add(new THREE.Mesh(sandGeo, new THREE.MeshLambertMaterial({ vertexColors: true })));
-
-// Sky.
-scene.add(
-  new THREE.Mesh(
-    new THREE.SphereGeometry(500, 32, 16),
-    new THREE.ShaderMaterial({
-      side: THREE.BackSide,
-      depthWrite: false,
-      uniforms: { uLow: { value: SKY_LOW }, uHigh: { value: SKY_HIGH }, uSun: { value: SUN } },
-      vertexShader: `varying vec3 vDir; void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-      fragmentShader: `
-        uniform vec3 uLow; uniform vec3 uHigh; uniform vec3 uSun; varying vec3 vDir;
-        void main() {
-          vec3 d = normalize(vDir);
-          vec3 col = mix(uLow, uHigh, smoothstep(0.0, 0.5, d.y));
-          float toSun = max(dot(d, uSun), 0.0);
-          col += vec3(1.0, 0.92, 0.7) * (pow(toSun, 8.0) * 0.3 + smoothstep(0.9985, 0.9992, toSun) * 2.5);
-          gl_FragColor = vec4(col, 1.0);
-        }`,
-    }),
-  ),
-);
-
-// The pool home: green and swirling, the colour of the wood on the other side.
-const poolUniforms = { uTime: { value: 0 } };
-const pool = new THREE.Mesh(
-  new THREE.CircleGeometry(POOL_RADIUS + 2, 48),
-  new THREE.ShaderMaterial({
-    uniforms: poolUniforms,
-    vertexShader: `varying vec2 vPos; void main() { vPos = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-    fragmentShader: `
-      uniform float uTime; varying vec2 vPos;
-      void main() {
-        float r = length(vPos) / ${POOL_RADIUS.toFixed(1)};
-        float arms = sin(atan(vPos.y, vPos.x) * 3.0 + r * 5.5 - uTime * 1.1) * 0.5 + 0.5;
-        float heart = smoothstep(1.3, 0.0, r);
-        vec3 wood = vec3(0.42, 0.72, 0.46);
-        vec3 col = mix(wood * 0.7, mix(wood, vec3(1.0), 0.7), heart * heart);
-        col = mix(col, mix(wood, vec3(1.0), 0.5), arms * 0.45 * smoothstep(1.5, 0.3, r));
-        gl_FragColor = vec4(pow(col, vec3(2.2)), 1.0);
-      }`,
-  }),
-);
-pool.rotation.x = -Math.PI / 2;
-pool.position.y = -0.3;
-scene.add(pool);
-
-// A ring of sandstone blocks around it.
-const blocks = new THREE.InstancedMesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  new THREE.MeshLambertMaterial({ color: 0xcfa66a }),
-  14,
-);
-const dummy = new THREE.Object3D();
-for (let i = 0; i < 14; i++) {
-  const a = (i / 14) * Math.PI * 2;
-  const d = POOL_RADIUS + 3 + Math.sin(i * 2.3) * 0.6;
-  const s = 0.5 + ((i * 37) % 10) / 20;
-  dummy.position.set(Math.cos(a) * d, sandHeight(Math.cos(a) * d, Math.sin(a) * d) + s * 0.3, Math.sin(a) * d);
-  dummy.rotation.set(0, a + i, 0);
-  dummy.scale.set(s * 1.4, s, s);
-  dummy.updateMatrix();
-  blocks.setMatrixAt(i, dummy.matrix);
-}
-scene.add(blocks);
-
-// Camera: stands by the pool and looks around. Drag to turn, pinch or scroll to step back.
-const camera = new THREE.PerspectiveCamera(50, 1, 0.3, 700);
-const finish = new Finish(renderer);
-let yaw = 0.6;
-let yawGoal = yaw;
-let back = 13;
-let backGoal = back;
-let rise = 0; // 0 = under the water, 1 = standing on the sand
-let diving = 0;
-
-function resize(): void {
-  renderer.setSize(window.innerWidth, window.innerHeight, false);
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  finish.resize();
-}
-window.addEventListener('resize', resize);
-resize();
-
-const pointers = new Map<number, { x: number; y: number }>();
-let tap: { x: number; y: number; t: number } | null = null;
-let pinch = 0;
-const ray = new THREE.Raycaster();
-
-canvas.addEventListener('pointerdown', (e) => {
-  canvas.setPointerCapture(e.pointerId);
-  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  tap = pointers.size === 1 ? { x: e.clientX, y: e.clientY, t: performance.now() } : null;
-  pinch = 0;
-});
-canvas.addEventListener('pointermove', (e) => {
-  const prev = pointers.get(e.pointerId);
-  if (!prev) return;
-  if (pointers.size === 1) yawGoal -= (e.clientX - prev.x) * 0.006;
-  prev.x = e.clientX;
-  prev.y = e.clientY;
-  if (pointers.size === 2) {
-    const [a, b] = [...pointers.values()];
-    const dist = Math.hypot(a.x - b.x, a.y - b.y);
-    if (pinch) backGoal = Math.min(40, Math.max(8, backGoal * (pinch / dist)));
-    pinch = dist;
+/** A group of bricks laid out in fives, so ten is always two full rows. */
+function bricks(n: number): HTMLDivElement {
+  const box = el('div', 'bricks');
+  for (let i = 0; i < n; i++) {
+    const b = el('i');
+    if (i >= 5 && i < 10 && n > 10) b.className = 'ten';
+    box.append(b);
   }
-});
-const release = (e: PointerEvent) => {
-  pointers.delete(e.pointerId);
-  pinch = 0;
-  const t = tap;
-  tap = null;
-  if (!t || diving || Math.hypot(e.clientX - t.x, e.clientY - t.y) > 10 || performance.now() - t.t > 400) return;
-  // Tap the pool to dive back to the wood.
-  ray.setFromCamera(
-    new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1),
-    camera,
-  );
-  const dir = ray.ray.direction;
-  if (dir.y >= 0) return;
-  const k = (pool.position.y - ray.ray.origin.y) / dir.y;
-  const hx = ray.ray.origin.x + dir.x * k;
-  const hz = ray.ray.origin.z + dir.z * k;
-  if (Math.hypot(hx, hz) < POOL_RADIUS + 1) {
-    diving = 0.001;
-    veil.style.background = '#4f9a5c';
-    setTimeout(() => veil.classList.remove('open'), 500);
-    setTimeout(() => {
-      window.location.href = '../../index.html#from-desert';
-    }, 1900);
+  return box;
+}
+
+function celebrate(): void {
+  const colours = ['#f2c84b', '#d9485f', '#2f7fd0', '#4f9a5c', '#ffffff'];
+  for (let i = 0; i < 60; i++) {
+    const s = el('i', 'spark');
+    s.style.left = '50vw';
+    s.style.top = '45vh';
+    s.style.background = colours[i % colours.length];
+    s.style.setProperty('--dx', `${(Math.random() - 0.5) * 90}vw`);
+    s.style.setProperty('--dy', `${(Math.random() - 0.6) * 90}vh`);
+    document.body.append(s);
+    setTimeout(() => s.remove(), 1700);
   }
-};
-canvas.addEventListener('pointerup', release);
-canvas.addEventListener('pointercancel', (e) => pointers.delete(e.pointerId));
-canvas.addEventListener(
-  'wheel',
-  (e) => {
-    e.preventDefault();
-    backGoal = Math.min(40, Math.max(8, backGoal * (1 + Math.max(-120, Math.min(120, e.deltaY)) * 0.0012)));
+}
+
+// ---- State ----
+
+let child: ChildId = 'C';
+let mode: Mode = MODES[0];
+let followPlan = true;
+
+const builder = new Builder(document.getElementById('world') as HTMLCanvasElement, {
+  needBlocks: (type) => order(type),
+  changed: () => {
+    keep();
+    drawPalette();
   },
-  { passive: false },
-);
+  finished: () => {
+    celebrate();
+    // Finishing a blueprint earns two of each special block.
+    mode.blocks.forEach((b, i) => {
+      if (b.special) builder.stock[i] += 2;
+    });
+    keep();
+    drawPalette();
+  },
+  sphinx: () => riddles(),
+  home: () => goHome(),
+});
+
+function keep(): void {
+  (saved.builds[child] ??= {})[mode.id] = { ...builder.save(), plan: followPlan };
+  persist();
+}
+
+// ---- Screens ----
+
+const who = el('section', 'screen');
+const what = el('section', 'screen');
+const report = el('section', 'screen');
+const top = el('div');
+const palette = el('div');
+const panel = el('div');
+top.id = 'top';
+palette.id = 'palette';
+panel.id = 'panel';
+report.id = 'report';
+ui.append(top, palette, who, what, report, panel);
+what.hidden = report.hidden = panel.hidden = top.hidden = palette.hidden = true;
+
+// Who is playing: one big letter each.
+{
+  const row = el('div', 'row');
+  for (const id of ['C', 'R', 'S'] as ChildId[]) {
+    const tile = el('button', `tile who-${id.toLowerCase()}`, id);
+    tile.onclick = () => {
+      child = id;
+      who.hidden = true;
+      what.hidden = false;
+    };
+    row.append(tile);
+  }
+  // A small corner for grown-ups: how each child is getting on.
+  const grown = el('button', 'round', '◔');
+  grown.onclick = () => {
+    report.replaceChildren();
+    const table = el('table');
+    for (const id of ['C', 'R', 'S'] as ChildId[]) {
+      const s = summary(id, saved.progress[id]);
+      const tr = el('tr');
+      tr.append(el('td', `who-${id.toLowerCase()}`, id), el('td', '', `▲ ${s.level} / ${s.levels}`), el('td', '', `✓ ${s.known} / ${s.facts}`), el('td', '', `? ${saved.progress[id].asked}`));
+      table.append(tr);
+    }
+    const back = el('button', 'round', '←');
+    back.onclick = () => {
+      report.hidden = true;
+      who.hidden = false;
+    };
+    report.append(table, back);
+    who.hidden = true;
+    report.hidden = false;
+  };
+  who.append(row, grown);
+}
+
+// What to build, and whether to follow a blueprint or build freely.
+{
+  const row = el('div', 'row');
+  for (const m of MODES) {
+    const tile = el('button', 'tile', `<svg viewBox="0 0 40 40">${m.icon}</svg>`);
+    tile.onclick = () => start(m);
+    row.append(tile);
+  }
+  const style = el('div', 'row');
+  const plan = el('button', 'tile small on', '<svg viewBox="0 0 40 40"><path d="M20 5 34 12v16l-14 7-14-7V12Z" fill="none" stroke="#4a3620" stroke-width="2.5" stroke-dasharray="4 3"/></svg>');
+  const free = el('button', 'tile small', '<svg viewBox="0 0 40 40"><path d="M20 5 34 12v16l-14 7-14-7V12Z" fill="#d8a45c"/><path d="M6 12l14 7 14-7M20 19v16" fill="none" stroke="#4a3620" stroke-width="2"/></svg>');
+  plan.onclick = () => {
+    followPlan = true;
+    plan.classList.add('on');
+    free.classList.remove('on');
+  };
+  free.onclick = () => {
+    followPlan = false;
+    free.classList.add('on');
+    plan.classList.remove('on');
+  };
+  style.append(plan, free);
+  const back = el('button', 'round', '←');
+  back.onclick = () => {
+    what.hidden = true;
+    who.hidden = false;
+  };
+  what.append(row, style, back);
+}
+
+function start(m: Mode): void {
+  mode = m;
+  const old = saved.builds[child]?.[m.id];
+  builder.load(m, old ?? { blocks: [], stock: m.blocks.map((b) => (b.special ? 0 : 0)), done: false }, followPlan);
+  // A few blocks to begin with, so the first thing a child does is build.
+  if (!old) builder.stock[0] = 6;
+  what.hidden = true;
+  top.hidden = palette.hidden = false;
+  drawTop();
+  drawPalette();
+  keep();
+}
+
+function drawTop(): void {
+  const left = el('div');
+  const right = el('div');
+  const back = el('button', 'round', '←');
+  back.onclick = () => {
+    keep();
+    top.hidden = palette.hidden = true;
+    what.hidden = false;
+  };
+  const home = el('button', 'round');
+  home.id = 'home';
+  home.onclick = () => goHome();
+  const rub = el('button', 'round' + (builder.erasing ? ' on' : ''), '⌫');
+  rub.onclick = () => {
+    builder.erasing = !builder.erasing;
+    drawTop();
+  };
+  // Clearing the plot takes two taps, so it cannot happen by accident.
+  const clear = el('button', 'round', '⟲');
+  clear.onclick = () => {
+    if (!clear.classList.contains('warn')) {
+      clear.classList.add('warn');
+      setTimeout(() => clear.classList.remove('warn'), 2500);
+      return;
+    }
+    delete saved.builds[child]?.[mode.id];
+    start(mode);
+  };
+  left.append(back, home);
+  right.append(rub, clear);
+  top.replaceChildren(left, right);
+}
+
+function drawPalette(): void {
+  palette.replaceChildren();
+  const left = builder.remaining();
+  mode.blocks.forEach((b, i) => {
+    const have = builder.stock[i];
+    const tile = el('button', 'block');
+    tile.style.background = hex(b.color);
+    if (b.indoor) tile.classList.add('indoor');
+    if (i === builder.selected && !builder.erasing) tile.classList.add('on');
+    if (b.special && have === 0) tile.classList.add('locked');
+    if (!b.special && have === 0) tile.classList.add('empty');
+    // Shows how many are in hand; when following a blueprint and out of a block it needs, shows a plus.
+    tile.append(el('b', '', have > 0 ? String(have) : b.special ? '?' : left[i] > 0 || !followPlan ? '+' : '0'));
+    tile.onclick = () => {
+      const again = builder.selected === i && !builder.erasing;
+      builder.selected = i;
+      builder.erasing = false;
+      drawTop();
+      drawPalette();
+      if (again || have === 0) order(i);
+    };
+    palette.append(tile);
+  });
+}
+
+// ---- Asking questions ----
+
+/** Shows one question and resolves with whether it was answered correctly and how fast. */
+function ask(problem: Problem, badge?: HTMLElement): Promise<{ correct: boolean; seconds: number } | null> {
+  return new Promise((resolve) => {
+    const card = el('div', 'card');
+    const began = performance.now();
+    const answerWith = async (value: number, reveal: () => void) => {
+      const correct = value === problem.answer;
+      card.classList.add(correct ? 'right' : 'wrong');
+      card.style.pointerEvents = 'none';
+      if (!correct) reveal();
+      await wait(correct ? 450 : 2200);
+      resolve({ correct, seconds: (performance.now() - began) / 1000 });
+    };
+    const close = el('button', 'close', '✕');
+    close.onclick = () => resolve(null);
+    card.append(close);
+    if (badge) card.append(badge);
+
+    if (problem.kind === 'type') {
+      let typed = '';
+      const box = el('span', 'box');
+      const sum = el('div', 'sum');
+      sum.append(problem.prompt, ' = ', box);
+      const hint = el('div');
+      const pad = el('div', 'pad');
+      const press = (label: string, cls = '') => {
+        const key = el('button', cls, label);
+        pad.append(key);
+        return key;
+      };
+      for (const d of '123456789') press(d).onclick = () => type(d);
+      press('⌫').onclick = () => {
+        typed = typed.slice(0, -1);
+        box.textContent = typed;
+      };
+      press('0').onclick = () => type('0');
+      press('✓', 'ok').onclick = () => {
+        if (typed === '') return;
+        void answerWith(Number(typed), () => {
+          box.textContent = String(problem.answer);
+          // After a missed times-table fact, show it as rows of bricks.
+          if (problem.array) {
+            const [across, down] = problem.array;
+            const dots = el('div', 'dots');
+            dots.style.gridTemplateColumns = `repeat(${across}, auto)`;
+            for (let i = 0; i < across * down; i++) dots.append(el('i'));
+            hint.append(dots);
+          }
+        });
+      };
+      const type = (d: string) => {
+        if (typed.length < 4) typed += d;
+        box.textContent = typed;
+      };
+      card.append(sum, hint, pad);
+    } else if (problem.kind === 'pickNumeral' || problem.kind === 'pickPile') {
+      const numerals = problem.kind === 'pickNumeral';
+      card.append(numerals ? bricks(problem.answer) : el('div', 'sum', problem.prompt));
+      const picks = el('div', 'picks');
+      for (const c of problem.choices!) {
+        const pick = el('button');
+        pick.append(numerals ? String(c) : bricks(c));
+        if (c === problem.answer) pick.dataset.is = '1';
+        pick.onclick = () => void answerWith(c, () => picks.querySelector('[data-is]')!.classList.add('is'));
+        picks.append(pick);
+      }
+      card.append(picks);
+    } else {
+      // Count out that many bricks by tapping them, then confirm.
+      card.append(el('div', 'sum', problem.prompt));
+      const tray = el('div', 'bricks tap');
+      const size = problem.answer <= 5 ? 10 : problem.answer <= 10 ? 15 : 25;
+      for (let i = 0; i < size; i++) {
+        const b = el('i');
+        b.onclick = () => b.classList.toggle('in');
+        tray.append(b);
+      }
+      const ok = el('button', 'round on', '✓');
+      ok.onclick = () =>
+        void answerWith(tray.querySelectorAll('.in').length, () => {
+          tray.querySelectorAll('i').forEach((b, i) => b.classList.toggle('in', i < problem.answer));
+        });
+      card.append(tray, ok);
+    }
+    panel.replaceChildren(card);
+    panel.hidden = false;
+  });
+}
+
+/** How many blocks a right answer brings. */
+function batch(problem: Problem, quick: boolean): number {
+  if (child === 'C') return problem.kind === 'count' ? Math.max(3, problem.answer) : 5;
+  return (child === 'R' ? 6 : 8) + (quick ? 3 : 0);
+}
+
+let busy = false;
+
+/** Order more of a block: answer a question, receive a batch. */
+async function order(type: number): Promise<void> {
+  if (busy || mode.blocks[type].special || builder.stock[type] >= 16) return;
+  busy = true;
+  builder.enabled = false;
+  const progress = saved.progress[child];
+  const problem = nextProblem(child, progress);
+  let first = true;
+  for (;;) {
+    const result = await ask(problem);
+    if (!result) break; // closed without answering
+    let gain = 0;
+    if (first) {
+      const outcome = record(child, progress, problem, result.correct, result.seconds);
+      if (result.correct) gain = batch(problem, outcome.quick);
+      if (outcome.levelUp) celebrate();
+    } else if (result.correct) {
+      gain = Math.ceil(batch(problem, false) / 2); // got it after being shown: half a batch
+    }
+    first = false;
+    persist();
+    if (result.correct) {
+      builder.stock[type] += gain;
+      panel.replaceChildren(el('div', 'card right', `<div class="gain">+${gain}</div>`));
+      await wait(650);
+      break;
+    }
+    // Missed: the answer was shown; now ask the very same thing again.
+  }
+  panel.hidden = true;
+  builder.enabled = true;
+  busy = false;
+  keep();
+  drawPalette();
+}
+
+/** The sphinx's three riddles: harder questions, for blocks that cannot be ordered. */
+async function riddles(): Promise<void> {
+  if (busy) return;
+  busy = true;
+  builder.enabled = false;
+  await wait(900); // let the camera come round to face it
+  const progress = saved.progress[child];
+  const specials = mode.blocks.map((b, i) => (b.special ? i : -1)).filter((i) => i >= 0);
+  let won = 0;
+  for (let q = 0; q < 3; q++) {
+    const badge = el('div', 'row');
+    badge.innerHTML = `<svg class="face" viewBox="0 0 40 40"><path d="M6 36V14l6-9h16l6 9v22h-7V22H13v14Z" fill="#2f5fa8"/><path d="M6 20h7M6 27h7M27 20h7M27 27h7" stroke="#e6bd4c" stroke-width="2.5"/><rect x="12" y="11" width="16" height="17" rx="2" fill="#d9b97c"/><rect x="11" y="8" width="18" height="4" fill="#e6bd4c"/><path d="M15 18h3M22 18h3" stroke="#3a2c22" stroke-width="2.4"/><rect x="18" y="28" width="4" height="7" fill="#e6bd4c"/></svg>`;
+    const pips = el('div', 'pips');
+    for (let i = 0; i < 3; i++) pips.append(el('i', i < won ? 'won' : ''));
+    badge.append(pips);
+    const problem = stretchProblem(child, progress);
+    const result = await ask(problem, badge);
+    if (!result) break;
+    record(child, progress, problem, result.correct, result.seconds);
+    persist();
+    if (result.correct) {
+      won++;
+      // Give whichever special block they have fewest of.
+      const give = specials.sort((a, b) => builder.stock[a] - builder.stock[b])[0];
+      builder.stock[give]++;
+    }
+  }
+  if (won === 3) celebrate();
+  panel.hidden = true;
+  builder.release();
+  builder.enabled = true;
+  busy = false;
+  keep();
+  drawPalette();
+}
+
+// ---- Arriving and leaving ----
+
+function goHome(): void {
+  keep();
+  veil.style.background = '#4f9a5c';
+  veil.classList.remove('open');
+  setTimeout(() => {
+    window.location.href = '../../index.html#from-desert';
+  }, 1500);
+}
 window.addEventListener('pageshow', (e) => {
   if (e.persisted) window.location.reload();
 });
-
 requestAnimationFrame(() => veil.classList.add('open'));
-
-const clock = new THREE.Clock();
-renderer.setAnimationLoop(() => {
-  const dt = Math.min(clock.getDelta(), 0.1);
-  poolUniforms.uTime.value = clock.elapsedTime;
-  yaw = lerp(yaw, yawGoal, 1 - Math.exp(-dt * 8));
-  back = lerp(back, backGoal, 1 - Math.exp(-dt * 6));
-  rise = Math.min(1, rise + dt / 2.4);
-  if (diving) diving = Math.min(1, diving + dt / 1.6);
-
-  // Rise out of the water on arrival; drop back into it when diving home.
-  const up = smoothstep(0, 1, rise) * (1 - smoothstep(0, 1, diving));
-  const d = lerp(0.5, back, up);
-  camera.position.set(Math.sin(yaw) * d, lerp(-0.1, 3.2 + back * 0.12, up), Math.cos(yaw) * d);
-  camera.lookAt(0, lerp(-3, 1.2, up), 0);
-
-  finish.render(scene, camera, 0.006, 0, 0.7);
-});

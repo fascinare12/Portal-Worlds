@@ -1,0 +1,500 @@
+import * as THREE from 'three';
+import { Finish } from '../../src/finish';
+import { fbm, lerp, smoothstep } from '../../src/noise';
+import { buildSphinx } from '../../src/world/creatures/sphinxModel';
+import { paint } from '../../src/world/paint';
+import { HEIGHT, PLOT } from './modes';
+import type { Cell, Mode } from './modes';
+
+/**
+ * The building site: a square plot in the desert where blocks are placed on a
+ * grid, a camera that swings all the way round it, and the sphinx that paces
+ * the edge. This file knows nothing about maths; it only reports what the
+ * builder tried to do (place a block they have none of, finish a blueprint,
+ * meet the sphinx) and leaves the rest to main.ts.
+ */
+
+export interface BuildSave {
+  /** Placed blocks as [x, y, z, block type]. */
+  blocks: [number, number, number, number][];
+  /** How many of each block type are waiting to be placed. */
+  stock: number[];
+  /** The blueprint has been completed at least once. */
+  done: boolean;
+}
+
+export interface BuilderEvents {
+  /** The child tried to place a block type they have run out of. */
+  needBlocks(type: number): void;
+  /** Something was placed or removed. */
+  changed(): void;
+  /** The last block of the blueprint went in. */
+  finished(): void;
+  /** The sphinx has caught the child. */
+  sphinx(): void;
+  /** The child tapped the pool that leads home. */
+  home(): void;
+}
+
+const HALF = PLOT / 2;
+const SKY_LOW = new THREE.Color(0xf6e2b8);
+const SKY_HIGH = new THREE.Color(0x7fb6e6);
+const SUN = new THREE.Vector3(0.5, 0.62, -0.6).normalize();
+const POOL = new THREE.Vector3(-13.5, 0.04, -13.5);
+const POOL_RADIUS = 2.6;
+const SPHINX_RING = 11.5;
+
+const keyOf = (x: number, y: number, z: number) => x + z * PLOT + y * PLOT * PLOT;
+const centre = (x: number, y: number, z: number, out: THREE.Vector3) => out.set(x - HALF + 0.5, y + 0.5, z - HALF + 0.5);
+
+/** Flat around the plot, rising into dunes further out. */
+function sandHeight(x: number, z: number): number {
+  const d = Math.hypot(x, z);
+  const dunes = Math.max(0, fbm(x * 0.012 + 5, z * 0.012 + 5, 3) * 30 - 8) + Math.sin(x * 0.05 + z * 0.03) * 1.5;
+  return dunes * smoothstep(24, 80, d);
+}
+
+export class Builder {
+  /** The block type that a tap places. */
+  selected = 0;
+  /** When on, a tap removes a block and gives it back. */
+  erasing = false;
+  stock: number[] = [];
+
+  private renderer: THREE.WebGLRenderer;
+  private scene = new THREE.Scene();
+  private camera = new THREE.PerspectiveCamera(50, 1, 0.3, 700);
+  private finish: Finish;
+  private ray = new THREE.Raycaster();
+
+  private mode: Mode | null = null;
+  private blocks = new Map<number, number>();
+  private meshes: THREE.InstancedMesh[] = [];
+  private meshKeys: number[][] = [];
+  private plot: THREE.Mesh;
+  private pool: THREE.Mesh;
+  private poolTime = { value: 0 };
+
+  private plan: Cell[] = [];
+  private planOn = false;
+  private done = false;
+  private ghost: THREE.InstancedMesh;
+  private ghostCells: Cell[] = [];
+
+  // Camera: swings round the middle of the plot.
+  private yaw = 0.7;
+  private pitch = 0.55;
+  private dist = 30;
+  private goal = { yaw: 0.7, pitch: 0.55, dist: 30 };
+  private look = new THREE.Vector3(0, 2.5, 0);
+
+  private sphinx = buildSphinx();
+  private sphinxAngle = 0;
+  private sphinxStride = 0;
+  private sphinxRest = 20; // seconds before it will catch anyone
+  private caught = false;
+  private life = 0;
+  /** While false, taps on the site do nothing (a panel is open over it). */
+  enabled = true;
+
+  constructor(
+    private canvas: HTMLCanvasElement,
+    private events: BuilderEvents,
+  ) {
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    this.finish = new Finish(this.renderer);
+
+    const { scene } = this;
+    scene.fog = new THREE.FogExp2(SKY_LOW, 0.004);
+    scene.add(new THREE.HemisphereLight(0xfff1d0, 0xc99a5a, 1.25));
+    const sun = new THREE.DirectionalLight(0xfff0cf, 2.1);
+    sun.position.copy(SUN).multiplyScalar(100);
+    scene.add(sun);
+
+    // Sand.
+    const sand = new THREE.PlaneGeometry(500, 500, 160, 160);
+    sand.rotateX(-Math.PI / 2);
+    const sp = sand.attributes.position;
+    const sc = new Float32Array(sp.count * 3);
+    const light = new THREE.Color(0xf0d49a);
+    const dark = new THREE.Color(0xd9b06c);
+    const tone = new THREE.Color();
+    for (let i = 0; i < sp.count; i++) {
+      const x = sp.getX(i);
+      const z = sp.getZ(i);
+      sp.setY(i, sandHeight(x, z));
+      tone.copy(dark).lerp(light, fbm(x * 0.05, z * 0.05, 3));
+      sc.set([tone.r, tone.g, tone.b], i * 3);
+    }
+    sand.setAttribute('color', new THREE.BufferAttribute(sc, 3));
+    sand.computeVertexNormals();
+    scene.add(new THREE.Mesh(sand, new THREE.MeshLambertMaterial({ vertexColors: true })));
+
+    // Sky.
+    scene.add(
+      new THREE.Mesh(
+        new THREE.SphereGeometry(500, 32, 16),
+        new THREE.ShaderMaterial({
+          side: THREE.BackSide,
+          depthWrite: false,
+          uniforms: { uLow: { value: SKY_LOW }, uHigh: { value: SKY_HIGH }, uSun: { value: SUN } },
+          vertexShader: `varying vec3 vDir; void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+          fragmentShader: `
+            uniform vec3 uLow; uniform vec3 uHigh; uniform vec3 uSun; varying vec3 vDir;
+            void main() {
+              vec3 d = normalize(vDir);
+              vec3 col = mix(uLow, uHigh, smoothstep(0.0, 0.5, d.y));
+              float toSun = max(dot(d, uSun), 0.0);
+              col += vec3(1.0, 0.92, 0.7) * (pow(toSun, 8.0) * 0.3 + smoothstep(0.9985, 0.9992, toSun) * 2.5);
+              gl_FragColor = vec4(col, 1.0);
+            }`,
+        }),
+      ),
+    );
+
+    // The plot: paved, with the grid marked out so every block has an obvious place.
+    const paving = document.createElement('canvas');
+    paving.width = paving.height = PLOT * 32;
+    const g = paving.getContext('2d')!;
+    for (let x = 0; x < PLOT; x++) {
+      for (let z = 0; z < PLOT; z++) {
+        g.fillStyle = (x + z) % 2 ? '#e9cf9c' : '#e2c48c';
+        g.fillRect(x * 32, z * 32, 32, 32);
+      }
+    }
+    g.strokeStyle = 'rgba(120, 90, 50, 0.35)';
+    g.lineWidth = 2;
+    for (let i = 0; i <= PLOT; i++) {
+      g.beginPath();
+      g.moveTo(i * 32, 0);
+      g.lineTo(i * 32, PLOT * 32);
+      g.moveTo(0, i * 32);
+      g.lineTo(PLOT * 32, i * 32);
+      g.stroke();
+    }
+    const pavingMap = new THREE.CanvasTexture(paving);
+    pavingMap.colorSpace = THREE.SRGBColorSpace;
+    this.plot = new THREE.Mesh(new THREE.PlaneGeometry(PLOT, PLOT), new THREE.MeshLambertMaterial({ map: pavingMap }));
+    this.plot.rotation.x = -Math.PI / 2;
+    this.plot.position.y = 0.02;
+    scene.add(this.plot);
+
+    // The pool home: green and swirling, the colour of the wood on the other side.
+    this.pool = new THREE.Mesh(
+      new THREE.CircleGeometry(POOL_RADIUS, 40),
+      new THREE.ShaderMaterial({
+        uniforms: { uTime: this.poolTime },
+        vertexShader: `varying vec2 vPos; void main() { vPos = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+        fragmentShader: `
+          uniform float uTime; varying vec2 vPos;
+          void main() {
+            float r = length(vPos) / ${POOL_RADIUS.toFixed(1)};
+            float arms = sin(atan(vPos.y, vPos.x) * 3.0 + r * 5.5 - uTime * 1.1) * 0.5 + 0.5;
+            float heart = smoothstep(1.3, 0.0, r);
+            vec3 wood = vec3(0.42, 0.72, 0.46);
+            vec3 col = mix(wood * 0.7, mix(wood, vec3(1.0), 0.7), heart * heart);
+            col = mix(col, mix(wood, vec3(1.0), 0.5), arms * 0.45);
+            gl_FragColor = vec4(pow(col, vec3(2.2)), 1.0);
+          }`,
+      }),
+    );
+    this.pool.rotation.x = -Math.PI / 2;
+    this.pool.position.copy(POOL);
+    scene.add(this.pool);
+    const rim = new THREE.Mesh(
+      new THREE.TorusGeometry(POOL_RADIUS + 0.25, 0.3, 6, 20),
+      new THREE.MeshLambertMaterial({ color: 0xcfa66a }),
+    );
+    rim.rotation.x = -Math.PI / 2;
+    rim.position.copy(POOL);
+    scene.add(rim);
+
+    // Outlines of the blocks still to place when following a blueprint.
+    this.ghost = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(0.94, 0.94, 0.94),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.3, depthWrite: false }),
+      PLOT * PLOT * HEIGHT,
+    );
+    this.ghost.count = 0;
+    scene.add(this.ghost);
+
+    this.sphinx.group.scale.setScalar(1.7);
+    scene.add(this.sphinx.group);
+
+    this.listen();
+    window.addEventListener('resize', () => this.resize());
+    this.resize();
+
+    const clock = new THREE.Clock();
+    this.renderer.setAnimationLoop(() => this.frame(Math.min(clock.getDelta(), 0.1)));
+  }
+
+  /** Starts (or resumes) a build. */
+  load(mode: Mode, save: BuildSave, followPlan: boolean): void {
+    for (const m of this.meshes) {
+      this.scene.remove(m);
+      m.dispose();
+    }
+    this.mode = mode;
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    this.meshes = mode.blocks.map((type) => {
+      const mat = paint({ color: type.color, dab: 0.45 });
+      if (type.glow) {
+        mat.emissive.set(type.glow);
+        mat.emissiveIntensity = 0.9;
+      }
+      const mesh = new THREE.InstancedMesh(box, mat, PLOT * PLOT * HEIGHT);
+      mesh.count = 0;
+      this.scene.add(mesh);
+      return mesh;
+    });
+    this.blocks.clear();
+    for (const [x, y, z, t] of save.blocks) this.blocks.set(keyOf(x, y, z), t);
+    this.stock = mode.blocks.map((_, i) => save.stock[i] ?? 0);
+    this.done = save.done;
+    this.plan = mode.blueprint();
+    this.planOn = followPlan;
+    this.selected = 0;
+    this.erasing = false;
+    this.refresh();
+  }
+
+  /** What to store so this build can be picked up again later. */
+  save(): BuildSave {
+    const blocks: BuildSave['blocks'] = [];
+    for (const [k, t] of this.blocks) {
+      blocks.push([k % PLOT, Math.floor(k / (PLOT * PLOT)), Math.floor(k / PLOT) % PLOT, t]);
+    }
+    return { blocks, stock: [...this.stock], done: this.done };
+  }
+
+  /** How many blueprint blocks are still to go, by block type. */
+  remaining(): number[] {
+    const left = this.stock.map(() => 0);
+    if (this.planOn) for (const c of this.plan) if (!this.blocks.has(keyOf(c.x, c.y, c.z))) left[c.t]++;
+    return left;
+  }
+
+  /** Lets go of a child the sphinx was holding. */
+  release(): void {
+    this.caught = false;
+    this.sphinxRest = 45;
+  }
+
+  private refresh(): void {
+    const m = new THREE.Matrix4();
+    const p = new THREE.Vector3();
+    this.meshKeys = this.meshes.map(() => []);
+    for (const [k, t] of this.blocks) {
+      const list = this.meshKeys[t];
+      centre(k % PLOT, Math.floor(k / (PLOT * PLOT)), Math.floor(k / PLOT) % PLOT, p);
+      this.meshes[t].setMatrixAt(list.length, m.makeTranslation(p.x, p.y, p.z));
+      list.push(k);
+    }
+    this.meshes.forEach((mesh, t) => {
+      mesh.count = this.meshKeys[t].length;
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.computeBoundingSphere();
+    });
+
+    // Show only the outlines that can be reached now: on the ground, or on top of a placed block.
+    this.ghostCells = [];
+    if (this.planOn && this.mode) {
+      const tint = new THREE.Color();
+      for (const c of this.plan) {
+        if (this.blocks.has(keyOf(c.x, c.y, c.z))) continue;
+        if (c.y > 0 && !this.blocks.has(keyOf(c.x, c.y - 1, c.z))) continue;
+        centre(c.x, c.y, c.z, p);
+        this.ghost.setMatrixAt(this.ghostCells.length, m.makeTranslation(p.x, p.y, p.z));
+        this.ghost.setColorAt(this.ghostCells.length, tint.set(this.mode.blocks[c.t].color));
+        this.ghostCells.push(c);
+      }
+    }
+    this.ghost.count = this.ghostCells.length;
+    this.ghost.instanceMatrix.needsUpdate = true;
+    if (this.ghost.instanceColor) this.ghost.instanceColor.needsUpdate = true;
+    this.ghost.computeBoundingSphere();
+  }
+
+  private place(x: number, y: number, z: number, type: number): void {
+    if (x < 0 || z < 0 || y < 0 || x >= PLOT || z >= PLOT || y >= HEIGHT) return;
+    if (this.blocks.has(keyOf(x, y, z))) return;
+    if (this.stock[type] <= 0) {
+      this.events.needBlocks(type);
+      return;
+    }
+    this.stock[type]--;
+    this.blocks.set(keyOf(x, y, z), type);
+    this.refresh();
+    this.events.changed();
+    if (this.planOn && !this.done && this.plan.every((c) => this.blocks.has(keyOf(c.x, c.y, c.z)))) {
+      this.done = true;
+      this.events.finished();
+    }
+  }
+
+  private tap(clientX: number, clientY: number): void {
+    if (!this.enabled || !this.mode) return;
+    this.ray.setFromCamera(
+      new THREE.Vector2((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1),
+      this.camera,
+    );
+    if (this.ray.intersectObject(this.sphinx.group, true).length) {
+      this.catchChild();
+      return;
+    }
+    const hit = this.ray.intersectObjects([this.ghost, ...this.meshes, this.plot, this.pool], false)[0];
+    if (!hit) return;
+
+    if (hit.object === this.pool) {
+      this.events.home();
+    } else if (hit.object === this.ghost) {
+      const c = this.ghostCells[hit.instanceId!];
+      if (!this.erasing) this.place(c.x, c.y, c.z, c.t);
+    } else if (hit.object === this.plot) {
+      if (!this.erasing) this.place(Math.floor(hit.point.x + HALF), 0, Math.floor(hit.point.z + HALF), this.selected);
+    } else {
+      const type = this.meshes.indexOf(hit.object as THREE.InstancedMesh);
+      const k = this.meshKeys[type][hit.instanceId!];
+      const x = k % PLOT;
+      const y = Math.floor(k / (PLOT * PLOT));
+      const z = Math.floor(k / PLOT) % PLOT;
+      if (this.erasing) {
+        this.blocks.delete(k);
+        this.stock[type]++;
+        this.refresh();
+        this.events.changed();
+      } else {
+        // Build onto whichever face of the block was tapped.
+        const n = hit.face!.normal;
+        this.place(x + Math.round(n.x), y + Math.round(n.y), z + Math.round(n.z), this.selected);
+      }
+    }
+  }
+
+  private catchChild(): void {
+    if (this.caught) return;
+    this.caught = true;
+    this.events.sphinx();
+  }
+
+  private listen(): void {
+    const pointers = new Map<number, { x: number; y: number }>();
+    let tap: { x: number; y: number; t: number } | null = null;
+    let pinch = 0;
+    const el = this.canvas;
+
+    el.addEventListener('pointerdown', (e) => {
+      el.setPointerCapture(e.pointerId);
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      tap = pointers.size === 1 ? { x: e.clientX, y: e.clientY, t: performance.now() } : null;
+      pinch = 0;
+    });
+    el.addEventListener('pointermove', (e) => {
+      const prev = pointers.get(e.pointerId);
+      if (!prev || this.caught) return;
+      if (pointers.size === 1) {
+        // Drag to swing right round the building and to look from higher or lower.
+        this.goal.yaw -= (e.clientX - prev.x) * 0.008;
+        this.goal.pitch = Math.min(1.35, Math.max(0.12, this.goal.pitch + (e.clientY - prev.y) * 0.006));
+      }
+      prev.x = e.clientX;
+      prev.y = e.clientY;
+      if (pointers.size === 2) {
+        const [a, b] = [...pointers.values()];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinch) this.goal.dist = Math.min(48, Math.max(9, this.goal.dist * (pinch / d)));
+        pinch = d;
+      }
+    });
+    const up = (e: PointerEvent) => {
+      pointers.delete(e.pointerId);
+      pinch = 0;
+      const t = tap;
+      tap = null;
+      if (e.type === 'pointercancel' || !t) return;
+      if (Math.hypot(e.clientX - t.x, e.clientY - t.y) <= 10 && performance.now() - t.t <= 450) this.tap(e.clientX, e.clientY);
+    };
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+    el.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        if (this.caught) return;
+        const step = Math.max(-120, Math.min(120, e.deltaY)) * 0.0012;
+        this.goal.dist = Math.min(48, Math.max(9, this.goal.dist * (1 + step)));
+      },
+      { passive: false },
+    );
+  }
+
+  private resize(): void {
+    this.renderer.setSize(window.innerWidth, window.innerHeight, false);
+    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.updateProjectionMatrix();
+    this.finish.resize();
+  }
+
+  private frame(dt: number): void {
+    this.life += dt;
+    this.poolTime.value = this.life;
+
+    // The sphinx paces a circle round the plot, and stops to face whoever it has caught.
+    const s = this.sphinx.group;
+    if (!this.caught) {
+      this.sphinxAngle += (dt * 1.0) / SPHINX_RING;
+      this.sphinxStride += dt * 5.5;
+      this.sphinxRest = Math.max(0, this.sphinxRest - dt);
+    }
+    const sx = Math.cos(this.sphinxAngle) * SPHINX_RING;
+    const sz = Math.sin(this.sphinxAngle) * SPHINX_RING;
+    s.position.set(sx, 0, sz);
+    const outward = Math.atan2(sx, sz);
+    const along = Math.atan2(-Math.sin(this.sphinxAngle), Math.cos(this.sphinxAngle));
+    s.rotation.y = this.caught ? outward : along;
+    this.sphinx.pose({
+      stand: 1,
+      curl: 0,
+      walking: this.caught ? 0 : 1,
+      stride: this.sphinxStride,
+      life: this.life,
+      glance: this.caught ? 0.4 : 0,
+    });
+
+    // Camera: ease towards where the child has swung it, or go face to face with the sphinx.
+    const ease = 1 - Math.exp(-dt * 7);
+    let yaw = this.goal.yaw;
+    let pitch = this.goal.pitch;
+    let dist = this.goal.dist;
+    const target = new THREE.Vector3(0, 2.5, 0);
+    if (this.caught) {
+      yaw = outward;
+      pitch = 0.16;
+      dist = 6.5;
+      target.set(sx, 1.5, sz);
+      // Turn the short way round.
+      while (yaw - this.yaw > Math.PI) yaw -= Math.PI * 2;
+      while (yaw - this.yaw < -Math.PI) yaw += Math.PI * 2;
+    }
+    this.yaw = lerp(this.yaw, yaw, this.caught ? ease * 0.5 : ease);
+    this.pitch = lerp(this.pitch, pitch, ease);
+    this.dist = lerp(this.dist, dist, ease);
+    this.look.lerp(target, ease);
+    if (!this.caught) this.goal.yaw = yaw; // keep the wrapped angle
+    this.camera.position.set(
+      this.look.x + Math.sin(this.yaw) * Math.cos(this.pitch) * this.dist,
+      this.look.y + Math.sin(this.pitch) * this.dist,
+      this.look.z + Math.cos(this.yaw) * Math.cos(this.pitch) * this.dist,
+    );
+    this.camera.lookAt(this.look);
+
+    // Zoom in on the sphinx and it catches you.
+    if (!this.caught && this.enabled && this.mode && this.sphinxRest === 0 && this.camera.position.distanceTo(s.position) < 7.5) {
+      this.catchChild();
+    }
+
+    this.finish.render(this.scene, this.camera, 0.004, 0, 0.75);
+  }
+}

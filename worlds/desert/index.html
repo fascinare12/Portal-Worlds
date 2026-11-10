@@ -5,16 +5,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <title>Portal Worlds: Desert</title>
     <style>
-      html, body { margin: 0; height: 100%; overflow: hidden; background: #e6cfa0; }
-      canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
-      canvas:active { cursor: grabbing; }
+      :root { --sand: #e6cfa0; --ink: #4a3620; --paper: #fff6e0; --good: #4f9a5c; --warm: #e0803a; }
+      html, body { margin: 0; height: 100%; overflow: hidden; background: var(--sand); font-family: ui-rounded, "Trebuchet MS", system-ui, sans-serif; color: var(--ink); -webkit-user-select: none; user-select: none; }
+      canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+      button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+      [hidden] { display: none !important; }
       /* Fills the screen with a pool's colour while passing between worlds. */
-      #veil { position: fixed; inset: 0; pointer-events: none; background: #e6cfa0; opacity: 1; transition: opacity 1.4s ease; }
+      #veil { position: fixed; inset: 0; pointer-events: none; background: var(--sand); opacity: 1; transition: opacity 1.4s ease; z-index: 9; }
       #veil.open { opacity: 0; }
+
+      .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4vmin; background: rgba(246, 226, 184, 0.86); z-index: 5; }
+      .row { display: flex; flex-wrap: wrap; justify-content: center; gap: 3vmin; padding: 0 3vmin; }
+      .tile { width: 22vmin; height: 22vmin; max-width: 170px; max-height: 170px; border-radius: 18%; background: var(--paper); box-shadow: 0 0.8vmin 0 rgba(74, 54, 32, 0.28); display: grid; place-items: center; font-size: 12vmin; font-weight: 800; }
+      .tile:active { transform: translateY(0.5vmin); box-shadow: 0 0.3vmin 0 rgba(74, 54, 32, 0.28); }
+      .tile svg { width: 72%; height: 72%; }
+      .tile.small { width: 14vmin; height: 14vmin; font-size: 7vmin; }
+      .tile.on { outline: 1vmin solid var(--warm); }
+      .who-c { color: #d9485f; } .who-r { color: #2f7fd0; } .who-s { color: #7a4fc9; }
+
+      .round { width: 13vmin; height: 13vmin; max-width: 68px; max-height: 68px; border-radius: 50%; background: var(--paper); box-shadow: 0 0.5vmin 0 rgba(74, 54, 32, 0.3); display: grid; place-items: center; font-size: 6vmin; font-weight: 800; }
+      .round.on { background: var(--warm); color: #fff; }
+      .round.warn { background: #d9485f; color: #fff; }
+      #top { position: fixed; top: 2vmin; left: 2vmin; right: 2vmin; display: flex; justify-content: space-between; pointer-events: none; z-index: 3; }
+      #top > div { display: flex; gap: 2vmin; pointer-events: auto; }
+      #home { background: radial-gradient(circle, #fff 0%, #8fd49a 45%, #4f9a5c 100%); }
+
+      #palette { position: fixed; left: 0; right: 0; bottom: 2vmin; display: flex; justify-content: center; gap: 1.6vmin; flex-wrap: wrap; padding: 0 2vmin; z-index: 3; }
+      .block { position: relative; width: 12vmin; height: 12vmin; max-width: 66px; max-height: 66px; border-radius: 16%; box-shadow: inset 0 -1vmin 0 rgba(0, 0, 0, 0.18), 0 0.5vmin 0 rgba(74, 54, 32, 0.3); }
+      .block.on { outline: 0.9vmin solid var(--paper); transform: translateY(-1.2vmin); }
+      .block.indoor { border-radius: 50% 50% 16% 16%; }
+      .block.locked { opacity: 0.45; }
+      .block b { position: absolute; right: -1vmin; top: -1.4vmin; min-width: 5.4vmin; padding: 0 1vmin; height: 5.4vmin; border-radius: 3vmin; background: var(--paper); font-size: 3.2vmin; line-height: 5.4vmin; text-align: center; box-shadow: 0 0.3vmin 0 rgba(74, 54, 32, 0.3); }
+      .block.empty b { background: var(--warm); color: #fff; }
+
+      #panel { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(74, 54, 32, 0.35); z-index: 6; }
+      .card { position: relative; background: var(--paper); border-radius: 5vmin; padding: 3vmin 4vmin; width: min(92vw, 560px); max-height: 96vh; overflow-y: auto; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: min(3vmin, 2vh); box-shadow: 0 1.2vmin 0 rgba(74, 54, 32, 0.3); }
+      .card.right { background: #dff3df; } .card.wrong { background: #ffe6d2; }
+      .card .close { position: absolute; right: 2vmin; top: 2vmin; font-size: 5vmin; width: 9vmin; height: 9vmin; opacity: 0.5; }
+      .sum { font-size: min(13vmin, 16vh, 84px); font-weight: 800; display: flex; align-items: center; gap: 2vmin; }
+      .sum .box { min-width: 1.6em; padding: 0 0.2em; border-radius: 0.2em; background: #fff; box-shadow: inset 0 0 0 0.06em var(--ink); text-align: center; min-height: 1.25em; }
+      .card.wrong .box { color: var(--warm); }
+      .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6vmin; width: min(70vmin, 330px); }
+      .pad button { height: min(12vmin, 16vh, 70px); border-radius: 2.4vmin; background: #fff; font-size: min(8vmin, 44px); font-weight: 800; box-shadow: 0 0.5vmin 0 rgba(74, 54, 32, 0.25); }
+      .pad .ok { background: var(--good); color: #fff; }
+      .picks { display: flex; gap: 3vmin; flex-wrap: wrap; justify-content: center; }
+      .picks > button { min-width: 20vmin; min-height: 20vmin; padding: 2vmin; border-radius: 3vmin; background: #fff; font-size: 12vmin; font-weight: 800; box-shadow: 0 0.6vmin 0 rgba(74, 54, 32, 0.25); display: grid; place-items: center; }
+      .picks > button.is { outline: 1vmin solid var(--good); }
+      .bricks { display: grid; grid-template-columns: repeat(5, auto); gap: 0.8vmin; }
+      .bricks i { width: 5.2vmin; height: 3.4vmin; max-width: 34px; max-height: 22px; border-radius: 0.7vmin; background: #d8a45c; box-shadow: inset 0 -0.6vmin 0 rgba(0, 0, 0, 0.2); }
+      .bricks i.ten { margin-bottom: 1.6vmin; }
+      .card > .bricks i { width: 9vmin; height: 6vmin; max-width: 60px; max-height: 40px; }
+      .bricks.tap i { width: 9vmin; height: 6vmin; max-width: 60px; max-height: 40px; background: #eadcc0; box-shadow: inset 0 0 0 0.4vmin #d8a45c; }
+      .bricks.tap i.in { background: #d8a45c; box-shadow: inset 0 -0.8vmin 0 rgba(0, 0, 0, 0.2); }
+      .dots { display: grid; gap: 0.5vmin; }
+      .dots i { width: 1.9vmin; height: 1.9vmin; max-width: 13px; max-height: 13px; border-radius: 22%; background: #d8a45c; }
+      .gain { font-size: 9vmin; font-weight: 800; color: var(--good); }
+      .face { width: 11vmin; height: 11vmin; max-width: 70px; max-height: 70px; }
+      .pips { display: flex; gap: 1.4vmin; } .pips i { width: 3vmin; height: 3vmin; border-radius: 50%; background: #e2d2b0; } .pips i.won { background: #f2c84b; }
+
+      #report { font-size: 4vmin; }
+      #report table { border-collapse: collapse; background: var(--paper); border-radius: 3vmin; overflow: hidden; }
+      #report td { padding: 2vmin 3.4vmin; text-align: center; font-variant-numeric: tabular-nums; }
+      #report td:first-child { font-size: 7vmin; font-weight: 800; }
+      .spark { position: fixed; width: 2.4vmin; height: 2.4vmin; border-radius: 30%; z-index: 8; pointer-events: none; animation: fly 1.6s ease-out forwards; }
+      @keyframes fly { to { transform: translate(var(--dx), var(--dy)) rotate(540deg); opacity: 0; } }
     </style>
   </head>
   <body>
     <canvas id="world"></canvas>
+    <div id="ui"></div>
     <div id="veil"></div>
     <script type="module" src="./main.ts"></script>
   </body>
