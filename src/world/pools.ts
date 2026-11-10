@@ -125,7 +125,7 @@ const waterFragment = /* glsl */ `
       col = mix(col, desertPicture(p, uTime), window);
     }
     // Woken by a touch: a ring of light runs outward and the whole pool brightens.
-    float wake = uPulse * (1.0 - uOpen);
+    float wake = uPulse * (1.0 - 0.6 * uOpen);
     float ring = smoothstep(0.25, 0.0, abs(r - (1.0 - uPulse) * 1.6));
     col += mix(sky, vec3(1.0), 0.6) * wake * (0.35 * smoothstep(1.4, 0.0, r) + 0.6 * ring);
     gl_FragColor = vec4(col, 1.0);
@@ -207,6 +207,8 @@ export interface PoolsView {
   setOpen(index: number, open: boolean, color?: number): void;
   /** How brightly each pool lights its surroundings right now, 0..1. */
   glow: number[];
+  /** Make one pool send up light, as when something passes through it. */
+  stir(index: number): void;
   /** Wake any pool this line of sight passes over; it answers with a burst of light. */
   touch(ray: THREE.Ray): void;
   update(time: number, dt: number, viewportHeight: number, eye: THREE.Vector3): void;
@@ -309,6 +311,9 @@ export function createPools(): PoolsView {
     group,
     openness,
     glow,
+    stir(index) {
+      pulse[index] = 1;
+    },
     touch(ray) {
       if (ray.direction.y >= -0.02) return;
       pools.forEach((p, i) => {

@@ -4,6 +4,7 @@ import { Finish } from './finish';
 import { lerp, smoothstep } from './noise';
 import { createAtmosphere } from './world/atmosphere';
 import { daylight, updateDaylight } from './world/daylight';
+import { createSphinx } from './world/creatures/sphinx';
 import { createForest } from './world/forest';
 import { pools } from './world/layout';
 import { wind } from './world/paint';
@@ -28,6 +29,11 @@ const poolsView = createPools();
 const atmosphere = createAtmosphere();
 const forest = createForest();
 scene.add(terrain.mesh, forest.group, poolsView.group, atmosphere.group);
+
+// Visitors from other worlds.
+const desertIndex = pools.findIndex((p) => p.world === 'desert');
+const sphinx = createSphinx(pools[desertIndex], () => poolsView.stir(desertIndex));
+scene.add(sphinx.group);
 
 const rig = new CameraRig(canvas, terrain.mesh);
 const finish = new Finish(renderer);
@@ -150,6 +156,7 @@ renderer.setAnimationLoop(() => {
   fog.density = lerp(0.003, 0.02, rig.zoom * rig.zoom);
   wind.value = time;
   poolsView.update(time, dt, window.innerHeight, rig.camera.position);
+  sphinx.update(dt);
   terrain.update(time, poolsView.glow);
   atmosphere.update(time, rig.zoom, window.innerHeight);
   const blur = LEVELS[level].blur ? smoothstep(0.6, 0.95, rig.zoom) : 0;
