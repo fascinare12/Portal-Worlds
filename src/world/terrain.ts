@@ -91,7 +91,11 @@ export function createTerrain(): TerrainView {
         // Sunlight falling through the leaves.
         float sunSpot = dapple(vWPos.xz, uTime);
         diffuseColor.rgb *= mix(0.86, 1.2, sunSpot);
-        diffuseColor.rgb += vec3(0.09, 0.07, 0.0) * sunSpot;`,
+        diffuseColor.rgb += vec3(0.09, 0.07, 0.0) * sunSpot;
+        // Uneven washes of pigment, so the ground is never one flat fill.
+        float wash = texture2D(uNoise, vWPos.xz * 0.16 + 0.5).r;
+        float stroke = texture2D(uNoise, vWPos.xz * vec2(0.9, 0.35)).r;
+        diffuseColor.rgb *= 0.9 + 0.2 * smoothstep(0.4, 0.6, wash) + 0.08 * (stroke - 0.5);`,
       )
       .replace(
         '#include <emissivemap_fragment>',

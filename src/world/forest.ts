@@ -1,12 +1,10 @@
 import * as THREE from 'three';
 import { fbm, lerp, mulberry32, noise2, smoothstep } from '../noise';
 import { groundHeight, poolAt, pools, trees } from './layout';
+import { paint, wind } from './paint';
 
 const dummy = new THREE.Object3D();
 const color = new THREE.Color();
-
-/** Shared clock for the breeze that moves leaves and grass. */
-export const wind = { value: 0 };
 
 /** Makes an instanced material sway gently; `amount` is in world units at the top of the shape. */
 function addSway(mat: THREE.Material, amount: number, byHeight: boolean): void {
@@ -72,14 +70,13 @@ function createTrees(): THREE.Group {
   const rand = mulberry32(22);
   const trunks = new THREE.InstancedMesh(
     trunkGeometry(),
-    new THREE.MeshLambertMaterial({ vertexColors: true }),
+    paint({ vertexColors: true, dab: 0.7 }),
     trees.length,
   );
   const barks = [0x5c4635, 0x6f5a47, 0x6f5a47, 0x8b8577, 0xd6cfbd];
 
   const BLOBS = 4;
-  const leafMat = new THREE.MeshLambertMaterial({ vertexColors: true });
-  addSway(leafMat, 0.09, false);
+  const leafMat = paint({ vertexColors: true, sway: 0.09, dab: 1.3 });
   const leaves = new THREE.InstancedMesh(blobGeometry(), leafMat, trees.length * BLOBS);
   // Mostly greens from deep teal to spring; a few amber and rose trees for accent.
   const foliage = [0x1f5d4a, 0x2e7a4f, 0x4c9a55, 0x79b05a, 0xa7bf5c];
@@ -172,7 +169,7 @@ function createGroundCover(): THREE.Group {
   group.add(tufts);
 
   const FLOWERS = 2600;
-  const flowerGeo = new THREE.IcosahedronGeometry(0.055, 0);
+  const flowerGeo = new THREE.IcosahedronGeometry(0.08, 0);
   flowerGeo.scale(1, 0.6, 1);
   flowerGeo.translate(0, 0.26, 0);
   const flowerMat = new THREE.MeshLambertMaterial({ emissive: 0x333333 });
@@ -214,7 +211,7 @@ function createDetails(): THREE.Group {
   const stoneGeo = new THREE.DodecahedronGeometry(1, 1);
   const stones = new THREE.InstancedMesh(
     stoneGeo,
-    new THREE.MeshLambertMaterial({ color: 0x8f978c }),
+    paint({ color: 0x8f978c, dab: 0.8 }),
     pools.length * perPool,
   );
   let n = 0;
@@ -243,7 +240,7 @@ function createDetails(): THREE.Group {
   capGeo.scale(1, 0.75, 1);
   capGeo.translate(0, 0.27, 0);
   const stems = new THREE.InstancedMesh(stemGeo, new THREE.MeshLambertMaterial({ color: 0xf2ead8 }), count);
-  const caps = new THREE.InstancedMesh(capGeo, new THREE.MeshLambertMaterial(), count);
+  const caps = new THREE.InstancedMesh(capGeo, paint({ dab: 0.4 }), count);
   const capColors = [0xc9584a, 0xd99a4a, 0xb59ad6, 0xefe6d2, 0xc9584a];
   for (let i = 0; i < count; i++) {
     // Mushrooms gather at the feet of trees.

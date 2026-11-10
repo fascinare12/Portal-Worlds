@@ -56,6 +56,8 @@ const waterFragment = /* glsl */ `
     open = mix(open, mirror, 0.2 * glance);
 
     gl_FragColor = vec4(mix(closed, open, uOpen), 1.0);
+
+    gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(2.2)); // authored in display colour, stored linear
   }
 `;
 
@@ -88,6 +90,7 @@ const beamFragment = /* glsl */ `
     float shimmer = 0.8 + 0.2 * sin(vUv.x * 30.0 + uTime * 1.2 + vUv.y * 5.0);
     vec3 col = mix(uColor, vec3(1.0), 0.35);
     gl_FragColor = vec4(col, fade * soft * shimmer * 0.32 * uOpen * uNear);
+    gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(2.2)); // authored in display colour, stored linear
   }
 `;
 
@@ -119,6 +122,7 @@ const sparkFragment = /* glsl */ `
   void main() {
     float d = length(gl_PointCoord - 0.5);
     gl_FragColor = vec4(vColor, smoothstep(0.5, 0.0, d) * vAlpha);
+    gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(2.2)); // authored in display colour, stored linear
   }
 `;
 
@@ -247,7 +251,7 @@ export function createPools(): PoolsView {
         beamMats[i].uniforms.uOpen.value = openness[i];
         // Standing inside the column would wash the whole view out, so it thins as you approach.
         const away = Math.hypot(eye.x - p.x, eye.z - p.z) / p.radius;
-        beamMats[i].uniforms.uNear.value = 0.15 + 0.85 * Math.min(1, Math.max(0, (away - 1.5) / 4));
+        beamMats[i].uniforms.uNear.value = 0.2 + 0.8 * Math.min(1, Math.max(0, (away - 1.5) / 4));
       });
       if (sparksDirty) sparkGeo.attributes.aOpen.needsUpdate = true;
     },

@@ -36,6 +36,7 @@ function createSky(): THREE.Mesh {
           vec3 col = mix(uHorizon, uZenith, smoothstep(0.0, 0.55, d.y));
           col += vec3(1.0, 0.9, 0.6) * pow(max(dot(d, uSun), 0.0), 6.0) * 0.25;
           gl_FragColor = vec4(col, 1.0);
+          gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(2.2)); // authored in display colour, stored linear
         }`,
     }),
   );
@@ -78,6 +79,7 @@ export function createAtmosphere(): Atmosphere {
         float along = smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.45, vUv.y);
         float breathe = 0.7 + 0.3 * sin(uTime * 0.4 + vSeed);
         gl_FragColor = vec4(1.0, 0.95, 0.72, across * along * breathe * uStrength);
+        gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(2.2)); // authored in display colour, stored linear
       }`,
   });
   const shafts = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), shaftMat, SHAFTS * 2);
@@ -146,6 +148,7 @@ export function createAtmosphere(): Atmosphere {
       void main() {
         float d = length(gl_PointCoord - 0.5);
         gl_FragColor = vec4(1.0, 0.96, 0.7, smoothstep(0.5, 0.0, d) * vAlpha * uStrength);
+        gl_FragColor.rgb = pow(gl_FragColor.rgb, vec3(2.2)); // authored in display colour, stored linear
       }`,
   });
   const motes = new THREE.Points(moteGeo, moteMat);

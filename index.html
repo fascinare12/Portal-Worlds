@@ -8,16 +8,10 @@
       html, body { margin: 0; height: 100%; overflow: hidden; background: #bcd8c0; }
       canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
       canvas:active { cursor: grabbing; }
-      /* Darkened, slightly warm corners, like the edge of a painted page. */
-      #vignette {
-        position: fixed; inset: 0; pointer-events: none;
-        background: radial-gradient(ellipse at center, rgba(40, 60, 30, 0) 55%, rgba(24, 44, 34, 0.38) 100%);
-      }
     </style>
   </head>
   <body>
     <canvas id="world"></canvas>
-    <div id="vignette"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
