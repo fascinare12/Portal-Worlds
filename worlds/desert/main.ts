@@ -1,9 +1,11 @@
+import { facePicture } from './blocks';
 import { Builder } from './builder';
 import type { BuildSave } from './builder';
 import { freshProgress, nextProblem, record, stretchProblem, summary } from './facts';
 import type { ChildId, Problem, Progress } from './facts';
 import { MODES } from './modes';
 import type { Mode, ModeId } from './modes';
+import { sound } from './sound';
 
 /**
  * The desert: a building site where blocks are earned by answering sums.
@@ -22,6 +24,9 @@ import type { Mode, ModeId } from './modes';
 interface Saved {
   progress: Record<ChildId, Progress>;
   builds: Partial<Record<ChildId, Partial<Record<ModeId, BuildSave & { plan: boolean }>>>>;
+  /** A small picture of each build, and which one each child worked on last. */
+  pictures?: Partial<Record<ChildId, Partial<Record<ModeId, string>>>>;
+  last?: Partial<Record<ChildId, ModeId>>;
 }
 const STORE = 'portal-worlds-desert-v1';
 function loadSaved(): Saved {
@@ -95,7 +100,7 @@ const builder = new Builder(document.getElementById('world') as HTMLCanvasElemen
   },
   finished: () => {
     celebrate();
-    builder.welcome(true, true); // the pharaoh, knight, monkeys, astronauts or townspeople come out
+    builder.celebrate(); // fireworks, a turn round the building, then the visitors come out
     // Finishing a blueprint earns two of each special block.
     mode.blocks.forEach((b, i) => {
       if (b.special) builder.stock[i] += 2;
@@ -103,7 +108,10 @@ const builder = new Builder(document.getElementById('world') as HTMLCanvasElemen
     keep();
     drawPalette();
   },
-  sphinx: () => riddles(),
+  sphinx: () => {
+    sound.sphinx();
+    void riddles();
+  },
   home: () => goHome(),
 });
 
@@ -112,7 +120,17 @@ function keep(): void {
   persist();
 }
 
+/** Takes a small picture of the build, to show on the choosing screens. */
+function picture(): void {
+  ((saved.pictures ??= {})[child] ??= {})[mode.id] = builder.snapshot();
+  (saved.last ??= {})[child] = mode.id;
+  persist();
+}
+
 // ---- Screens ----
+
+let drawWho = () => {};
+let drawWhat = () => {};
 
 const who = el('section', 'screen');
 const what = el('section', 'screen');
@@ -130,15 +148,28 @@ what.hidden = report.hidden = panel.hidden = top.hidden = palette.hidden = true;
 // Who is playing: one big letter each.
 {
   const row = el('div', 'row');
+  const tiles: Partial<Record<ChildId, HTMLButtonElement>> = {};
   for (const id of ['C', 'R', 'S'] as ChildId[]) {
     const tile = el('button', `tile who-${id.toLowerCase()}`, id);
     tile.onclick = () => {
       child = id;
       who.hidden = true;
+      drawWhat();
       what.hidden = false;
     };
+    tiles[id] = tile;
     row.append(tile);
   }
+  /** Each child's letter sits over a picture of the last thing they built. */
+  drawWho = () => {
+    for (const id of ['C', 'R', 'S'] as ChildId[]) {
+      const last = saved.last?.[id];
+      const pic = last && saved.pictures?.[id]?.[last];
+      tiles[id]!.style.backgroundImage = pic ? `linear-gradient(rgba(255,246,224,.55), rgba(255,246,224,.55)), url(${pic})` : '';
+      tiles[id]!.classList.toggle('pic', !!pic);
+    }
+  };
+  drawWho();
   // A small corner for grown-ups: how each child is getting on.
   const grown = el('button', 'round', '◔');
   grown.onclick = () => {
@@ -165,11 +196,20 @@ what.hidden = report.hidden = panel.hidden = top.hidden = palette.hidden = true;
 // What to build, and whether to follow a blueprint or build freely.
 {
   const row = el('div', 'row');
-  for (const m of MODES) {
+  const tiles = MODES.map((m) => {
     const tile = el('button', 'tile', `<svg viewBox="0 0 40 40">${m.icon}</svg>`);
     tile.onclick = () => start(m);
     row.append(tile);
-  }
+    return tile;
+  });
+  /** A build this child has already started shows as a picture, with its icon in the corner. */
+  drawWhat = () => {
+    MODES.forEach((m, i) => {
+      const pic = saved.pictures?.[child]?.[m.id];
+      tiles[i].style.backgroundImage = pic ? `url(${pic})` : '';
+      tiles[i].classList.toggle('pic', !!pic);
+    });
+  };
   const style = el('div', 'row');
   const plan = el('button', 'tile small on', '<svg viewBox="0 0 40 40"><path d="M20 5 34 12v16l-14 7-14-7V12Z" fill="none" stroke="#4a3620" stroke-width="2.5" stroke-dasharray="4 3"/></svg>');
   const free = el('button', 'tile small', '<svg viewBox="0 0 40 40"><path d="M20 5 34 12v16l-14 7-14-7V12Z" fill="#d8a45c"/><path d="M6 12l14 7 14-7M20 19v16" fill="none" stroke="#4a3620" stroke-width="2"/></svg>');
@@ -187,6 +227,7 @@ what.hidden = report.hidden = panel.hidden = top.hidden = palette.hidden = true;
   const back = el('button', 'round', '←');
   back.onclick = () => {
     what.hidden = true;
+    drawWho();
     who.hidden = false;
   };
   what.append(row, style, back);
@@ -203,6 +244,13 @@ function start(m: Mode): void {
   drawTop();
   drawPalette();
   keep();
+  // For trying out the celebration without finishing a blueprint: add ?party to the address.
+  if (new URLSearchParams(window.location.search).has('party')) {
+    setTimeout(() => {
+      celebrate();
+      builder.celebrate();
+    }, 1500);
+  }
 }
 
 function drawTop(): void {
@@ -211,7 +259,9 @@ function drawTop(): void {
   const back = el('button', 'round', '←');
   back.onclick = () => {
     keep();
+    picture();
     top.hidden = palette.hidden = true;
+    drawWhat();
     what.hidden = false;
   };
   const home = el('button', 'round');
@@ -240,11 +290,19 @@ function drawTop(): void {
 
 function drawPalette(): void {
   palette.replaceChildren();
-  mode.blocks.forEach((b, i) => {
+  // Ordinary blocks first, then the special ones that only the sphinx gives.
+  const sequence = mode.blocks.map((_, i) => i).sort((a, b) => Number(!!mode.blocks[a].special) - Number(!!mode.blocks[b].special));
+  for (const i of sequence) {
+    const b = mode.blocks[i];
     const have = builder.stock[i];
     const tile = el('button', 'block');
-    tile.style.background = hex(b.color);
-    if (b.indoor) tile.classList.add('indoor');
+    // The painted face, cut to the outline of the block's shape.
+    const look = el('span', `look shape-${b.shape ?? 'cube'}`);
+    look.style.backgroundColor = hex(b.color);
+    look.style.backgroundImage = `url(${(pictures[`${mode.id}:${i}`] ??= facePicture(b))})`;
+    tile.append(look);
+    if (i === arrived) tile.classList.add('arrived');
+    if (b.indoor) look.classList.add('indoor');
     if (i === builder.selected && !builder.erasing) tile.classList.add('on');
     if (b.special && have === 0) tile.classList.add('locked');
     if (!b.special && have === 0) tile.classList.add('empty');
@@ -256,11 +314,17 @@ function drawPalette(): void {
       builder.erasing = false;
       drawTop();
       drawPalette();
-      if (again || have === 0) order(i);
+      if (again || have === 0) void order(i);
     };
     palette.append(tile);
-  });
+  }
+  arrived = -1;
 }
+
+/** Pictures of block faces for the buttons, drawn once each. */
+const pictures: Record<string, string> = {};
+/** The block that has just been delivered, so its button can bounce. */
+let arrived = -1;
 
 // ---- Asking questions ----
 
@@ -271,6 +335,8 @@ function ask(problem: Problem, badge?: HTMLElement): Promise<{ correct: boolean;
     const began = performance.now();
     const answerWith = async (value: number, reveal: () => void) => {
       const correct = value === problem.answer;
+      if (correct) sound.right();
+      else sound.wrong();
       card.classList.add(correct ? 'right' : 'wrong');
       card.style.pointerEvents = 'none';
       if (!correct) reveal();
@@ -385,6 +451,8 @@ async function order(type: number): Promise<void> {
     persist();
     if (result.correct) {
       builder.stock[type] += gain;
+      arrived = type;
+      sound.deliver();
       panel.replaceChildren(el('div', 'card right', `<div class="gain">+${gain}</div>`));
       await wait(650);
       break;
@@ -419,6 +487,7 @@ async function riddles(): Promise<void> {
     record(child, progress, problem, result.correct, result.seconds);
     persist();
     if (result.correct) {
+      builder.sphinxNod();
       won++;
       // Give whichever special block they have fewest of.
       const give = specials.sort((a, b) => builder.stock[a] - builder.stock[b])[0];
@@ -438,6 +507,7 @@ async function riddles(): Promise<void> {
 
 function goHome(): void {
   keep();
+  if (!top.hidden) picture();
   veil.style.background = '#4f9a5c';
   veil.classList.remove('open');
   setTimeout(() => {

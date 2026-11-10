@@ -21,6 +21,10 @@
       .tile svg { width: 72%; height: 72%; }
       .tile.small { width: 14vmin; height: 14vmin; font-size: 7vmin; }
       .tile.on { outline: 1vmin solid var(--warm); }
+      /* A tile showing a picture of a build: the picture fills it and the icon shrinks into a corner. */
+      .tile.pic { background-size: cover; background-position: center; align-items: start; justify-items: start; }
+      .tile.pic svg { width: 34%; height: 34%; margin: 6%; padding: 4%; background: var(--paper); border-radius: 22%; }
+      .tile[class*="who-"].pic { place-items: center; text-shadow: 0 0 2vmin var(--paper), 0 0 1vmin var(--paper); }
       .who-c { color: #d9485f; } .who-r { color: #2f7fd0; } .who-s { color: #7a4fc9; }
 
       .round { width: 13vmin; height: 13vmin; max-width: 68px; max-height: 68px; border-radius: 50%; background: var(--paper); box-shadow: 0 0.5vmin 0 rgba(74, 54, 32, 0.3); display: grid; place-items: center; font-size: 6vmin; font-weight: 800; }
@@ -31,9 +35,19 @@
       #home { background: radial-gradient(circle, #fff 0%, #8fd49a 45%, #4f9a5c 100%); }
 
       #palette { position: fixed; left: 0; right: 0; bottom: 2vmin; display: flex; justify-content: center; gap: 1.6vmin; flex-wrap: wrap; padding: 0 2vmin; z-index: 3; }
-      .block { position: relative; width: 12vmin; height: 12vmin; max-width: 66px; max-height: 66px; border-radius: 16%; box-shadow: inset 0 -1vmin 0 rgba(0, 0, 0, 0.18), 0 0.5vmin 0 rgba(74, 54, 32, 0.3); }
-      .block.on { outline: 0.9vmin solid var(--paper); transform: translateY(-1.2vmin); }
-      .block.indoor { border-radius: 50% 50% 16% 16%; }
+      .block { position: relative; width: 12vmin; height: 12vmin; max-width: 66px; max-height: 66px; border-radius: 16%; }
+      .block .look { position: absolute; inset: 0; border-radius: 16%; background-size: cover; box-shadow: inset 0 -1vmin 0 rgba(0, 0, 0, 0.18); }
+      /* The button takes the outline of the block's shape. */
+      .look.shape-slab { clip-path: inset(42% 0 0 0 round 12%); }
+      .look.shape-slope { clip-path: polygon(0 100%, 100% 100%, 100% 8%); }
+      .look.shape-cone { clip-path: polygon(50% 4%, 100% 100%, 0 100%); }
+      .look.shape-post { clip-path: inset(0 32% 0 32% round 12%); }
+      .look.shape-pane { clip-path: inset(0 0 0 0 round 12%); opacity: 0.85; }
+      .look.shape-arch { clip-path: polygon(0 0, 100% 0, 100% 100%, 72% 100%, 72% 52%, 62% 38%, 50% 34%, 38% 38%, 28% 52%, 28% 100%, 0 100%); }
+      .block.arrived { animation: arrive 0.7s ease-out; }
+      @keyframes arrive { 0% { transform: translateY(-6vmin) scale(1.25); } 55% { transform: translateY(1vmin) scale(0.94); } 100% { transform: none; } }
+      .block.on { outline: 0.9vmin solid var(--paper); outline-offset: 0.3vmin; transform: translateY(-1.2vmin); }
+      .look.indoor { outline: 0.5vmin dashed rgba(255, 246, 224, 0.9); outline-offset: -1vmin; }
       .block.locked { opacity: 0.45; }
       .block b { position: absolute; right: -1vmin; top: -1.4vmin; min-width: 5.4vmin; padding: 0 1vmin; height: 5.4vmin; border-radius: 3vmin; background: var(--paper); font-size: 3.2vmin; line-height: 5.4vmin; text-align: center; box-shadow: 0 0.3vmin 0 rgba(74, 54, 32, 0.3); }
       .block.empty b { background: var(--warm); color: #fff; }

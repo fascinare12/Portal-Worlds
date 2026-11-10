@@ -27,6 +27,10 @@ export interface SphinxPose {
   life: number;
   /** 1 = head up and looking about. */
   glance: number;
+  /** Turn the head this far to one side (radians), to watch something. */
+  look?: number;
+  /** Dip the head this far (radians), for a nod. */
+  nod?: number;
 }
 
 function block(mat: THREE.Material, w: number, h: number, d: number, x = 0, y = 0, z = 0): THREE.Mesh {
@@ -97,7 +101,7 @@ export function buildSphinx(): { group: THREE.Group; pose(p: SphinxPose): void }
 
   return {
     group,
-    pose({ stand, curl, walking, stride, life, glance }) {
+    pose({ stand, curl, walking, stride, life, glance, look = 0, nod = 0 }) {
       // Body height: up on its legs, or down on its belly. It breathes while it rests.
       const breath = Math.sin(life * 1.3) * 0.012 * (1 - stand);
       body.position.y = lerp(0.33, 0.76, stand) + Math.abs(Math.sin(stride)) * 0.03 * walking + breath;
@@ -113,6 +117,8 @@ export function buildSphinx(): { group: THREE.Group; pose(p: SphinxPose): void }
       // and then, mid-rest, it lifts and looks about before going still again.
       head.rotation.x = lerp(0, 0.3, curl) * (1 - glance);
       head.rotation.y = lerp(0, -0.55, curl) * (1 - glance) + Math.sin(life * 0.9) * 0.5 * glance;
+      head.rotation.y += look;
+      head.rotation.x += nod;
 
       // Tail: sways behind when up; wraps round the body when curled, with the odd flick of the tip.
       const flick = Math.max(0, Math.sin(life * 0.8)) ** 12 * 0.5;

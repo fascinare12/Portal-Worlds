@@ -8,8 +8,16 @@ export type ModeId = 'pyramid' | 'castle' | 'treefort' | 'rocket' | 'town';
 /** Where a build stands: sand and dunes, a clearing in a wood, or a launch pad by the sea. */
 export type Setting = 'desert' | 'forest' | 'coast';
 
+/** What a block is made of, which decides the pattern painted on it. */
+export type Face = 'stone' | 'brick' | 'plank' | 'bark' | 'leaf' | 'tile' | 'panel' | 'cloth' | 'sand' | 'glass' | 'plain';
+
+/** The solid form of a block. Anything but a cube turns to face the builder as it is placed. */
+export type Shape = 'cube' | 'slab' | 'slope' | 'cone' | 'arch' | 'post' | 'pane';
+
 export interface BlockType {
   color: number;
+  face?: Face;
+  shape?: Shape;
   /** Indoor blocks furnish the inside; outdoor blocks make the shell. */
   indoor?: boolean;
   /** Colour it glows, for lamps, torches and engines. */
@@ -40,21 +48,25 @@ export const PLOT = 31;
 export const HEIGHT = 12;
 const MID = Math.floor(PLOT / 2);
 
-const GOLD: BlockType = { color: 0xf2c84b, special: true };
-const GLASS: BlockType = { color: 0x9fe0f5, glow: 0x2a6a80, special: true };
+const GOLD: BlockType = { color: 0xf2c84b, face: 'panel', special: true };
+const GLASS: BlockType = { color: 0x9fe0f5, face: 'glass', shape: 'pane', glow: 0x2a6a80, special: true };
 
 const pyramid: Mode = {
   id: 'pyramid',
   setting: 'desert',
   icon: '<path d="M20 5 37 34H3Z" fill="#e2bd76"/><path d="M20 5 37 34H20Z" fill="#c79b55"/>',
   blocks: [
-    { color: 0xdcb878 }, // sandstone
-    { color: 0xf1e6cc }, // limestone casing
-    { color: 0x8a6f58 }, // granite
-    { color: 0x2f9a9a, indoor: true }, // painted wall
-    { color: 0xffb347, glow: 0xff7a1a, indoor: true }, // torch
+    { color: 0xdcb878, face: 'stone' }, // sandstone
+    { color: 0xf1e6cc, face: 'stone' }, // limestone casing
+    { color: 0x8a6f58, face: 'stone' }, // granite
+    { color: 0x2f9a9a, face: 'cloth', indoor: true }, // painted wall
+    { color: 0xffb347, glow: 0xff7a1a, shape: 'post', indoor: true }, // torch
     GOLD,
-    { color: 0x3a66c9, special: true }, // lapis
+    { color: 0x3a66c9, face: 'stone', special: true }, // lapis
+    // Added later; new blocks go at the end so saved builds keep their meaning.
+    { color: 0xe9d6a6, face: 'sand', shape: 'slope' }, // smooth casing for the sides
+    { color: 0xdcb878, face: 'stone', shape: 'slab' }, // step
+    { color: 0xf1e6cc, face: 'sand', shape: 'cone' }, // capstone
   ],
   blueprint() {
     const cells: Cell[] = [];
@@ -76,13 +88,16 @@ const castle: Mode = {
   setting: 'forest',
   icon: '<path d="M5 34V12h5v4h4v-4h5v4h3v-4h5v4h4v-4h5v22Z" fill="#9aa3ad"/><path d="M17 34V24a3 3 0 0 1 6 0v10Z" fill="#5d4a3e"/>',
   blocks: [
-    { color: 0xa7adb5 }, // stone
-    { color: 0x767d88 }, // dark stone
-    { color: 0x7a5a3c }, // timber
-    { color: 0xb83a3a, indoor: true }, // carpet
-    { color: 0xffc766, glow: 0xff8c1a, indoor: true }, // torch
+    { color: 0xa7adb5, face: 'stone' }, // stone
+    { color: 0x767d88, face: 'stone' }, // dark stone
+    { color: 0x7a5a3c, face: 'plank' }, // timber
+    { color: 0xb83a3a, face: 'cloth', shape: 'slab', indoor: true }, // carpet
+    { color: 0xffc766, glow: 0xff8c1a, shape: 'post', indoor: true }, // torch
     GOLD,
     GLASS,
+    { color: 0xa7adb5, face: 'stone', shape: 'arch' }, // gateway
+    { color: 0xa7adb5, face: 'stone', shape: 'slab' }, // battlement
+    { color: 0x4f5d7a, face: 'tile', shape: 'cone' }, // tower roof
   ],
   blueprint() {
     const cells: Cell[] = [];
@@ -112,13 +127,16 @@ const treefort: Mode = {
   setting: 'forest',
   icon: '<rect x="17" y="18" width="6" height="17" fill="#7a5a3c"/><circle cx="20" cy="13" r="11" fill="#4f9a55"/><rect x="9" y="20" width="22" height="4" fill="#b98a55"/>',
   blocks: [
-    { color: 0xc49a62 }, // planks
-    { color: 0x6b4a34 }, // bark
-    { color: 0x4f9a55 }, // leaves
-    { color: 0xe6c85a, indoor: true }, // rug
-    { color: 0xffe08a, glow: 0xffb030, indoor: true }, // lantern
+    { color: 0xc49a62, face: 'plank' }, // planks
+    { color: 0x6b4a34, face: 'bark' }, // bark
+    { color: 0x4f9a55, face: 'leaf' }, // leaves
+    { color: 0xe6c85a, face: 'cloth', shape: 'slab', indoor: true }, // rug
+    { color: 0xffe08a, glow: 0xffb030, shape: 'post', indoor: true }, // lantern
     GOLD,
-    { color: 0xd94f4f, special: true }, // flag
+    { color: 0xd94f4f, face: 'cloth', shape: 'pane', special: true }, // flag
+    { color: 0xc49a62, face: 'plank', shape: 'slab' }, // decking
+    { color: 0x6b4a34, face: 'bark', shape: 'post' }, // pole, for rails and ladders
+    { color: 0xc49a62, face: 'plank', shape: 'slope' }, // roof
   ],
   blueprint() {
     const cells: Cell[] = [];
@@ -141,13 +159,16 @@ const rocket: Mode = {
   setting: 'coast',
   icon: '<path d="M20 3c7 7 8 17 6 26H14C12 20 13 10 20 3Z" fill="#eef1f5"/><circle cx="20" cy="15" r="3.5" fill="#6fd0ee"/><path d="M14 24 7 34h8Zm12 0 7 10h-8Z" fill="#d94f4f"/><path d="M16 29h8l-4 9Z" fill="#ffa53a"/>',
   blocks: [
-    { color: 0xeef1f5 }, // hull
-    { color: 0xd94f4f }, // fins and nose
-    { color: 0x8f98a6 }, // metal
-    { color: 0x4a78d9, indoor: true }, // seat
-    { color: 0x6ff0e0, glow: 0x1fb0a0, indoor: true }, // control panel
-    { color: 0xffa53a, glow: 0xff5a10, special: true }, // flame
+    { color: 0xeef1f5, face: 'panel' }, // hull
+    { color: 0xd94f4f, face: 'panel' }, // fins and nose
+    { color: 0x8f98a6, face: 'panel' }, // metal
+    { color: 0x4a78d9, face: 'cloth', shape: 'slab', indoor: true }, // seat
+    { color: 0x6ff0e0, glow: 0x1fb0a0, face: 'panel', indoor: true }, // control panel
+    { color: 0xffa53a, glow: 0xff5a10, shape: 'cone', special: true }, // flame
     GLASS,
+    { color: 0xd94f4f, face: 'panel', shape: 'slope' }, // fin
+    { color: 0xd94f4f, face: 'panel', shape: 'cone' }, // nose cone
+    { color: 0x8f98a6, face: 'panel', shape: 'post' }, // strut
   ],
   blueprint() {
     const cells: Cell[] = [];
@@ -176,13 +197,16 @@ const town: Mode = {
   setting: 'forest',
   icon: '<path d="M3 34V20l8-7 8 7v14Z" fill="#c9694f"/><path d="M21 34V16l8-7 8 7v18Z" fill="#f1e2c2"/><path d="M1 21 11 12l10 9M19 17 29 8l10 9" fill="none" stroke="#a84f3a" stroke-width="2.5"/>',
   blocks: [
-    { color: 0xc9694f }, // brick
-    { color: 0xf1e2c2 }, // plaster
-    { color: 0xa84f3a }, // roof tile
-    { color: 0xb98a55, indoor: true }, // floorboards
-    { color: 0xfff0a8, glow: 0xffc040, indoor: true }, // lamp
+    { color: 0xc9694f, face: 'brick' }, // brick
+    { color: 0xf1e2c2, face: 'sand' }, // plaster
+    { color: 0xa84f3a, face: 'tile' }, // roof tile
+    { color: 0xb98a55, face: 'plank', shape: 'slab', indoor: true }, // floorboards
+    { color: 0xfff0a8, glow: 0xffc040, shape: 'post', indoor: true }, // lamp
     GOLD,
     GLASS,
+    { color: 0xa84f3a, face: 'tile', shape: 'slope' }, // pitched roof
+    { color: 0x7a5a3c, face: 'plank', shape: 'arch' }, // doorway
+    { color: 0xa84f3a, face: 'tile', shape: 'cone' }, // pointed roof
   ],
   blueprint() {
     const cells: Cell[] = [];
