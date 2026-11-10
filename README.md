@@ -30,7 +30,7 @@ in `vite.config.ts`, and set `world: '<name>'` on a pool in
 | World | Folder | Pool |
 |---|---|---|
 | Desert | `worlds/desert/` | pale sand; shows a pyramid being built |
-| (not built yet) | | red; shows 日本 being sprayed on a wall. Cannot be dived into yet |
+| Shibuya | `worlds/shibuya/` | red; shows 日本 being sprayed on a wall |
 
 ## Visitors
 
