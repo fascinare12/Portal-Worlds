@@ -3,6 +3,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import asphaltUrl from './textures/asphalt.webp';
 import concreteUrl from './textures/concrete.webp';
 import shutterUrl from './textures/shutter.webp';
+import { MURALS } from './murals';
 import { WORDS } from './words';
 
 /**
@@ -415,6 +416,11 @@ export async function buildCity(): Promise<City> {
     const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), turn), new THREE.Vector3(sx, sy, sz));
     parts[kind].push({ m, c: new THREE.Color(color) });
   };
+  // Stretches of wall where her tags go, and the murals still to be hung. Both are placed on
+  // building fronts as the buildings are made, so nothing hangs past the edge of a wall.
+  const slots: { x: number; z: number; turn: number }[] = [];
+  const muralQueue = WORDS.filter((w) => w.mural);
+  let fronts = 0;
   const signs: THREE.Mesh[] = [];
   const spills: { x: number; z: number; color: string }[] = [];
   const thing = (word: string, object: THREE.Object3D, lift: number) => {
@@ -491,7 +497,44 @@ export async function buildCity(): Promise<City> {
     front.position.set(fx, 1.7, fz);
     front.rotation.y = turn;
     city.add(front);
-    if (floor.shutter && rnd() < 0.7) {
+    // Every other building front carries a mural: a picture with its word. The rest hold her tags
+    // and smaller wordless pieces, all kept inside the width of the wall.
+    const mural = fronts++ % 2 === 1 ? muralQueue.shift() : undefined;
+    if (mural) {
+      const [c, g] = canvas(384, 288);
+      MURALS[mural.id](g);
+      g.font = `900 ${mural.kana.length > 3 ? 46 : 58}px ${KANA_FONT}`;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.lineJoin = 'round';
+      g.strokeStyle = '#0a0818';
+      g.lineWidth = 12;
+      g.strokeText(mural.kana, 192, 254);
+      g.fillStyle = '#ffffff';
+      g.fillText(mural.kana, 192, 254);
+      const size = Math.min(4, wide - 1.4);
+      const picture = new THREE.Mesh(new THREE.PlaneGeometry(size, size * 0.75), new THREE.MeshBasicMaterial({ map: texture(c), transparent: true, depthWrite: false }));
+      const [mx, mz] = onFace(0, 0.08);
+      picture.position.set(mx, 1.75, mz);
+      picture.rotation.y = turn;
+      picture.renderOrder = 2;
+      thing(mural.id, picture, 2);
+    } else {
+      for (const along of wide >= 6.8 ? [-wide / 4, wide / 4] : [0]) {
+        const [tx, tz] = onFace(along, 0.09);
+        slots.push({ x: tx, z: tz, turn });
+      }
+      for (let i = 0; i < 2; i++) {
+        const size = 0.5 + rnd() * 0.5;
+        const sw = Math.min(3.4 * size, wide - 1);
+        const piece = new THREE.Mesh(new THREE.PlaneGeometry(sw, sw / 2), new THREE.MeshBasicMaterial({ map: scribble(), transparent: true, depthWrite: false }));
+        const [sx, sz] = onFace((rnd() - 0.5) * (wide - sw - 0.6), 0.05);
+        piece.position.set(sx, 0.7 + rnd() * 2, sz);
+        piece.rotation.set(0, turn, (rnd() - 0.5) * 0.16);
+        city.add(piece);
+      }
+    }
+    if (floor.shutter && !mural && rnd() < 0.7) {
       // A big piece painted right across the shutter.
       const piece = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(wide - 1.2, 7), 2.6), new THREE.MeshBasicMaterial({ map: scribble(true), transparent: true, depthWrite: false }));
       const [px, pz] = onFace(0, 0.06);
@@ -813,26 +856,9 @@ export async function buildCity(): Promise<City> {
     }
   }
 
-  // ---- Graffiti: wordless pieces to begin with; her own tags are added as she learns.
-  const slots: { x: number; z: number; side: number }[] = [];
-  for (let k = 0; k < 15; k++) {
-    for (const side of [-1, 1]) {
-      const z = 43 - k * 6 - (side > 0 ? 3 : 0);
-      if (Math.abs(z) < 11) continue;
-      slots.push({ x: side * (KERB - 0.1), z, side });
-    }
-  }
-  for (let i = 0; i < 70; i++) {
-    const side = rnd() < 0.5 ? -1 : 1;
-    const z = (rnd() * 2 - 1) * 46;
-    if (Math.abs(z) < 10) continue;
-    const size = 0.7 + rnd() * 0.8;
-    const s = new THREE.Mesh(new THREE.PlaneGeometry(3.4 * size, 1.7 * size), new THREE.MeshBasicMaterial({ map: scribble(), transparent: true, depthWrite: false }));
-    s.position.set(side * (KERB - 0.06 - rnd() * 0.02), 0.6 + rnd() * 2.4, z);
-    s.rotation.y = (-side * Math.PI) / 2;
-    s.rotation.z = (rnd() - 0.5) * 0.2;
-    city.add(s);
-  }
+  if (muralQueue.length) console.warn(`Shibuya: ${muralQueue.length} murals found no wall`);
+  // Her tags fill the walls nearest to where she arrives first.
+  slots.sort((a, b) => Math.hypot(a.x, a.z - 41) - Math.hypot(b.x, b.z - 41));
 
   // ---- The things that carry a word.
 
@@ -1469,15 +1495,17 @@ export async function buildCity(): Promise<City> {
     puddle,
     tags,
     tag(id, kana, filled, animate) {
-      if (nextSlot >= slots.length) return;
-      const s = slots[nextSlot++];
+      // Once the ground-floor walls are full, a second row starts above the ledge.
+      const row = Math.floor(nextSlot / slots.length);
+      const s = slots[nextSlot++ % slots.length];
       const colour = NEON[nextSlot % NEON.length];
       const mesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(4.2, 2.1),
+        new THREE.PlaneGeometry(3.2, 1.6),
         new THREE.MeshBasicMaterial({ map: tagTexture(kana, colour, filled), transparent: true, depthWrite: false, opacity: animate ? 0 : 1 }),
       );
-      mesh.position.set(s.x, 1.9, s.z);
-      mesh.rotation.y = (-s.side * Math.PI) / 2;
+      mesh.position.set(s.x, 1.9 + row * 3.2, s.z);
+      mesh.rotation.y = s.turn;
+      mesh.renderOrder = 5;
       scene.add(mesh);
       tags.push({ id, kana, mesh, age: animate ? 0 : 9, filled, colour });
     },

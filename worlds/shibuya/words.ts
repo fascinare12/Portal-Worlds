@@ -13,6 +13,8 @@ export interface Word {
   english: string;
   /** Food and drink at the stall are asked for, not looked for: "〜 を ください". */
   food?: boolean;
+  /** Painted on a wall as a picture, because it has no place in a city street. */
+  mural?: boolean;
 }
 
 export const WORDS: Word[] = [
@@ -43,6 +45,21 @@ export const WORDS: Word[] = [
   { id: 'kaban', kana: 'かばん', romaji: 'kaban', english: 'bag' },
   { id: 'jitensha', kana: 'じてんしゃ', romaji: 'jitensha', english: 'bicycle' },
   { id: 'tori', kana: 'とり', romaji: 'tori', english: 'bird' },
+  // Murals: common words with no place in a city street, painted on the walls.
+  { id: 'yama', kana: 'やま', romaji: 'yama', english: 'mountain', mural: true },
+  { id: 'umi', kana: 'うみ', romaji: 'umi', english: 'sea', mural: true },
+  { id: 'taiyou', kana: 'たいよう', romaji: 'taiyō', english: 'sun', mural: true },
+  { id: 'kumo', kana: 'くも', romaji: 'kumo', english: 'cloud', mural: true },
+  { id: 'niji', kana: 'にじ', romaji: 'niji', english: 'rainbow', mural: true },
+  { id: 'ame', kana: 'あめ', romaji: 'ame', english: 'rain', mural: true },
+  { id: 'yuki', kana: 'ゆき', romaji: 'yuki', english: 'snow', mural: true },
+  { id: 'hi', kana: 'ひ', romaji: 'hi', english: 'fire', mural: true },
+  { id: 'ie', kana: 'いえ', romaji: 'ie', english: 'house', mural: true },
+  { id: 'fune', kana: 'ふね', romaji: 'fune', english: 'boat', mural: true },
+  { id: 'me', kana: 'め', romaji: 'me', english: 'eye', mural: true },
+  { id: 'te', kana: 'て', romaji: 'te', english: 'hand', mural: true },
+  { id: 'usagi', kana: 'うさぎ', romaji: 'usagi', english: 'rabbit', mural: true },
+  { id: 'hebi', kana: 'へび', romaji: 'hebi', english: 'snake', mural: true },
 ];
 
 export const wordById = (id: string) => WORDS.find((w) => w.id === id)!;
