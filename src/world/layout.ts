@@ -62,8 +62,9 @@ function makePools(): Pool[] {
         p.scene = 1;
       }
       if (i === 3) {
-        // A second doorway, red. Its world is not built yet, so it shows its picture but cannot be dived into.
+        // The second doorway, red: a city street at night, where Japanese is learned.
         p.color = 0xe0383a;
+        p.world = 'shibuya';
         p.scene = 2;
       }
     }

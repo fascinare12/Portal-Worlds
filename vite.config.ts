@@ -10,6 +10,7 @@ export default defineConfig({
       input: {
         wood: resolve(__dirname, 'index.html'),
         desert: resolve(__dirname, 'worlds/desert/index.html'),
+        shibuya: resolve(__dirname, 'worlds/shibuya/index.html'),
       },
     },
   },
