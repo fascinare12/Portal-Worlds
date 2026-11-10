@@ -11,7 +11,8 @@ shares nothing with the wood's rules.
    following a blueprint (pale outlines show the shape; any block can fill
    any outline) or building freely.
 3. **Build.** Tap the plot or the side of a block to place the selected block.
-   Drag to swing right round the building; pinch or scroll to zoom.
+   Drag to swing right round the building; pinch or scroll to zoom; drag with
+   two fingers (or shift-drag) to slide across the plot.
 4. **Order more blocks.** Blocks run out quickly. Tapping a block type that has
    run out asks one question; a right answer delivers a batch. No more can be
    ordered once 16 of that block are in hand, so blocks cannot be stockpiled.
