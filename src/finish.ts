@@ -27,6 +27,7 @@ export class Finish {
         uFar: { value: 600 },
         uFog: { value: 0.004 },
         uBlur: { value: 0 },
+        uInk: { value: 0.8 },
       },
       vertexShader: /* glsl */ `
         varying vec2 vUv;
@@ -44,6 +45,7 @@ export class Finish {
         uniform float uFar;
         uniform float uFog;
         uniform float uBlur;
+        uniform float uInk;
         varying vec2 vUv;
 
         // Distance from the eye, in world units.
@@ -87,7 +89,7 @@ export class Finish {
           float d = 1.0 / max(c, n);
           ink *= exp(-pow(uFog * d * 1.3, 2.0));
           ink *= 0.55 + 0.45 * texture2D(uNoise, paperUv * 6.0).r;
-          col = mix(col, col * vec3(0.16, 0.24, 0.27), ink * 0.8);
+          col = mix(col, col * vec3(0.16, 0.24, 0.27), ink * uInk);
 
           gl_FragColor = vec4(col, 1.0);
           #include <colorspace_fragment>
@@ -139,12 +141,13 @@ export class Finish {
     this.material.uniforms.uSize.value.copy(size);
   }
 
-  render(scene: THREE.Scene, camera: THREE.PerspectiveCamera, fogDensity: number, blur: number): void {
+  render(scene: THREE.Scene, camera: THREE.PerspectiveCamera, fogDensity: number, blur: number, ink: number): void {
     const u = this.material.uniforms;
     u.uNear.value = camera.near;
     u.uFar.value = camera.far;
     u.uFog.value = fogDensity;
     u.uBlur.value = blur;
+    u.uInk.value = ink;
     this.renderer.setRenderTarget(this.target);
     this.renderer.render(scene, camera);
     this.renderer.setRenderTarget(null);

@@ -122,5 +122,8 @@ renderer.setAnimationLoop(() => {
   terrain.update(time, poolsView.glow);
   atmosphere.update(time, rig.zoom, window.innerHeight);
   const blur = LEVELS[level].blur ? smoothstep(0.6, 0.95, rig.zoom) : 0;
-  finish.render(scene, rig.camera, fog.density, blur);
+  // From high above, leaf edges are only a pixel or two apart, where strong ink lines
+  // would crawl; they lighten with height.
+  const ink = lerp(0.4, 0.8, smoothstep(0.1, 0.5, rig.zoom));
+  finish.render(scene, rig.camera, fog.density, blur, ink);
 });

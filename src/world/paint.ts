@@ -61,6 +61,7 @@ export function paint(opts: PaintOptions = {}): THREE.MeshToonMaterial {
     sway > 0
       ? `float swayPhase = instanceMatrix[3].x * 0.31 + instanceMatrix[3].z * 0.27;
          float swayNow = sin(uWind * 0.9 + swayPhase) + 0.5 * sin(uWind * 2.3 + swayPhase * 1.7);
+         swayNow *= smoothstep(95.0, 45.0, distance(cameraPosition, instanceMatrix[3].xyz));
          transformed.x += swayNow * ${sway.toFixed(3)};
          transformed.z += swayNow * ${(sway * 0.6).toFixed(3)};`
       : '';
