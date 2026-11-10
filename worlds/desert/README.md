@@ -35,6 +35,36 @@ someone out to walk round it. They are still there on later visits.
 
 Finishing also gives two of each special block.
 
+## Blocks
+
+Every block has a painted face (stone courses, brick, planks, bark, leaves,
+roof tiles, metal panels, woven cloth) and a shape. Besides cubes there are
+half-height slabs, slopes, cones, arches, posts and thin panes. Shaped blocks
+turn to face the builder as they are placed, so swing the view round to set a
+roof slope or a doorway the other way.
+
+Each build has ten blocks: three outdoor, two indoor (dashed edge on the
+button), three shaped, and two special ones that only the sphinx gives.
+
+## Look and feel
+
+- Buildings cast shadows. The sun stands where it does over Brevard, but never
+  lower than a warm late afternoon, so there is always light to build by.
+- Rocks, bushes, flowers, cactus or shells come right up to the plot's edge,
+  with trees close by. Birds circle; on the coast the sea laps and a boat sails.
+- Blocks spring into place with a puff of dust and a knock. Deliveries rattle
+  in and the block's button bounces. Torches, lamps and engines flicker.
+- Finishing a blueprint sets off fireworks and a fanfare, turns the view once
+  round the building, and then brings the visitors out. A finished rocket
+  lifts off, climbs out of sight and lands again.
+- The sphinx watches whoever is building, sits down for a rest now and then,
+  and nods at a right answer.
+- The choosing screens show a picture of each build a child has started.
+
+Sounds are made in the browser; there are no audio files. Add `?noshadow` to
+the address to turn shadows off on a slow device, or `?party` to see the
+finishing celebration without finishing.
+
 ## How much a right answer brings
 
 Sized for roughly one question per 40 seconds of building.
@@ -68,7 +98,10 @@ got: level, facts known, and questions asked.
 
 - `facts.ts`: what is asked, and how the next question is chosen.
 - `modes.ts`: the five things to build, their blocks and blueprints.
-- `builder.ts`: the 3D building site, camera and sphinx.
+- `builder.ts`: the 3D building site, camera, scenery and sphinx.
+- `blocks.ts`: the painted faces and shapes of blocks.
+- `figures.ts`: the visitors who come out of a finished build.
+- `sound.ts`: the sounds.
 - `main.ts`: the screens and the flow of play.
 
 Progress and builds are kept in the browser on each device. Nothing is sent
