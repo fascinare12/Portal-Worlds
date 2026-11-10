@@ -143,24 +143,24 @@ function createGroundCover(): { group: THREE.Group; meshes: THREE.InstancedMesh[
   const kinds: PlantKind[] = [
     {
       url: grassUrl,
-      count: 18000,
+      count: 48000,
       size: [0.5, 1.1],
       tints: [0xa9c79a, 0xc4d8a6, 0x9dbf95, 0xd8e2b0],
-      grows: (x, z, chance) => fbm(x * 0.11 + 30, z * 0.11 + 30, 2) > 0.28 + chance * 0.2, // in drifts
+      grows: (x, z, chance) => fbm(x * 0.11 + 30, z * 0.11 + 30, 2) > 0.14 + chance * 0.18, // nearly everywhere, thinner in places
     },
     {
       url: sprigUrl,
-      count: 2600,
+      count: 7000,
       size: [0.7, 1.4],
       tints: [0xffffff, 0xe6efd8],
-      grows: (x, z) => fbm(x * 0.06 + 200, z * 0.06 + 200, 2) > 0.52, // meadows
+      grows: (x, z) => fbm(x * 0.06 + 200, z * 0.06 + 200, 2) > 0.47, // meadows
     },
     {
       url: spikeUrl,
-      count: 1500,
+      count: 4000,
       size: [0.8, 1.6],
       tints: [0xffffff, 0xf2ead8],
-      grows: (x, z) => fbm(x * 0.05 + 400, z * 0.05 + 400, 2) > 0.56, // rarer patches
+      grows: (x, z) => fbm(x * 0.05 + 400, z * 0.05 + 400, 2) > 0.5, // rarer patches
     },
   ];
 
@@ -178,7 +178,9 @@ function createGroundCover(): { group: THREE.Group; meshes: THREE.InstancedMesh[
       const d = Math.sqrt(rand()) * 110;
       const x = Math.cos(a) * d;
       const z = Math.sin(a) * d;
-      if (poolAt(x, z, 4)) continue; // keep clear of the water
+      // Grow right down the bank to the waterline, but not in the water itself.
+      const pool = poolAt(x, z, 6);
+      if (pool && groundHeight(x, z) < pool.level + 0.04) continue;
       if (!kind.grows(x, z, rand())) continue;
       const h = lerp(kind.size[0], kind.size[1], rand());
       dummy.position.set(x, groundHeight(x, z) - 0.04, z);
