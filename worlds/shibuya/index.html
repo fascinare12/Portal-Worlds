@@ -32,6 +32,20 @@
       #ask.right { border-color: #8cff6a; box-shadow: 0 0 22px rgba(140, 255, 106, 0.7); }
       #again { width: 52px; height: 52px; flex: none; border-radius: 50%; background: var(--cyan); color: var(--night); font-size: 24px; }
 
+      /* Writing a word on the wall with the spray can. */
+      #trace { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(12, 6, 30, 0.9); z-index: 7; }
+      #trace canvas { width: auto; height: auto; border-radius: 18px; border: 2px solid var(--pink); box-shadow: 0 0 26px rgba(255, 79, 163, 0.5); touch-action: none; cursor: crosshair; }
+      #trace .bar { display: flex; align-items: center; gap: 16px; }
+      #trace .word { font: 800 clamp(30px, 8vw, 52px)/1.1 var(--kana); letter-spacing: 0.08em; }
+      #trace .word span { opacity: 0.35; }
+      #trace .word span.now { opacity: 1; color: var(--cyan); text-shadow: 0 0 14px var(--cyan); }
+      #trace .word span.done { opacity: 1; color: #8cff6a; }
+      #trace .meaning { font-size: 15px; opacity: 0.7; text-align: center; }
+      #trace .hear, #trace .close { width: 50px; height: 50px; border-radius: 50%; font-size: 22px; flex: none; }
+      #trace .hear { background: var(--cyan); color: var(--night); }
+      #trace .close { border: 2px solid var(--paper); }
+      #trace .tip { font-size: 14px; opacity: 0.65; text-align: center; padding: 0 16px; }
+
       #intro { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(20, 10, 46, 0.72); z-index: 6; }
       #intro .card { text-align: center; padding: 28px 34px; border-radius: 26px; max-width: 86vw; border-color: var(--pink); box-shadow: 0 0 30px rgba(255, 79, 163, 0.6); }
       #intro .kana { font: 800 clamp(40px, 11vw, 72px)/1.2 var(--kana); text-shadow: 0 0 18px var(--pink); }
@@ -51,12 +65,21 @@
     </div>
     <div id="intro">
       <div class="card chip">
-        <div class="kana">こんばんは！</div>
-        <div class="romaji">konbanwa: good evening</div>
-        <p>Tap things in the street to hear their names.<br />Drag to look around. Tap the road to walk.</p>
+        <div class="kana" id="greeting">こんばんは！</div>
+        <div class="romaji" id="greeting-romaji">konbanwa: good evening</div>
+        <p>Tap things in the street to hear their names.<br />Drag to look around. Tap the road to walk.<br />Find a word, then spray it on the wall yourself.</p>
         <button id="start">はじめる</button>
         <div class="romaji" style="margin-top: 0.5em; opacity: 0.6">hajimeru: start</div>
       </div>
+    </div>
+    <div id="trace" hidden>
+      <div class="bar">
+        <button class="hear" aria-label="Hear it">🔊</button>
+        <div><div class="word"></div><div class="meaning"></div></div>
+        <button class="close" aria-label="Close">✕</button>
+      </div>
+      <canvas></canvas>
+      <div class="tip">Start at the white dot and follow the dashes. Strokes go in order: 1, 2, 3…</div>
     </div>
     <div id="veil"></div>
     <script type="module" src="./main.ts"></script>
