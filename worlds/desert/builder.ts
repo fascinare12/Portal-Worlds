@@ -213,7 +213,7 @@ export class Builder {
     // Outlines of the blocks still to place when following a blueprint.
     this.ghost = new THREE.InstancedMesh(
       new THREE.BoxGeometry(0.94, 0.94, 0.94),
-      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.3, depthWrite: false }),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55, depthWrite: false }),
       PLOT * PLOT * HEIGHT,
     );
     this.ghost.count = 0;
@@ -269,13 +269,6 @@ export class Builder {
     return { blocks, stock: [...this.stock], done: this.done };
   }
 
-  /** How many blueprint blocks are still to go, by block type. */
-  remaining(): number[] {
-    const left = this.stock.map(() => 0);
-    if (this.planOn) for (const c of this.plan) if (!this.blocks.has(keyOf(c.x, c.y, c.z))) left[c.t]++;
-    return left;
-  }
-
   /** Lets go of a child the sphinx was holding. */
   release(): void {
     this.caught = false;
@@ -307,7 +300,7 @@ export class Builder {
         if (c.y > 0 && !this.blocks.has(keyOf(c.x, c.y - 1, c.z))) continue;
         centre(c.x, c.y, c.z, p);
         this.ghost.setMatrixAt(this.ghostCells.length, m.makeTranslation(p.x, p.y, p.z));
-        this.ghost.setColorAt(this.ghostCells.length, tint.set(this.mode.blocks[c.t].color));
+        this.ghost.setColorAt(this.ghostCells.length, tint.set(0xfff8e8)); // one pale colour: no block is 'meant' for a space
         this.ghostCells.push(c);
       }
     }
@@ -351,7 +344,8 @@ export class Builder {
       this.events.home();
     } else if (hit.object === this.ghost) {
       const c = this.ghostCells[hit.instanceId!];
-      if (!this.erasing) this.place(c.x, c.y, c.z, c.t);
+      // Any block may fill any outline: the blueprint gives the shape, the child chooses the colours.
+      if (!this.erasing) this.place(c.x, c.y, c.z, this.selected);
     } else if (hit.object === this.plot) {
       if (!this.erasing) this.place(Math.floor(hit.point.x + HALF), 0, Math.floor(hit.point.z + HALF), this.selected);
     } else {

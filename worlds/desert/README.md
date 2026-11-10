@@ -8,7 +8,8 @@ shares nothing with the wood's rules.
 
 1. **Who is playing.** Three letters: C, R and S.
 2. **What to build.** Pyramid, castle, tree fort, rocket or town, either
-   following a blueprint (outlines show where blocks go) or building freely.
+   following a blueprint (pale outlines show the shape; any block can fill
+   any outline) or building freely.
 3. **Build.** Tap the plot or the side of a block to place the selected block.
    Drag to swing right round the building; pinch or scroll to zoom.
 4. **Order more blocks.** Blocks run out quickly. Tapping a block type that has
