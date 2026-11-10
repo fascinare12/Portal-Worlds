@@ -4,6 +4,7 @@ import { Finish } from './finish';
 import { lerp, smoothstep } from './noise';
 import { createAtmosphere } from './world/atmosphere';
 import { daylight, updateDaylight } from './world/daylight';
+import { createFox } from './world/creatures/fox';
 import { createSphinx } from './world/creatures/sphinx';
 import { createForest } from './world/forest';
 import { pools } from './world/layout';
@@ -34,6 +35,9 @@ scene.add(terrain.mesh, forest.group, poolsView.group, atmosphere.group);
 const desertIndex = pools.findIndex((p) => p.world === 'desert');
 const sphinx = createSphinx(pools[desertIndex], () => poolsView.stir(desertIndex));
 scene.add(sphinx.group);
+const cityIndex = pools.findIndex((p) => p.world === 'shibuya');
+const fox = createFox(pools[cityIndex], () => poolsView.stir(cityIndex));
+scene.add(fox.group);
 
 const rig = new CameraRig(canvas, terrain.mesh);
 const finish = new Finish(renderer);
@@ -159,6 +163,7 @@ renderer.setAnimationLoop(() => {
   wind.value = time;
   poolsView.update(time, dt, window.innerHeight, rig.camera.position);
   sphinx.update(dt);
+  fox.update(dt);
   terrain.update(time, poolsView.glow);
   atmosphere.update(time, rig.zoom, window.innerHeight);
   const blur = LEVELS[level].blur ? smoothstep(0.6, 0.95, rig.zoom) : 0;

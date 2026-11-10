@@ -38,6 +38,12 @@ Creatures from other worlds come through their pools. A sandstone sphinx
 wades out of the desert pool every couple of minutes, lies on the bank for a
 while, then walks back in. Add `?visit=now` to the address to see it at once.
 
+A white fox with red markings comes through the red pool. It springs out and
+shakes itself dry, trots about with its nose down, freezes with ears pricked,
+pounces nose-first into the grass, curls up for a nap, then stretches and
+jumps back in. It has one tail for every five words found in Shibuya, up to
+nine.
+
 ## Time of day
 
 The sky follows the real sun over Brevard, North Carolina: morning light,
