@@ -18,6 +18,8 @@ export interface Pool {
   open: boolean;
   /** The world this pool leads to, once that world exists: the folder name under worlds/. */
   world?: string;
+  /** The picture seen when looking into the pool: 1 = a pyramid being built, 2 = kanji being sprayed on a wall. */
+  scene?: number;
 }
 
 function naturalHeight(x: number, z: number): number {
@@ -57,6 +59,12 @@ function makePools(): Pool[] {
         // The first doorway that goes somewhere: pale sand, for the desert.
         p.color = 0xe6cfa0;
         p.world = 'desert';
+        p.scene = 1;
+      }
+      if (i === 3) {
+        // A second doorway, red. Its world is not built yet, so it shows its picture but cannot be dived into.
+        p.color = 0xe0383a;
+        p.scene = 2;
       }
     }
   });

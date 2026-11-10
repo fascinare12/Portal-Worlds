@@ -88,7 +88,9 @@ rig.onDive = (pool) => {
 };
 // Coming home: rise out of the pool that leads to the world just left.
 const cameFrom = window.location.hash.replace('#from-', '');
-const homePool = pools.find((p) => p.world && p.world === cameFrom);
+// For looking at one pool while developing: add ?at=3 (the pool's number) to the address.
+const lookAt = new URLSearchParams(window.location.search).get('at');
+const homePool = lookAt !== null ? pools[Number(lookAt)] : pools.find((p) => p.world && p.world === cameFrom);
 if (homePool) {
   rig.arriveAt(homePool);
   veil.style.background = '#' + homePool.color.toString(16).padStart(6, '0');
