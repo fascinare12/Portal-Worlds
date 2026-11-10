@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import asphaltUrl from './textures/asphalt.webp';
 import concreteUrl from './textures/concrete.webp';
 import shutterUrl from './textures/shutter.webp';
@@ -372,8 +373,11 @@ function scribble(big = false): THREE.CanvasTexture {
 const lambert = (color: number, glow = 0) =>
   new THREE.MeshLambertMaterial({ color, emissive: glow ? color : 0, emissiveIntensity: glow });
 
+/** A block. Anything smaller than a building has its edges and corners rounded off, so nothing looks cut from cardboard. */
 function box(mat: THREE.Material, w: number, h: number, d: number, x = 0, y = 0, z = 0): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  const small = Math.min(w, h, d);
+  const geo = Math.max(w, h, d) > 6.5 ? new THREE.BoxGeometry(w, h, d) : new RoundedBoxGeometry(w, h, d, 3, Math.min(0.12, small * 0.32));
+  const m = new THREE.Mesh(geo, mat);
   m.position.set(x, y, z);
   return m;
 }
@@ -613,13 +617,13 @@ export async function buildCity(): Promise<City> {
       const x = side * (KERB - 0.9 - rnd() * 0.8);
       const kind = rnd();
       if (kind < 0.35) {
-        const cone = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.6, 8), lambert(0xff7a3a, 0.4));
+        const cone = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.6, 16), lambert(0xff7a3a, 0.4));
         cone.position.set(x, 0.5, z);
         city.add(cone);
       } else if (kind < 0.7) {
         city.add(box(lambert(pick([0x39a0c0, 0xc0a039, 0x8a4a6a])), 0.7, 0.45, 0.5, x, 0.43, z));
       } else {
-        const bag = new THREE.Mesh(new THREE.IcosahedronGeometry(0.4, 0), lambert(0x15131f));
+        const bag = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 12), lambert(0x15131f));
         bag.position.set(x, 0.5, z);
         bag.scale.y = 0.8;
         city.add(bag);
@@ -789,7 +793,7 @@ export async function buildCity(): Promise<City> {
       const x = (t * 2 - 1) * 10.6;
       const y = 8.6 - Math.sin(t * Math.PI) * 1.8;
       if (i % 5 === 2) {
-        const l = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), lantern);
+        const l = new THREE.Mesh(new THREE.SphereGeometry(0.42, 18, 14), lantern);
         l.scale.y = 1.2;
         l.position.set(x, y - 0.5, z);
         city.add(l);
@@ -844,7 +848,7 @@ export async function buildCity(): Promise<City> {
     cat.add(ball(fur, 0.3, 0, 0.3, 0, 0.9, 1, 1.1), ball(cream, 0.2, 0, 0.26, 0.16, 0.8, 0.9, 0.7)); // body and bib
     cat.add(ball(fur, 0.22, 0, 0.68, 0.14)); // head
     for (const sx of [1, -1]) {
-      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.16, 4), fur);
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.16, 12), fur);
       ear.position.set(sx * 0.13, 0.9, 0.12);
       cat.add(ear, box(lambert(0x8cff6a, 1.2), 0.07, 0.05, 0.02, sx * 0.09, 0.72, 0.345)); // ears and green eyes
       cat.add(box(lambert(0xffffff, 0.6), 0.22, 0.008, 0.008, sx * 0.2, 0.64, 0.33)); // whiskers
@@ -873,7 +877,7 @@ export async function buildCity(): Promise<City> {
     g.add(ball(bronze, 0.42, 0, 1.45, -0.1, 0.9, 1, 1.1), ball(bronze, 0.3, 0, 1.75, 0.2, 0.9, 1.1, 0.9)); // haunches and chest
     g.add(ball(bronze, 0.27, 0, 2.2, 0.32), ball(bronze, 0.14, 0, 2.14, 0.56, 1, 0.8, 1.2)); // head and muzzle
     for (const sx of [1, -1]) {
-      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.2, 4), bronze);
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.2, 12), bronze);
       ear.position.set(sx * 0.16, 2.46, 0.26);
       g.add(ear, box(lambert(0x23160c), 0.05, 0.05, 0.02, sx * 0.1, 2.26, 0.565), box(bronze, 0.13, 0.7, 0.13, sx * 0.17, 1.35, 0.42));
     }
@@ -920,13 +924,26 @@ export async function buildCity(): Promise<City> {
     const g = new THREE.Group();
     const coat = lambert(coatColour, 0.2);
     const dark = lambert(0x23203a);
-    const legs = [box(dark, 0.17, 0.8, 0.2, 0.12, 0.4, 0), box(dark, 0.17, 0.8, 0.2, -0.12, 0.4, 0)];
-    g.add(...legs, box(coat, 0.5, 0.8, 0.3, 0, 1.2, 0), box(coat, 0.13, 0.65, 0.16, 0.33, 1.22, 0), box(coat, 0.13, 0.65, 0.16, -0.33, 1.22, 0));
+    const capsule = (mat: THREE.Material, r: number, len: number, x: number, y: number) => {
+      const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 6, 14), mat);
+      m.position.set(x, y, 0);
+      return m;
+    };
+    // Legs swing from the hip, so each hangs from a pivot at its top.
+    const legs = [0.12, -0.12].map((x) => {
+      const hip = new THREE.Mesh(new THREE.BufferGeometry(), dark);
+      hip.position.set(x, 0.85, 0);
+      hip.add(capsule(dark, 0.09, 0.62, 0, -0.42));
+      return hip;
+    });
+    const torso = capsule(coat, 0.25, 0.42, 0, 1.2);
+    torso.scale.z = 0.7;
+    g.add(...legs, torso, capsule(coat, 0.075, 0.5, 0.33, 1.2), capsule(coat, 0.075, 0.5, -0.33, 1.2));
     g.add(ball(lambert(0xf0c9a0, 0.15), 0.19, 0, 1.8, 0), ball(lambert(0x1a1626), 0.2, 0, 1.86, -0.03, 1, 0.8, 1)); // head and hair
     g.add(box(dark, 0.05, 0.04, 0.02, 0.07, 1.81, 0.18), box(dark, 0.05, 0.04, 0.02, -0.07, 1.81, 0.18)); // eyes
     if (umbrella) {
       const colour = pick([0xff4fa3, 0x39e6ff, 0xffe14a, 0xffffff, 0xc58bff]);
-      const canopy = new THREE.Mesh(new THREE.ConeGeometry(0.85, 0.36, 8, 1, true), new THREE.MeshLambertMaterial({ color: colour, emissive: colour, emissiveIntensity: 0.35, side: THREE.DoubleSide, transparent: true, opacity: 0.85 }));
+      const canopy = new THREE.Mesh(new THREE.ConeGeometry(0.85, 0.36, 20, 1, true), new THREE.MeshLambertMaterial({ color: colour, emissive: colour, emissiveIntensity: 0.35, side: THREE.DoubleSide, transparent: true, opacity: 0.85 }));
       canopy.position.set(0.2, 2.45, 0);
       g.add(canopy, box(lambert(0xdddddd), 0.04, 1.3, 0.04, 0.3, 1.8, 0.1));
     }
@@ -977,12 +994,12 @@ export async function buildCity(): Promise<City> {
   // き: cherry trees in blossom, hung with small lights.
   for (const [x, z] of [[-(ROAD + 1.8), 12], [ROAD + 1.8, -20], [-(ROAD + 1.8), -38], [ROAD + 1.8, 42]]) {
     const g = new THREE.Group();
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.3, 3, 6), lambert(0x5a3040));
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.3, 3, 14), lambert(0x5a3040));
     trunk.position.y = 1.5;
     g.add(trunk);
     const petal = lambert(0xf5a8d8, 0.35);
     for (let i = 0; i < 6; i++) {
-      const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.9 + rnd() * 0.6, 1), petal);
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.9 + rnd() * 0.6, 16, 12), petal);
       b.position.set((rnd() - 0.5) * 2.2, 3.2 + rnd() * 1.5, (rnd() - 0.5) * 2.2);
       g.add(b);
       light(x + b.position.x, b.position.y + 0.2, z + b.position.z, '#ffd0f0', 1.6);
@@ -1008,7 +1025,7 @@ export async function buildCity(): Promise<City> {
     thing('hito', g, 2.9);
 
     const u = new THREE.Group();
-    const canopy = new THREE.Mesh(new THREE.ConeGeometry(1.1, 0.5, 8, 1, true), new THREE.MeshLambertMaterial({ color: 0xff4fa3, emissive: 0xff4fa3, emissiveIntensity: 0.45, side: THREE.DoubleSide }));
+    const canopy = new THREE.Mesh(new THREE.ConeGeometry(1.1, 0.5, 20, 1, true), new THREE.MeshLambertMaterial({ color: 0xff4fa3, emissive: 0xff4fa3, emissiveIntensity: 0.45, side: THREE.DoubleSide }));
     canopy.position.y = 1.9;
     u.add(canopy, box(lambert(0xdddddd), 0.05, 1.9, 0.05, 0, 0.95, 0));
     u.position.set(-(ROAD + 1.4), 0.2, -9.6);
@@ -1022,7 +1039,7 @@ export async function buildCity(): Promise<City> {
     const g = new THREE.Group();
     g.add(box(lambert(0x55506a), 2.4, 0.6, 0.8, 0, 0.3, 0));
     for (let i = 0; i < 9; i++) {
-      const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 0), lambert(pick([0xff4fa3, 0xffe14a, 0xffffff, 0xff7a3a, 0xc58bff]), 0.7));
+      const f = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), lambert(pick([0xff4fa3, 0xffe14a, 0xffffff, 0xff7a3a, 0xc58bff]), 0.7));
       f.position.set(-1 + i * 0.25, 0.8 + (i % 2) * 0.16, (rnd() - 0.5) * 0.4);
       g.add(f, box(lambert(0x4fa860), 0.04, 0.3, 0.04, f.position.x, 0.62, f.position.z));
     }
@@ -1093,7 +1110,7 @@ export async function buildCity(): Promise<City> {
     stall.position.set(24, 0.2, -(ROAD + 1.6));
     city.add(stall);
     for (let i = 0; i < 5; i++) {
-      const l = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff5a3a }));
+      const l = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12), new THREE.MeshBasicMaterial({ color: 0xff5a3a }));
       l.position.set(21 + i * 1.5, 3.4, -(ROAD + 0.2));
       city.add(l);
       light(l.position.x, 3.4, l.position.z, '#ff6a3a', 3);
@@ -1106,7 +1123,7 @@ export async function buildCity(): Promise<City> {
       g.scale.setScalar(1.35);
       thing(word, g, 1.5);
     };
-    const ball = (color: number, r: number, glowing = 0.3) => new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), lambert(color, glowing));
+    const ball = (color: number, r: number, glowing = 0.3) => new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), lambert(color, glowing));
     // りんご: a red apple with a stalk and a leaf.
     onCounter('ringo', -2.7, [ball(0xe0383a, 0.38), box(lambert(0x5a3a22), 0.05, 0.2, 0.05, 0, 0.42, 0), box(lambert(0x4fa860), 0.2, 0.04, 0.1, 0.1, 0.48, 0)]);
     // おにぎり: a triangle of rice wrapped in a strip of seaweed.
@@ -1190,7 +1207,7 @@ export async function buildCity(): Promise<City> {
       const frame = lambert(0x39e6ff, 0.5);
       const tyre = lambert(0x15131f);
       for (const x of [-0.75, 0.75]) {
-        const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.05, 6, 18), tyre);
+        const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.05, 10, 36), tyre);
         wheel.position.set(x, 0.55, 0);
         g.add(wheel);
       }
@@ -1216,7 +1233,7 @@ export async function buildCity(): Promise<City> {
     {
       const g = new THREE.Group();
       const grey = lambert(0x9aa0b4, 0.25);
-      const body = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 1), grey);
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12), grey);
       body.scale.set(0.8, 0.8, 1.3);
       body.position.y = 0.36;
       g.add(body, box(grey, 0.2, 0.22, 0.2, 0, 0.66, 0.3), box(lambert(0xffa53a, 0.6), 0.06, 0.05, 0.14, 0, 0.64, 0.46));
@@ -1229,13 +1246,21 @@ export async function buildCity(): Promise<City> {
     }
   }
 
+  // A plain round dot, so petals are not little squares.
+  const [rc, rgx] = canvas(32, 32);
+  rgx.fillStyle = '#ffffff';
+  rgx.beginPath();
+  rgx.ellipse(16, 16, 14, 9, 0.6, 0, 6.3);
+  rgx.fill();
+  const roundDot = new THREE.CanvasTexture(rc);
+
   // Petals drifting down past the lights.
   const PETALS = 260;
   const petalPos = new Float32Array(PETALS * 3);
   for (let i = 0; i < PETALS; i++) petalPos.set([(rnd() * 2 - 1) * 30, rnd() * 16, (rnd() * 2 - 1) * 50], i * 3);
   const petalGeo = new THREE.BufferGeometry();
   petalGeo.setAttribute('position', new THREE.BufferAttribute(petalPos, 3));
-  const petals = new THREE.Points(petalGeo, new THREE.PointsMaterial({ color: 0xffc8ec, size: 0.16, transparent: true, opacity: 0.85 }));
+  const petals = new THREE.Points(petalGeo, new THREE.PointsMaterial({ color: 0xffc8ec, size: 0.22, transparent: true, opacity: 0.85, map: roundDot, alphaTest: 0.3 }));
   petals.frustumCulled = false;
   scene.add(petals);
 

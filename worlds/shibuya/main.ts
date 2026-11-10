@@ -28,13 +28,14 @@ const ask = $('ask');
 const count = $('count');
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 const camera = new THREE.PerspectiveCamera(62, 1, 0.2, 900);
 const city = await buildCity();
 
 // Glow: bright things bleed light into the dark around them, as in a night photograph.
 // It is costly, so it switches itself off on a device that cannot keep up (or with ?plain).
-const composer = new EffectComposer(renderer);
+// Its drawing surface smooths edges itself; without that, every edge would be a staircase.
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
 composer.addPass(new RenderPass(city.scene, camera));
 composer.addPass(new UnrealBloomPass(new THREE.Vector2(1, 1), 0.62, 0.65, 0.7));
 composer.addPass(new OutputPass());
@@ -58,6 +59,8 @@ resize();
 // ---- Walking and looking ----
 
 const EYE = 1.7;
+/** How far one tap walks. */
+const STRIDE = 4;
 const at = new THREE.Vector2(0, 41);
 const goal = at.clone();
 let yaw = 0; // 0 looks up the street, away from where she arrives
@@ -127,7 +130,10 @@ function tapped(x: number, y: number): void {
   const d = ray.ray.direction;
   if (d.y < -0.02) {
     const k = -ray.ray.origin.y / d.y;
-    goal.copy(onRoad(new THREE.Vector2(ray.ray.origin.x + d.x * k, ray.ray.origin.z + d.z * k)));
+    // A tap is a few steps in that direction, not a journey: tap again to keep going.
+    const to = new THREE.Vector2(ray.ray.origin.x + d.x * k, ray.ray.origin.z + d.z * k).sub(at);
+    if (to.length() > STRIDE) to.setLength(STRIDE);
+    goal.copy(onRoad(to.add(at)));
   }
 }
 
@@ -303,7 +309,7 @@ renderer.setAnimationLoop(() => {
   // Walk towards the goal at a steady pace.
   const step = goal.clone().sub(at);
   const far = step.length();
-  if (far > 0.01) at.add(step.multiplyScalar(Math.min(1, (dt * 6) / far)));
+  if (far > 0.01) at.add(step.multiplyScalar(Math.min(1, (dt * 4.5) / far)));
   yaw += (yawGoal - yaw) * (1 - Math.exp(-dt * 10));
   pitch += (pitchGoal - pitch) * (1 - Math.exp(-dt * 10));
   const bob = far > 0.05 ? Math.sin(time * 9) * 0.04 : 0;
