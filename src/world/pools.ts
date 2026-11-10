@@ -25,6 +25,8 @@ const waterFragment = /* glsl */ `
   uniform float uTime;
   uniform float uOpen;
   uniform float uPulse;
+  uniform float uScene;
+  uniform float uReveal;
   uniform float uRadius;
   uniform vec3 uColor;
   varying vec2 vPos;
@@ -37,6 +39,44 @@ const waterFragment = /* glsl */ `
   // Soft, slowly shifting clouds: leaves and sky seen in moving water.
   float blot(vec2 p) {
     return texture2D(uNoise, p * 0.07).r;
+  }
+
+  float blockTone(float n) { return fract(sin(n * 91.345) * 47453.5); }
+
+  // What you see when you lean over the desert pool: far away under another
+  // sun, a pyramid going up one block at a time.
+  vec3 desertPicture(vec2 p, float t) {
+    vec3 c = mix(vec3(0.98, 0.90, 0.72), vec3(0.55, 0.78, 0.93), smoothstep(-0.3, 0.9, p.y));
+    c = mix(c, vec3(1.0, 0.97, 0.8), smoothstep(0.16, 0.13, length(p - vec2(0.5, 0.56))));
+    float dune = -0.28 + 0.07 * sin(p.x * 4.0 + 1.0) + 0.04 * sin(p.x * 9.0);
+    c = mix(c, vec3(0.86, 0.70, 0.45), smoothstep(0.012, 0.0, p.y - dune));
+
+    const float ROWS = 7.0;
+    float w = 0.17;
+    float h = 0.105;
+    float ground = -0.42;
+    float total = ROWS * (ROWS + 1.0) / 2.0;
+    // One block every moment or so; then the finished pyramid stands a while before starting again.
+    float built = mod(t * 1.3, total + 9.0);
+    float row = floor((p.y - ground) / h);
+    if (row >= 0.0 && row < ROWS) {
+      float inRow = ROWS - row;
+      float left = -inRow * w * 0.5;
+      float nth = floor((p.x - left) / w);
+      if (nth >= 0.0 && nth < inRow) {
+        float index = row * ROWS - row * (row - 1.0) * 0.5 + nth;
+        float placed = clamp(built - index, 0.0, 1.0);
+        vec2 cell = vec2(fract((p.x - left) / w), fract((p.y - ground) / h));
+        // Each block grows into its place.
+        float inside = step(max(abs(cell.x - 0.5), abs(cell.y - 0.5)) * 2.0, placed);
+        float face = smoothstep(0.0, 0.08, cell.x) * smoothstep(1.0, 0.92, cell.x) * smoothstep(0.0, 0.1, cell.y) * smoothstep(1.0, 0.9, cell.y);
+        vec3 stone = vec3(0.92, 0.78, 0.52) * (0.86 + 0.22 * blockTone(index)) * mix(0.68, 1.0, face);
+        stone *= mix(0.84, 1.08, smoothstep(-0.4, 0.4, p.x)); // lit from the sun's side
+        c = mix(c, stone, inside);
+      }
+    }
+    c = mix(c, vec3(0.94, 0.81, 0.57), smoothstep(0.006, 0.0, p.y - ground));
+    return c;
   }
 
   void main() {
@@ -72,6 +112,18 @@ const waterFragment = /* glsl */ `
     open = mix(open, mirror, 0.2 * glance);
 
     vec3 col = mix(closed, open, uOpen);
+
+    // A pool that leads somewhere shows that place once you are close enough to look in.
+    if (uScene > 0.5 && uReveal > 0.01) {
+      vec2 off = vec2(vPos.x, -vPos.y); // across the ground, from the pool's centre
+      vec2 away = normalize(vWorld.xz - off - cameraPosition.xz);
+      // Turn the picture to face whoever is looking, so it is never upside down.
+      vec2 across = vec2(-away.y, away.x);
+      vec2 p = vec2(dot(off, across), dot(off, away)) / uRadius;
+      p += 0.012 * vec2(sin(p.y * 18.0 + uTime * 1.3), cos(p.x * 16.0 + uTime * 1.1)); // seen through water
+      float window = smoothstep(1.0, 0.72, length(p)) * uReveal;
+      col = mix(col, desertPicture(p, uTime), window);
+    }
     // Woken by a touch: a ring of light runs outward and the whole pool brightens.
     float wake = uPulse * (1.0 - uOpen);
     float ring = smoothstep(0.25, 0.0, abs(r - (1.0 - uPulse) * 1.6));
@@ -189,6 +241,8 @@ export function createPools(): PoolsView {
           uOpen: { value: openness[i] },
           uRadius: { value: p.radius },
           uPulse: { value: 0 },
+          uScene: { value: p.world ? 1 : 0 },
+          uReveal: { value: 0 },
           uNoise: { value: noiseTexture },
           uSky: { value: daylight.zenith },
           uAmbient: { value: daylight.ambient },
@@ -297,6 +351,8 @@ export function createPools(): PoolsView {
         waterMats[i].uniforms.uTime.value = time + i * 3;
         waterMats[i].uniforms.uOpen.value = openness[i];
         waterMats[i].uniforms.uPulse.value = pulse[i];
+        const reach = Math.hypot(eye.x - p.x, eye.y - p.level, eye.z - p.z);
+        waterMats[i].uniforms.uReveal.value = 1 - Math.min(1, Math.max(0, (reach - 14) / 30));
         beamMats[i].uniforms.uTime.value = time + i * 3;
         beamMats[i].uniforms.uOpen.value = lit;
         // Standing inside the column would wash the whole view out, so it thins as you approach.

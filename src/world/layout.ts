@@ -16,6 +16,8 @@ export interface Pool {
   /** Colour of the world on the other side, shown when the pool is open. */
   color: number;
   open: boolean;
+  /** The world this pool leads to, once that world exists: the folder name under worlds/. */
+  world?: string;
 }
 
 function naturalHeight(x: number, z: number): number {
@@ -51,6 +53,11 @@ function makePools(): Pool[] {
     if (i % 3 === 0) {
       p.open = true;
       p.color = OPEN_COLORS[c++ % OPEN_COLORS.length];
+      if (i === 0) {
+        // The first doorway that goes somewhere: pale sand, for the desert.
+        p.color = 0xe6cfa0;
+        p.world = 'desert';
+      }
     }
   });
   return pools;

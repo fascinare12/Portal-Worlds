@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Portal Worlds: Desert</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #e6cfa0; }
+      canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+      canvas:active { cursor: grabbing; }
+      /* Fills the screen with a pool's colour while passing between worlds. */
+      #veil { position: fixed; inset: 0; pointer-events: none; background: #e6cfa0; opacity: 1; transition: opacity 1.4s ease; }
+      #veil.open { opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <canvas id="world"></canvas>
+    <div id="veil"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
