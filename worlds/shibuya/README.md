@@ -45,6 +45,28 @@ of day), 〜 は どこ？ (where is 〜?), 〜 を ください (〜, please),
 against a standard reference.** Stroke order is not from memory: it comes
 from the KanjiVG project (see `CREDITS.md`).
 
+## Look
+
+- **Glow:** bright things bleed light into the dark (a bloom pass). It is the
+  costliest effect, so the world watches its own frame rate and sheds it,
+  then reflections and rain, on a device that cannot keep up. `?plain` in the
+  address starts without them.
+- **Wet road:** real asphalt with worn paint, manhole covers and cracks. The
+  city is mirrored in it, stretched downward, sharpest in the puddles, with
+  rain rings spreading across it.
+- **Buildings:** photographed concrete with windows set into the wall
+  (curtains, blinds, silhouettes), balconies, air conditioners, drainpipes,
+  awnings, stepped tops, roof tanks and aerials, and a hazy far skyline.
+- **Ground floors:** real metal shutters, rust-stained and painted over, or
+  shops you can see into: shelves, a counter, someone serving.
+- **Neon:** tube lettering that lights the ground beneath it; a few signs
+  flicker and fail.
+- **Life:** people walking under umbrellas, cars crossing at the junction,
+  steam from the stall and the road gratings, light rain, drifting petals.
+  Walkers and cars carry the words ひと and くるま, so tapping them teaches.
+
+Surface photographs are CC0 from Poly Haven (see `CREDITS.md`).
+
 ## Sound
 
 Japanese is spoken by the voice built into the device, at a slightly slowed

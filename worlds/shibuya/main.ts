@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { KERB, ROAD, buildCity } from './city';
 import type { Thing } from './city';
 import { hasVoice, say, sound } from './speak';
@@ -26,7 +30,15 @@ const count = $('count');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 const camera = new THREE.PerspectiveCamera(62, 1, 0.2, 900);
-const city = buildCity();
+const city = await buildCity();
+
+// Glow: bright things bleed light into the dark around them, as in a night photograph.
+// It is costly, so it switches itself off on a device that cannot keep up (or with ?plain).
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(city.scene, camera));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(1, 1), 0.62, 0.65, 0.7));
+composer.addPass(new OutputPass());
+let quality = new URLSearchParams(window.location.search).has('plain') ? 0 : 2; // 2 = everything, 1 = no glow, 0 = no glow, reflections or rain
 const progress = loadProgress();
 
 // Tags already earned are on the walls from the start.
@@ -35,6 +47,8 @@ for (const id of progress.tagged) city.tag(id, wordById(id).kana, progress.spray
 
 function resize(): void {
   renderer.setSize(window.innerWidth, window.innerHeight, false);
+  composer.setPixelRatio(renderer.getPixelRatio());
+  composer.setSize(window.innerWidth, window.innerHeight);
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
 }
@@ -270,10 +284,14 @@ requestAnimationFrame(() => veil.classList.add('open'));
 
 // ---- Every frame ----
 
+city.setRich(quality > 0);
+let slowTime = 0;
+let slowFrames = 0;
 const clock = new THREE.Clock();
 const projected = new THREE.Vector3();
 renderer.setAnimationLoop(() => {
-  const dt = Math.min(clock.getDelta(), 0.1);
+  const raw = clock.getDelta();
+  const dt = Math.min(raw, 0.1);
   const time = clock.elapsedTime;
 
   // Keys walk and turn: arrows or WASD.
@@ -292,7 +310,20 @@ renderer.setAnimationLoop(() => {
   camera.position.set(at.x, EYE + bob, at.y);
   camera.lookAt(at.x + Math.sin(yaw) * Math.cos(pitch), EYE + bob + Math.sin(pitch), at.y - Math.cos(yaw) * Math.cos(pitch));
 
-  city.update(time, dt);
+  city.update(time, dt, camera.position);
+
+  // Watch the frame rate over three-second stretches and shed the costliest effect if it sags.
+  if (time > 4 && raw < 0.5) {
+    slowTime += raw;
+    slowFrames++;
+    if (slowTime >= 3) {
+      if (slowFrames / slowTime < 30 && quality > 0) {
+        quality--;
+        city.setRich(quality > 0);
+      }
+      slowTime = slowFrames = 0;
+    }
+  }
 
   if (questTimer > 0) {
     questTimer -= dt;
@@ -313,5 +344,6 @@ renderer.setAnimationLoop(() => {
     }
   }
 
-  renderer.render(city.scene, camera);
+  if (quality === 2) composer.render();
+  else renderer.render(city.scene, camera);
 });
