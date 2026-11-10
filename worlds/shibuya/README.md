@@ -17,7 +17,7 @@ Japanese is learned from zero. It is a separate page with its own code.
    turn, each stroke in the proper order and direction. Paint only goes on
    while she follows the stroke. Finishing the word fills the tag with colour.
 
-The counter shows words found and words written, out of 24.
+The counter shows words found and words written, out of 38.
 
 Only words she has already heard are asked. Words missed at the first try
 come back soonest; words she knows come back later. Romaji under a word is
@@ -35,6 +35,11 @@ puddle, or the green button, leads back to the wood.
   すし sushi, おちゃ tea, みず water, さかな fish.
 - **The café terrace** (left at the crossing): いす chair, ほん book,
   かばん bag, じてんしゃ bicycle, とり bird.
+
+- **Murals** (pictures painted on building fronts, for common words with no
+  place in a city street): やま mountain, うみ sea, たいよう sun, くも cloud,
+  にじ rainbow, あめ rain, ゆき snow, ひ fire, いえ house, ふね boat, め eye,
+  て hand, うさぎ rabbit, へび snake.
 
 Phrases: おはよう / こんにちは / こんばんは (the greeting follows the real time
 of day), 〜 は どこ？ (where is 〜?), 〜 を ください (〜, please),
