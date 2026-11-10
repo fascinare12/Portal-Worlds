@@ -79,6 +79,67 @@ const waterFragment = /* glsl */ `
     return c;
   }
 
+  // One brush-width line from a to b, drawn over one beat of time starting at beat n.
+  // Adds to the paint already on the wall and notes where the spray is at this moment.
+  void spray(vec2 p, vec2 a, vec2 b, float n, float beat, inout float paint, inout vec2 tip) {
+    float q = clamp(beat - n, 0.0, 1.0);
+    if (q <= 0.0) return;
+    vec2 end = mix(a, b, q);
+    vec2 pa = p - a;
+    vec2 ba = end - a;
+    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 0.0001), 0.0, 1.0);
+    float d = length(pa - ba * h);
+    // A solid core with a soft sprayed edge.
+    paint = max(paint, smoothstep(0.075, 0.03, d));
+    if (q < 1.0) tip = end;
+  }
+
+  // What you see when you lean over the red pool: a wall in a city far away, and
+  // the word 日本 (Japan) being sprayed onto it, one stroke at a time in the proper order.
+  vec3 kanjiPicture(vec2 p, float t) {
+    // A pale concrete wall with courses of block and a little grime.
+    vec2 brick = vec2(p.x * 3.0 + step(1.0, mod(p.y * 6.0, 2.0)) * 0.5, p.y * 6.0);
+    vec2 cell = fract(brick);
+    float mortar = smoothstep(0.0, 0.05, cell.x) * smoothstep(1.0, 0.95, cell.x) * smoothstep(0.0, 0.1, cell.y) * smoothstep(1.0, 0.9, cell.y);
+    vec3 c = vec3(0.80, 0.79, 0.76) * (0.9 + 0.1 * blockTone(dot(floor(brick), vec2(1.0, 17.0)))) * mix(0.8, 1.0, mortar);
+    c *= 0.93 + 0.07 * texture2D(uNoise, p * 0.9).r;
+
+    // Ten strokes, then the finished word stays on the wall a while before it starts again.
+    float beat = mod(t * 1.1, 16.0);
+    float paint = 0.0;
+    vec2 tip = vec2(9.0);
+    // 日: left side; top and down the right side; middle bar; bottom bar.
+    spray(p, vec2(-0.52, 0.34), vec2(-0.52, -0.30), 0.0, beat, paint, tip);
+    spray(p, vec2(-0.52, 0.34), vec2(-0.20, 0.34), 1.0, beat, paint, tip);
+    spray(p, vec2(-0.20, 0.34), vec2(-0.20, -0.30), 2.0, beat, paint, tip);
+    spray(p, vec2(-0.52, 0.02), vec2(-0.20, 0.02), 3.0, beat, paint, tip);
+    spray(p, vec2(-0.52, -0.30), vec2(-0.20, -0.30), 4.0, beat, paint, tip);
+    // 本: across; down; left sweep; right sweep; the short bar near the foot.
+    spray(p, vec2(0.10, 0.16), vec2(0.62, 0.16), 5.0, beat, paint, tip);
+    spray(p, vec2(0.36, 0.38), vec2(0.36, -0.32), 6.0, beat, paint, tip);
+    spray(p, vec2(0.36, 0.16), vec2(0.11, -0.18), 7.0, beat, paint, tip);
+    spray(p, vec2(0.36, 0.16), vec2(0.61, -0.18), 8.0, beat, paint, tip);
+    spray(p, vec2(0.25, -0.14), vec2(0.47, -0.14), 9.0, beat, paint, tip);
+
+    // Wet paint: bright red, uneven, with a few runs dripping down from the strokes.
+    vec3 red = vec3(0.86, 0.10, 0.14) * (0.88 + 0.2 * texture2D(uNoise, p * 2.3).r);
+    c = mix(c, red, paint);
+
+    if (tip.x < 5.0) {
+      // The cloud of spray where the paint is landing...
+      c = mix(c, red, 0.35 * smoothstep(0.13, 0.0, length(p - tip)));
+      // ...and the can itself, held just below and to one side.
+      vec2 q = (p - tip - vec2(0.13, -0.2)) / 1.6;
+      float body = step(abs(q.x), 0.04) * step(abs(q.y), 0.085);
+      float band = step(abs(q.x), 0.04) * step(abs(q.y + 0.01), 0.03);
+      float cap = step(abs(q.x), 0.022) * step(abs(q.y - 0.105), 0.022);
+      c = mix(c, vec3(0.78, 0.80, 0.84) * (0.8 + 0.4 * smoothstep(-0.04, 0.04, q.x)), body);
+      c = mix(c, vec3(0.86, 0.10, 0.14), band);
+      c = mix(c, vec3(0.15, 0.15, 0.17), cap);
+    }
+    return c;
+  }
+
   void main() {
     float r = length(vPos) / uRadius;
     vec3 toEye = normalize(cameraPosition - vWorld);
@@ -122,7 +183,7 @@ const waterFragment = /* glsl */ `
       vec2 p = vec2(dot(off, across), dot(off, away)) / uRadius;
       p += 0.012 * vec2(sin(p.y * 18.0 + uTime * 1.3), cos(p.x * 16.0 + uTime * 1.1)); // seen through water
       float window = smoothstep(1.0, 0.72, length(p)) * uReveal;
-      col = mix(col, desertPicture(p, uTime), window);
+      col = mix(col, uScene > 1.5 ? kanjiPicture(p, uTime) : desertPicture(p, uTime), window);
     }
     // Woken by a touch: a ring of light runs outward and the whole pool brightens.
     float wake = uPulse * (1.0 - 0.6 * uOpen);
@@ -243,7 +304,7 @@ export function createPools(): PoolsView {
           uOpen: { value: openness[i] },
           uRadius: { value: p.radius },
           uPulse: { value: 0 },
-          uScene: { value: p.world ? 1 : 0 },
+          uScene: { value: p.scene ?? 0 },
           uReveal: { value: 0 },
           uNoise: { value: noiseTexture },
           uSky: { value: daylight.zenith },

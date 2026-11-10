@@ -258,7 +258,7 @@ export class CameraRig {
     this.goal.z = pool ? pool.z : hit.point.z;
     if (pool) this.goal.zoom = Math.max(this.goal.zoom, 0.72);
     // A pool that leads somewhere: stand over it and look straight in.
-    this.goal.peer = pool?.world ? 1 : 0;
+    this.goal.peer = pool?.scene ? 1 : 0;
     this.clampGoal();
   }
 
