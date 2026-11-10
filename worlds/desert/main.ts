@@ -239,7 +239,6 @@ function drawTop(): void {
 
 function drawPalette(): void {
   palette.replaceChildren();
-  const left = builder.remaining();
   mode.blocks.forEach((b, i) => {
     const have = builder.stock[i];
     const tile = el('button', 'block');
@@ -248,8 +247,8 @@ function drawPalette(): void {
     if (i === builder.selected && !builder.erasing) tile.classList.add('on');
     if (b.special && have === 0) tile.classList.add('locked');
     if (!b.special && have === 0) tile.classList.add('empty');
-    // Shows how many are in hand; when following a blueprint and out of a block it needs, shows a plus.
-    tile.append(el('b', '', have > 0 ? String(have) : b.special ? '?' : left[i] > 0 || !followPlan ? '+' : '0'));
+    // Shows how many are in hand; a plus means tap to order more; a question mark means ask the sphinx.
+    tile.append(el('b', '', have > 0 ? String(have) : b.special ? '?' : '+'));
     tile.onclick = () => {
       const again = builder.selected === i && !builder.erasing;
       builder.selected = i;
