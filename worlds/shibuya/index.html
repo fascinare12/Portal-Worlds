@@ -15,6 +15,9 @@
 
       .chip { background: rgba(20, 10, 46, 0.78); border: 2px solid var(--cyan); border-radius: 999px; padding: 0.5em 1em; box-shadow: 0 0 14px rgba(57, 230, 255, 0.45); }
       #home { position: fixed; top: 14px; left: 14px; width: 52px; height: 52px; border-radius: 50%; background: radial-gradient(circle, #fff 0%, #8fd49a 45%, #4f9a5c 100%); box-shadow: 0 0 16px #8fd49a; z-index: 3; }
+      #weather { position: fixed; top: 14px; left: 78px; text-align: left; border-radius: 16px; padding: 5px 14px; z-index: 3; }
+      #weather .kana { font: 800 19px/1.2 var(--kana); }
+      #weather .romaji { font-size: 12px; opacity: 0.75; }
       #count { position: fixed; top: 16px; right: 14px; font-size: 18px; font-variant-numeric: tabular-nums; z-index: 3; }
       #mute { position: fixed; top: 70px; right: 14px; font-size: 14px; max-width: 46vw; border-color: var(--pink); box-shadow: 0 0 14px rgba(255, 79, 163, 0.45); z-index: 3; }
 
@@ -61,6 +64,7 @@
   <body>
     <canvas id="world"></canvas>
     <button id="home" aria-label="Back to the wood"></button>
+    <button id="weather" class="chip" hidden><div class="kana"></div><div class="romaji"></div></button>
     <div id="count" class="chip"></div>
     <div id="mute" class="chip" hidden>No Japanese voice on this device, so words are shown but not spoken.</div>
     <div id="toast" class="chip" hidden><div class="kana"></div><div class="romaji"></div></div>
