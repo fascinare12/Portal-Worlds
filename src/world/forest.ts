@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import { fbm, lerp, mulberry32, noise2, smoothstep } from '../noise';
+import grassUrl from '../textures/grass.webp';
+import spikeUrl from '../textures/spike.webp';
+import sprigUrl from '../textures/sprig.webp';
+import { createFoliage } from './foliage';
 import { groundHeight, poolAt, pools, trees } from './layout';
 import { paint, wind } from './paint';
 
@@ -78,9 +82,7 @@ function createTrees(): THREE.Group {
   const BLOBS = 4;
   const leafMat = paint({ vertexColors: true, sway: 0.09, dab: 1.3 });
   const leaves = new THREE.InstancedMesh(blobGeometry(), leafMat, trees.length * BLOBS);
-  // Mostly greens from deep teal to spring; a few amber and rose trees for accent.
-  const foliage = [0x1f5d4a, 0x2e7a4f, 0x4c9a55, 0x79b05a, 0xa7bf5c];
-  const accents = [0xd9a441, 0xc97b63, 0xe6c15a];
+  // Dark cores inside the painted leaf cards (see foliage.ts), giving the crown depth.
 
   trees.forEach((t, i) => {
     const y = groundHeight(t.x, t.z) - 0.25;
@@ -92,8 +94,6 @@ function createTrees(): THREE.Group {
     trunks.setMatrixAt(i, dummy.matrix);
     trunks.setColorAt(i, color.set(barks[Math.floor(rand() * barks.length)]));
 
-    const tint =
-      rand() < 0.09 ? accents[Math.floor(rand() * accents.length)] : foliage[Math.floor(rand() * foliage.length)];
     for (let b = 0; b < BLOBS; b++) {
       const centre = b === 0;
       const a = (b / (BLOBS - 1)) * 6.28 + rand();
@@ -105,10 +105,10 @@ function createTrees(): THREE.Group {
         t.z + Math.sin(a) * spread,
       );
       dummy.rotation.set(0, rand() * 6.28, 0);
-      dummy.scale.set(size, size * 0.72, size);
+      dummy.scale.set(size * 0.62, size * 0.45, size * 0.62);
       dummy.updateMatrix();
       leaves.setMatrixAt(i * BLOBS + b, dummy.matrix);
-      leaves.setColorAt(i * BLOBS + b, color.set(tint).offsetHSL((rand() - 0.5) * 0.03, 0, (rand() - 0.5) * 0.08));
+      leaves.setColorAt(i * BLOBS + b, color.set(0x2f7350));
     }
   });
 
@@ -117,88 +117,95 @@ function createTrees(): THREE.Group {
   return group;
 }
 
-/** Grass tufts and drifts of small flowers. */
+/** Two upright cards crossed at right angles, carrying a painted plant. */
+function plantGeometry(): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const uv: number[] = [];
+  const idx: number[] = [];
+  for (let q = 0; q < 2; q++) {
+    const dx = q === 0 ? 0.5 : 0;
+    const dz = q === 0 ? 0 : 0.5;
+    const o = q * 4;
+    pos.push(-dx, 0, -dz, dx, 0, dz, dx, 1, dz, -dx, 1, -dz);
+    uv.push(0, 0, 1, 0, 1, 1, 0, 1);
+    idx.push(o, o + 1, o + 2, o, o + 2, o + 3);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(idx);
+  return geo;
+}
+
+interface PlantKind {
+  url: string;
+  count: number;
+  /** Smallest and largest height in world units. */
+  size: [number, number];
+  tints: number[];
+  /** Where this plant grows: returns true to accept a spot. */
+  grows(x: number, z: number, chance: number): boolean;
+}
+
+/** Hand-painted grass and flowering plants scattered over the forest floor. */
 function createGroundCover(): THREE.Group {
   const rand = mulberry32(314);
   const group = new THREE.Group();
+  const loader = new THREE.TextureLoader();
+  const geo = plantGeometry();
 
-  // One tuft: three thin blades, dark at the root and bright at the tip.
-  const blades = 4;
-  const bp = new Float32Array(blades * 9);
-  const bc = new Float32Array(blades * 9);
-  const bn = new Float32Array(blades * 9);
-  for (let b = 0; b < blades; b++) {
-    const a = (b / blades) * 6.28;
-    const cx = Math.cos(a) * 0.07;
-    const cz = Math.sin(a) * 0.07;
-    const w = 0.03;
-    bp.set([cx - cz * w * 14, 0, cz + cx * w * 14, cx + cz * w * 14, 0, cz - cx * w * 14, cx * 3.2, 0.5, cz * 3.2], b * 9);
-    bc.set([0.62, 0.74, 0.62, 0.62, 0.74, 0.62, 1.12, 1.16, 0.85], b * 9);
-    bn.set([0, 1, 0, 0, 1, 0, 0, 1, 0], b * 9);
-  }
-  const tuftGeo = new THREE.BufferGeometry();
-  tuftGeo.setAttribute('position', new THREE.BufferAttribute(bp, 3));
-  tuftGeo.setAttribute('color', new THREE.BufferAttribute(bc, 3));
-  tuftGeo.setAttribute('normal', new THREE.BufferAttribute(bn, 3));
-  // Unlit, so both faces of a blade keep their painted colour.
-  const tuftMat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
-  addSway(tuftMat, 0.06, true);
+  const kinds: PlantKind[] = [
+    {
+      url: grassUrl,
+      count: 9000,
+      size: [0.5, 1.1],
+      tints: [0xa9c79a, 0xc4d8a6, 0x9dbf95, 0xd8e2b0],
+      grows: (x, z, chance) => fbm(x * 0.11 + 30, z * 0.11 + 30, 2) > 0.36 + chance * 0.2, // in drifts
+    },
+    {
+      url: sprigUrl,
+      count: 900,
+      size: [0.7, 1.4],
+      tints: [0xffffff, 0xe6efd8],
+      grows: (x, z) => fbm(x * 0.06 + 200, z * 0.06 + 200, 2) > 0.57, // meadows
+    },
+    {
+      url: spikeUrl,
+      count: 500,
+      size: [0.8, 1.6],
+      tints: [0xffffff, 0xf2ead8],
+      grows: (x, z) => fbm(x * 0.05 + 400, z * 0.05 + 400, 2) > 0.62, // rarer patches
+    },
+  ];
 
-  const TUFTS = 16000;
-  const tufts = new THREE.InstancedMesh(tuftGeo, tuftMat, TUFTS);
-  const grassTints = [0x5a9448, 0x74a850, 0x8fb858, 0x4c8650];
-  let n = 0;
-  let tries = 0;
-  while (n < TUFTS && tries++ < TUFTS * 6) {
-    const a = rand() * 6.28;
-    const d = Math.sqrt(rand()) * 112;
-    const x = Math.cos(a) * d;
-    const z = Math.sin(a) * d;
-    if (poolAt(x, z, 2.2)) continue;
-    if (fbm(x * 0.11 + 30, z * 0.11 + 30, 2) < 0.38 + rand() * 0.2) continue; // grow in drifts
-    const s = 0.55 + rand() * 0.8;
-    dummy.position.set(x, groundHeight(x, z) - 0.03, z);
-    dummy.rotation.set(0, rand() * 6.28, 0);
-    dummy.scale.set(s, s * (0.7 + rand() * 0.8), s);
-    dummy.updateMatrix();
-    tufts.setMatrixAt(n, dummy.matrix);
-    tufts.setColorAt(n, color.set(grassTints[Math.floor(rand() * grassTints.length)]));
-    n++;
+  for (const kind of kinds) {
+    const map = loader.load(kind.url);
+    map.colorSpace = THREE.SRGBColorSpace;
+    const mat = new THREE.MeshBasicMaterial({ map, alphaTest: 0.5, side: THREE.DoubleSide });
+    addSway(mat, 0.07, true);
+    const mesh = new THREE.InstancedMesh(geo, mat, kind.count);
+    let n = 0;
+    let tries = 0;
+    while (n < kind.count && tries++ < kind.count * 30) {
+      const a = rand() * 6.28;
+      const d = Math.sqrt(rand()) * 110;
+      const x = Math.cos(a) * d;
+      const z = Math.sin(a) * d;
+      if (poolAt(x, z, 4)) continue; // keep clear of the water
+      if (!kind.grows(x, z, rand())) continue;
+      const h = lerp(kind.size[0], kind.size[1], rand());
+      dummy.position.set(x, groundHeight(x, z) - 0.04, z);
+      // A slight lean, so plants also show their faces when seen from above.
+      dummy.rotation.set((rand() - 0.5) * 0.7, rand() * 6.28, (rand() - 0.5) * 0.7);
+      dummy.scale.set(h, h, h);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(n, dummy.matrix);
+      mesh.setColorAt(n, color.set(kind.tints[Math.floor(rand() * kind.tints.length)]));
+      n++;
+    }
+    mesh.count = n;
+    group.add(mesh);
   }
-  tufts.count = n;
-  group.add(tufts);
-
-  const FLOWERS = 2600;
-  const flowerGeo = new THREE.IcosahedronGeometry(0.08, 0);
-  flowerGeo.scale(1, 0.6, 1);
-  flowerGeo.translate(0, 0.26, 0);
-  const flowerMat = new THREE.MeshLambertMaterial({ emissive: 0x333333 });
-  addSway(flowerMat, 0.05, false);
-  const flowers = new THREE.InstancedMesh(flowerGeo, flowerMat, FLOWERS);
-  const petals = [0xffffff, 0xfff1a8, 0xbcd6ff, 0xf7c1dc, 0xd9c2ff];
-  n = 0;
-  tries = 0;
-  while (n < FLOWERS && tries++ < FLOWERS * 30) {
-    const a = rand() * 6.28;
-    const d = Math.sqrt(rand()) * 105;
-    const x = Math.cos(a) * d;
-    const z = Math.sin(a) * d;
-    if (poolAt(x, z, 2.2)) continue;
-    const patch = fbm(x * 0.06 + 200, z * 0.06 + 200, 2);
-    if (patch < 0.58) continue; // meadows of flowers, not an even sprinkle
-    const s = 0.7 + rand() * 0.8;
-    dummy.position.set(x, groundHeight(x, z), z);
-    dummy.rotation.set(0, rand() * 6.28, 0);
-    dummy.scale.setScalar(s);
-    dummy.updateMatrix();
-    flowers.setMatrixAt(n, dummy.matrix);
-    // Each meadow leans towards one colour.
-    const pick = Math.floor(noise2(x * 0.02 + 5, z * 0.02 + 5) * petals.length + rand() * 1.2) % petals.length;
-    flowers.setColorAt(n, color.set(petals[pick]));
-    n++;
-  }
-  flowers.count = n;
-  group.add(flowers);
   return group;
 }
 
@@ -264,6 +271,6 @@ function createDetails(): THREE.Group {
 
 export function createForest(): THREE.Group {
   const group = new THREE.Group();
-  group.add(createTrees(), createGroundCover(), createDetails());
+  group.add(createTrees(), createFoliage(), createGroundCover(), createDetails());
   return group;
 }
