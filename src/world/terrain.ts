@@ -18,8 +18,8 @@ export function createTerrain(): TerrainView {
 
   const pos = geo.attributes.position;
   const colors = new Float32Array(pos.count * 3);
-  const moss = new THREE.Color(0x4a8748);
-  const grass = new THREE.Color(0x86b257);
+  const moss = new THREE.Color(season.ground[0]);
+  const grass = new THREE.Color(season.ground[1]);
   const leafLitter = new THREE.Color(season.litter);
   const shade = new THREE.Color(0x1f4a40);
   const bank = new THREE.Color(0x355f45);
