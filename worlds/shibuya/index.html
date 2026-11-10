@@ -20,10 +20,20 @@
       #weather .romaji { font-size: 12px; opacity: 0.75; }
       #count { position: fixed; top: 16px; right: 14px; font-size: 18px; font-variant-numeric: tabular-nums; z-index: 3; }
       #test { position: fixed; top: 64px; right: 14px; font-size: 16px; border-color: #ffe14a; box-shadow: 0 0 14px rgba(255, 225, 74, 0.45); z-index: 3; }
-      #mute { position: fixed; top: 112px; right: 14px; font-size: 14px; max-width: 46vw; border-color: var(--pink); box-shadow: 0 0 14px rgba(255, 79, 163, 0.45); z-index: 3; }
+      #help { position: fixed; top: 64px; right: 112px; width: 40px; padding: 0.5em 0; text-align: center; font-size: 16px; z-index: 3; }
+      #coach { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); max-width: min(46vw, 520px); text-align: center; font-size: 15px; line-height: 1.3; border-radius: 16px; padding: 7px 16px; border-color: #8cff6a; box-shadow: 0 0 14px rgba(140, 255, 106, 0.4); z-index: 3; pointer-events: none; }
+      @media (max-width: 760px) { #coach { top: auto; bottom: 110px; max-width: 92vw; } }
+      #howto { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(12, 6, 30, 0.9); z-index: 8; }
+      #howto .card { width: min(92vw, 620px); max-height: 92vh; overflow-y: auto; box-sizing: border-box; border-radius: 26px; padding: 18px 26px 22px; }
+      #howto h2 { margin: 0 0 8px; font-size: 22px; }
+      #howto li { margin: 0 0 9px; font-size: 16px; line-height: 1.4; }
+      #howto .k { font-family: var(--kana); font-weight: 800; color: var(--cyan); }
+      #howto p { font-size: 15px; opacity: 0.8; }
+      #howto-close { display: block; margin: 6px auto 0; background: var(--pink); border-radius: 999px; padding: 0.5em 2em; font-weight: 800; font-size: 18px; }
+      #mute { position: fixed; top: 114px; right: 14px; font-size: 14px; max-width: 30vw; border-color: var(--pink); box-shadow: 0 0 14px rgba(255, 79, 163, 0.45); z-index: 3; }
 
       /* Something said to her as she comes and goes. */
-      #toast { position: fixed; left: 50%; top: 84px; transform: translateX(-50%); text-align: center; border-radius: 20px; padding: 8px 20px; max-width: 90vw; z-index: 4; }
+      #toast { position: fixed; left: 50%; top: 120px; transform: translateX(-50%); text-align: center; border-radius: 20px; padding: 8px 20px; max-width: 90vw; z-index: 4; }
       #toast .kana { font: 800 clamp(22px, 5.5vw, 34px)/1.2 var(--kana); }
       #toast .romaji { font-size: 14px; opacity: 0.8; }
 
@@ -84,6 +94,23 @@
     <button id="weather" class="chip" hidden><div class="kana"></div><div class="romaji"></div></button>
     <div id="count" class="chip"></div>
     <button id="test" class="chip">✎ Test</button>
+    <button id="help" class="chip" aria-label="How to play">?</button>
+    <div id="coach" class="chip" hidden></div>
+    <div id="howto" hidden>
+      <div class="card chip">
+        <h2>How to play</h2>
+        <ol>
+          <li><b>Listen.</b> Tap anything to hear its name and see it written.</li>
+          <li><b>Find.</b> A question appears at the bottom. <span class="k">〜 は どこ？</span> means “where is 〜?” and <span class="k">〜 を ください</span> means “〜, please.” Find the thing and tap it. 🔊 says it again. A wrong tap costs nothing.</li>
+          <li><b>Spray.</b> A word you found appears on a wall as a dashed outline. Tap it and trace each stroke, starting at the white dot.</li>
+          <li><b>Shop.</b> Tap the コンビニ front to go in. Sometimes you get a list of three things joined with <span class="k">と</span> (“and”). Finish a list for a stamp. The green でぐち door leads out.</li>
+          <li><b>By ear, by eye.</b> Words you know are sometimes asked with the word hidden (listen!) or with no sound (read!).</li>
+          <li><b>Test.</b> Twenty questions on every word. Get 16 right to pass.</li>
+        </ol>
+        <p>Drag to look around. Tap the ground to walk a few steps. The green circle goes home.</p>
+        <button id="howto-close">OK</button>
+      </div>
+    </div>
     <div id="mute" class="chip" hidden>No Japanese voice on this device, so words are shown but not spoken.</div>
     <div id="toast" class="chip" hidden><div class="kana"></div><div class="romaji"></div></div>
     <div id="label" hidden><div class="kana"></div><div class="romaji"></div><div class="english"></div></div>

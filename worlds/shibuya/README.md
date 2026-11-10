@@ -26,6 +26,14 @@ dropped once she has found it twice running.
 Drag to look around; tap the road to walk; arrows or WASD also work. The green
 puddle, or the green button, leads back to the wood.
 
+## How she is taught to play
+
+A green line at the top always says what to do next, worked out from how far
+she has got: tap things, then find what is asked for, then spray a found word,
+then visit the shop, then try the test. While a question is up, it explains
+that kind of question. The ? button opens a card describing every way of
+playing.
+
 ## Other ways she is asked
 
 - **Shopping lists.** In the store, every third question is a list of three

@@ -567,6 +567,8 @@ export async function buildCity(): Promise<City> {
       storeDoor.add(glass);
       for (const a of [-(wide - 0.8) / 2, -1.1, 1.1, (wide - 0.8) / 2]) storeDoor.add(box(frame, 0.12, 2.7, 0.16, a, 1.55, 0.03));
       storeDoor.add(box(frame, wide - 0.8, 0.14, 0.16, 0, 0.26, 0.03));
+      // The whole front counts as the way in, a little proud of the wall so nothing gets in front of it.
+      storeDoor.add(box(new THREE.MeshBasicMaterial({ visible: false }), wide - 0.4, 3.2, 0.5, 0, 1.6, 0.3));
       // A mat at the door and a rack of umbrellas beside it.
       storeDoor.add(box(lambert(0x2f9a6a), 2, 0.04, 0.9, 0, 0.02, 0.7));
       for (let i = 0; i < 3; i++) {
@@ -886,11 +888,12 @@ export async function buildCity(): Promise<City> {
     ag.fillRect(x - r, y - r, r * 2, r * 2);
     ag.restore();
   }
+  const wetMap = new THREE.CanvasTexture(ac);
   const roadTex = texture(gc);
   roadTex.anisotropy = 4;
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(128, 128),
-    new THREE.MeshBasicMaterial({ map: roadTex, alphaMap: new THREE.CanvasTexture(ac), transparent: true }),
+    new THREE.MeshBasicMaterial({ map: roadTex, alphaMap: wetMap, transparent: true }),
   );
   ground.rotation.x = -Math.PI / 2;
   ground.renderOrder = 1;
@@ -1646,12 +1649,19 @@ export async function buildCity(): Promise<City> {
   scene.add(fire);
 
   // Weather. Rain and snow fall only when they are falling for real; fog thickens the air.
-  // The road stays wet-looking in any weather: that is how this street is painted.
+  // The road mirrors the city only while it is raining.
   let rich = true;
   let weatherNow: Sky = 'rain';
   const apply = () => {
     const falling = weatherNow === 'rain' || weatherNow === 'storm' || weatherNow === 'snow';
-    mirror.visible = rich;
+    // The road only mirrors the city when it is actually wet. Dry, it is plain asphalt.
+    const wet = rich && (weatherNow === 'rain' || weatherNow === 'storm');
+    mirror.visible = wet;
+    const road = ground.material as THREE.MeshBasicMaterial;
+    road.alphaMap = wet ? wetMap : null;
+    road.transparent = wet;
+    road.color.setScalar(wet ? 1 : 0.6);
+    road.needsUpdate = true;
     rain.visible = rich && falling;
     ripples.visible = rich && (weatherNow === 'rain' || weatherNow === 'storm');
     const drops = rain.material as THREE.LineBasicMaterial;
