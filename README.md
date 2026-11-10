@@ -31,6 +31,12 @@ in `vite.config.ts`, and set `world: '<name>'` on a pool in
 |---|---|---|
 | Desert | `worlds/desert/` | pale sand; shows a pyramid being built |
 
+## Visitors
+
+Creatures from other worlds come through their pools. A sandstone sphinx
+wades out of the desert pool every couple of minutes, lies on the bank for a
+while, then walks back in. Add `?visit=now` to the address to see it at once.
+
 ## Time of day
 
 The sky follows the real sun over Brevard, North Carolina: morning light,
