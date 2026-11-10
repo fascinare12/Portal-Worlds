@@ -136,7 +136,9 @@ export function saveProgress(p: Progress): void {
 /** The next word to ask for, never the same one twice running. */
 /** `here` lists the words that can be found where she is standing, so she is never asked for something in another room. */
 export function nextWord(p: Progress, last: string | null, here: Set<string>): Word | null {
-  const pool = p.heard.filter((id) => id !== last && here.has(id));
+  let pool = p.heard.filter((id) => id !== last && here.has(id));
+  // If the only word she knows here is the one just asked, ask it again rather than fall silent.
+  if (!pool.length) pool = p.heard.filter((id) => here.has(id));
   if (!pool.length) return null;
   const due = pool.filter((id) => (p.due[id] ?? 0) <= p.asked);
   const from = due.length ? due : pool;

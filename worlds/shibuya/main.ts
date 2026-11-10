@@ -123,27 +123,25 @@ window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
 function tapped(x: number, y: number): void {
   if (writing) return;
   ray.setFromCamera(new THREE.Vector2((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1), camera);
-  // A thing with a name?
-  const hit = ray.intersectObjects(thingsHere().map((t) => t.object), true)[0];
-  if (hit) {
+  // Whatever is nearest along the line of the tap is what was tapped. (Taking the first thing
+  // found, however far off, let a mural on a building behind the shop answer a tap on the shop.)
+  const near = (list: THREE.Object3D[], deep = false) => ray.intersectObjects(list, deep)[0];
+  const thingHit = near(thingsHere().map((t) => t.object), true);
+  const tagHit = inside ? undefined : near(city.tags.map((t) => t.mesh));
+  const doorHit = near([inside ? store.exit : city.storeDoor], true);
+  const puddleHit = inside ? undefined : near([city.puddle]);
+  const nearest = [thingHit, tagHit, doorHit, puddleHit].filter((h) => h).sort((a, b) => a!.distance - b!.distance)[0];
+  if (nearest && nearest === thingHit) {
     const thing = thingsHere().find((t) => {
-      for (let o: THREE.Object3D | null = hit.object; o; o = o.parent) if (o === t.object) return true;
+      for (let o: THREE.Object3D | null = thingHit.object; o; o = o.parent) if (o === t.object) return true;
       return false;
     });
     if (thing) return touch(thing);
   }
   // One of her tags on the wall: write it with the spray can.
-  const tagHit = inside ? undefined : ray.intersectObjects(city.tags.map((t) => t.mesh))[0];
-  if (tagHit) {
-    const t = city.tags.find((x) => x.mesh === tagHit.object)!;
-    return write(t.id);
-  }
-  if (inside) {
-    if (ray.intersectObject(store.exit, true).length) return goThrough(false);
-  } else {
-    if (ray.intersectObject(city.storeDoor, true).length) return goThrough(true);
-    if (ray.intersectObject(city.puddle).length) return goHome();
-  }
+  if (nearest && nearest === tagHit) return write(city.tags.find((x) => x.mesh === tagHit.object)!.id);
+  if (nearest && nearest === doorHit) return goThrough(!inside);
+  if (nearest && nearest === puddleHit) return goHome();
   // Otherwise walk to the spot on the road.
   const d = ray.ray.direction;
   if (d.y < -0.02) {
@@ -241,7 +239,7 @@ function touch(thing: Thing): void {
       // Not that one: it tells her its own name, and the question stands.
       quest.firstTry = false;
     }
-  } else if (questTimer <= 0 && thingsHere().filter((t) => progress.heard.includes(t.word)).length >= (inside ? 3 : 4)) {
+  } else if (questTimer <= 0 && thingsHere().filter((t) => progress.heard.includes(t.word)).length >= (inside ? 1 : 4)) {
     questTimer = 2.5; // enough heard: the street starts asking
   }
   saveProgress(progress);
@@ -361,10 +359,10 @@ function goThrough(entering: boolean): void {
     ask.hidden = true;
     label.hidden = true;
     shown = null;
-    questTimer = 5;
+    questTimer = 4;
     veil.classList.add('open');
     // What shop staff call out when a customer comes in, and what they say as one leaves.
-    if (entering) announce('いらっしゃいませ', 'irasshaimase: welcome! (said by shop staff)');
+    if (entering) announce('いらっしゃいませ', 'irasshaimase: welcome! Tap things to hear them; the clerk will ask for what you have heard.');
     else announce('ありがとう ございました', 'arigatō gozaimashita: thank you very much');
     setTimeout(() => (veil.style.transition = ''), 500);
   }, 380);
@@ -378,6 +376,42 @@ if (new URLSearchParams(window.location.search).has('debug')) {
     return !!t;
   };
 }
+
+// ---- Teaching her how to play ----
+
+/**
+ * One line that always says what to do next, worked out from how far she has got.
+ * Each way of playing is introduced in turn: listen, find, spray, shop, test.
+ */
+function nextStep(): string {
+  if (writing || !$('intro').hidden || !$('quiz').hidden) return '';
+  const heardHere = thingsHere().filter((t) => progress.heard.includes(t.word)).length;
+  if (quest && !ask.classList.contains('right')) {
+    if (quest.words.length > 1) return 'A shopping list ↓  Find all three things and tap each one.';
+    if (quest.mode === 'listen') return 'Listen ↓  Tap 🔊 to hear it again, then find it and tap it.';
+    if (quest.mode === 'read') return 'Read the word ↓  then find it and tap it.';
+    return 'You are being asked for something ↓  Find it and tap it. A wrong tap is fine.';
+  }
+  if (inside) {
+    if (heardHere === 0) return 'Tap anything on the shelves to hear its name.';
+    return 'Tap more things to learn them, or tap the green でぐち door to leave.';
+  }
+  if (heardHere === 0) return 'Tap anything in the street to hear its name.';
+  if (heardHere < 4) return `Tap ${4 - heardHere} more thing${heardHere === 3 ? '' : 's'}. Then the street will start asking you for them.`;
+  if (progress.tagged.length === 0) return 'Good. Now listen: the street is about to ask you to find one of them.';
+  if (progress.tagged.length > 0 && progress.sprayed!.length === 0) return 'You found a word! Tap its dashed outline on a wall to spray it yourself.';
+  if (progress.sprayed!.length > 0 && !progress.heard.some((id) => wordById(id).store)) return 'Go into the bright コンビニ shop for more words: tap its front.';
+  if (progress.tagged.length >= 25 && !progress.tests?.length) return 'You know a lot of words. Try the ✎ Test when you feel ready.';
+  return '';
+}
+const coach = $('coach');
+setInterval(() => {
+  const text = nextStep();
+  coach.hidden = !text;
+  if (text && coach.textContent !== text) coach.textContent = text;
+}, 400);
+$('help').onclick = () => ($('howto').hidden = false);
+$('howto-close').onclick = () => ($('howto').hidden = true);
 
 // ---- The test ----
 
