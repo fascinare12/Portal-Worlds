@@ -21,11 +21,11 @@ export class CameraRig {
   readonly camera = new THREE.PerspectiveCamera(FOV, 1, 0.3, 600);
 
   /** 0 = whole wood from above, 1 = standing on the forest floor. */
-  zoom = 0.12;
+  zoom = 0.22;
   private x = 0;
   private z = 0;
   private yaw = 0.5;
-  private goal = { x: 0, z: 0, yaw: 0.5, zoom: 0.12 };
+  private goal = { x: 0, z: 0, yaw: 0.5, zoom: 0.22 };
 
   private pointers = new Map<number, { x: number; y: number }>();
   private tap: { x: number; y: number; t: number } | null = null;

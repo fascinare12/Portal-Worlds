@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mulberry32 } from '../noise';
 import { pools } from './layout';
+import { noiseTexture } from './noiseTexture';
 
 /**
  * Every pool is a still, dark mirror. An OPEN pool is told apart without words:
@@ -11,8 +12,10 @@ import { pools } from './layout';
 
 const waterVertex = /* glsl */ `
   varying vec2 vPos;
+  varying vec3 vWorld;
   void main() {
     vPos = position.xy;
+    vWorld = (modelMatrix * vec4(position, 1.0)).xyz;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
@@ -23,19 +26,34 @@ const waterFragment = /* glsl */ `
   uniform float uRadius;
   uniform vec3 uColor;
   varying vec2 vPos;
+  varying vec3 vWorld;
+
+  uniform sampler2D uNoise;
+
+  // Soft, slowly shifting clouds: leaves and sky seen in moving water.
+  float blot(vec2 p) {
+    return texture2D(uNoise, p * 0.07).r;
+  }
+
   void main() {
     float r = length(vPos) / uRadius;
-    float a = atan(vPos.y, vPos.x);
+    vec3 toEye = normalize(cameraPosition - vWorld);
+    // Water mirrors more at a glancing angle and shows its depth from above.
+    float glance = pow(1.0 - clamp(toEye.y, 0.0, 1.0), 3.0);
+    vec2 rip = vPos + 0.18 * vec2(sin(vPos.y * 2.0 + uTime * 0.5), cos(vPos.x * 2.0 + uTime * 0.4));
 
-    // Closed: dark mirror of canopy and sky with slow, faint ripples.
-    float ripple = sin(r * 9.0 - uTime * 0.6) * 0.5 + 0.5;
-    vec3 closed = mix(vec3(0.05, 0.13, 0.12), vec3(0.42, 0.60, 0.55), 0.25 + 0.2 * ripple * r);
+    // Closed: a dark mirror holding the canopy and the pale sky between the leaves.
+    float canopy = blot(rip * 0.8 + 3.0) * 0.7 + blot(rip * 2.1 + 9.0) * 0.3;
+    vec3 mirror = mix(vec3(0.13, 0.30, 0.24), vec3(0.94, 0.95, 0.80), smoothstep(0.42, 0.68, canopy));
+    vec3 closed = mix(vec3(0.04, 0.13, 0.15), mirror, 0.38 + 0.55 * glance);
 
-    // Open: a bright swirl in the colour of the other world.
-    float swirl = sin(a * 3.0 + r * 7.0 - uTime * 1.6) * 0.5 + 0.5;
-    float rings = sin(r * 16.0 - uTime * 2.6) * 0.5 + 0.5;
-    float core = smoothstep(1.1, 0.0, r);
-    vec3 open = uColor * (0.45 + 0.5 * swirl + 0.25 * rings) + vec3(1.0) * core * core * 0.45;
+    // Open: lit from below in the colour of the other world, brightest at the heart.
+    float heart = smoothstep(1.3, 0.0, r);
+    float shimmer = blot(rip * 1.6 + uTime * 0.4);
+    float rings = sin(r * 10.0 - uTime * 1.2) * 0.5 + 0.5;
+    vec3 open = mix(uColor * 0.8, mix(uColor, vec3(1.0), 0.75), heart * heart);
+    open += uColor * (0.2 * shimmer + 0.07 * rings);
+    open = mix(open, mirror, 0.2 * glance);
 
     gl_FragColor = vec4(mix(closed, open, uOpen), 1.0);
   }
@@ -43,8 +61,12 @@ const waterFragment = /* glsl */ `
 
 const beamVertex = /* glsl */ `
   varying vec2 vUv;
+  varying vec3 vNormal;
+  varying vec3 vWorld;
   void main() {
     vUv = uv;
+    vNormal = normal;
+    vWorld = (modelMatrix * vec4(position, 1.0)).xyz;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
@@ -55,10 +77,17 @@ const beamFragment = /* glsl */ `
   uniform float uNear;
   uniform vec3 uColor;
   varying vec2 vUv;
+  varying vec3 vNormal;
+  varying vec3 vWorld;
   void main() {
-    float fade = pow(1.0 - vUv.y, 2.0) * uNear;
-    float shimmer = 0.75 + 0.25 * sin(vUv.x * 40.0 + uTime * 1.5 + vUv.y * 6.0);
-    gl_FragColor = vec4(uColor, fade * shimmer * 0.45 * uOpen);
+    // Fade towards the silhouette so the column has no hard sides.
+    vec3 toEye = cameraPosition - vWorld;
+    float facing = abs(dot(normalize(vNormal.xz), normalize(toEye.xz)));
+    float soft = pow(facing, 2.5);
+    float fade = pow(1.0 - vUv.y, 1.6) * smoothstep(0.0, 0.04, vUv.y);
+    float shimmer = 0.8 + 0.2 * sin(vUv.x * 30.0 + uTime * 1.2 + vUv.y * 5.0);
+    vec3 col = mix(uColor, vec3(1.0), 0.35);
+    gl_FragColor = vec4(col, fade * soft * shimmer * 0.32 * uOpen * uNear);
   }
 `;
 
@@ -95,6 +124,8 @@ const sparkFragment = /* glsl */ `
 
 export interface PoolsView {
   group: THREE.Group;
+  /** How open each pool currently is, 0..1. */
+  openness: number[];
   /** Open or close a pool; it eases between the two states. */
   setOpen(index: number, open: boolean, color?: number): void;
   update(time: number, dt: number, viewportHeight: number, eye: THREE.Vector3): void;
@@ -124,7 +155,13 @@ export function createPools(): PoolsView {
       new THREE.ShaderMaterial({
         vertexShader: waterVertex,
         fragmentShader: waterFragment,
-        uniforms: { uTime: { value: 0 }, uOpen: { value: openness[i] }, uRadius: { value: p.radius }, uColor },
+        uniforms: {
+          uTime: { value: 0 },
+          uOpen: { value: openness[i] },
+          uRadius: { value: p.radius },
+          uNoise: { value: noiseTexture },
+          uColor,
+        },
       }),
     );
     water.rotation.x = -Math.PI / 2;
@@ -132,7 +169,7 @@ export function createPools(): PoolsView {
     group.add(water);
     waterMats.push(water.material);
 
-    const height = 16;
+    const height = 20;
     const beam = new THREE.Mesh(
       new THREE.CylinderGeometry(p.radius * 0.7, p.radius * 0.95, height, 28, 1, true),
       new THREE.ShaderMaterial({
@@ -180,6 +217,7 @@ export function createPools(): PoolsView {
 
   return {
     group,
+    openness,
     setOpen(index, open, colorHex) {
       const p = pools[index];
       p.open = open;

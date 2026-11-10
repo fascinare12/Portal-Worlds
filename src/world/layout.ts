@@ -74,3 +74,30 @@ export function groundHeight(x: number, z: number): number {
 export function poolAt(x: number, z: number, margin = 2): Pool | undefined {
   return pools.find((p) => Math.hypot(p.x - x, p.z - z) < p.radius + margin);
 }
+
+export interface Tree {
+  x: number;
+  z: number;
+  /** Trunk height. */
+  h: number;
+  /** Canopy radius. */
+  r: number;
+}
+
+function makeTrees(): Tree[] {
+  const rand = mulberry32(21);
+  const trees: Tree[] = [];
+  const half = GROUND_SIZE / 2 - 6;
+  let tries = 0;
+  while (trees.length < 820 && tries++ < 30000) {
+    const x = (rand() * 2 - 1) * half;
+    const z = (rand() * 2 - 1) * half;
+    if (poolAt(x, z, 7)) continue;
+    if (fbm(x * 0.03 + 9, z * 0.03 + 9, 2) < 0.4) continue; // glades
+    if (trees.some((t) => Math.hypot(t.x - x, t.z - z) < 3)) continue;
+    trees.push({ x, z, h: 7 + rand() * 7, r: 2.4 + rand() * 1.8 });
+  }
+  return trees;
+}
+
+export const trees: Tree[] = makeTrees();

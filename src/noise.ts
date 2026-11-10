@@ -55,3 +55,19 @@ export function smoothstep(a: number, b: number, x: number): number {
 export function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
+
+/** Value noise that repeats every `period` units, for seamless textures. */
+export function tileNoise(x: number, z: number, period: number): number {
+  const ix = Math.floor(x);
+  const iz = Math.floor(z);
+  const fx = x - ix;
+  const fz = z - iz;
+  const u = fx * fx * (3 - 2 * fx);
+  const v = fz * fz * (3 - 2 * fz);
+  const w = (n: number) => ((n % period) + period) % period;
+  const a = hash(w(ix), w(iz));
+  const b = hash(w(ix + 1), w(iz));
+  const c = hash(w(ix), w(iz + 1));
+  const d = hash(w(ix + 1), w(iz + 1));
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
