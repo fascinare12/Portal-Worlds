@@ -15,10 +15,20 @@ shares nothing with the wood's rules.
    two fingers (or shift-drag) to slide across the plot.
 4. **Order more blocks.** Blocks run out quickly. Tapping a block type that has
    run out asks one question; a right answer delivers a batch. No more can be
-   ordered once 16 of that block are in hand, so blocks cannot be stockpiled.
+   ordered once 32 of that block are in hand, so blocks cannot be stockpiled.
 5. **The sphinx** paces the edge of the site. Tap it, or zoom in close, and it
-   asks three harder questions. Each right answer wins a special block that
+   asks three harder questions. Each right answer wins two special blocks that
    cannot be ordered.
+
+## How much a right answer brings
+
+Sized for roughly one question per 40 seconds of building.
+
+| Child | Blocks per right answer |
+|---|---|
+| C | 10 (or twice the number she counted out, at least 8) |
+| R | 12, or 17 if answered quickly |
+| S | 16, or 21 if answered quickly |
 
 ## What each child practises
 
