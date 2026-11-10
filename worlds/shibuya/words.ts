@@ -15,6 +15,8 @@ export interface Word {
   food?: boolean;
   /** Painted on a wall as a picture, because it has no place in a city street. */
   mural?: boolean;
+  /** Found inside the convenience store. */
+  store?: boolean;
 }
 
 export const WORDS: Word[] = [
@@ -60,6 +62,19 @@ export const WORDS: Word[] = [
   { id: 'te', kana: 'て', romaji: 'te', english: 'hand', mural: true },
   { id: 'usagi', kana: 'うさぎ', romaji: 'usagi', english: 'rabbit', mural: true },
   { id: 'hebi', kana: 'へび', romaji: 'hebi', english: 'snake', mural: true },
+  // Inside the convenience store. Things on the shelves are asked for with を ください.
+  { id: 'obentou', kana: 'おべんとう', romaji: 'obentō', english: 'boxed lunch', food: true, store: true },
+  { id: 'okashi', kana: 'おかし', romaji: 'okashi', english: 'snacks, sweets', food: true, store: true },
+  { id: 'tamago', kana: 'たまご', romaji: 'tamago', english: 'egg', food: true, store: true },
+  { id: 'gyuunyuu', kana: 'ぎゅうにゅう', romaji: 'gyūnyū', english: 'milk', food: true, store: true },
+  { id: 'mikan', kana: 'みかん', romaji: 'mikan', english: 'mandarin orange', food: true, store: true },
+  { id: 'momo', kana: 'もも', romaji: 'momo', english: 'peach', food: true, store: true },
+  { id: 'ichigo', kana: 'いちご', romaji: 'ichigo', english: 'strawberry', food: true, store: true },
+  { id: 'yasai', kana: 'やさい', romaji: 'yasai', english: 'vegetables', food: true, store: true },
+  { id: 'zasshi', kana: 'ざっし', romaji: 'zasshi', english: 'magazine', food: true, store: true },
+  { id: 'kago', kana: 'かご', romaji: 'kago', english: 'basket', food: true, store: true },
+  { id: 'okane', kana: 'おかね', romaji: 'okane', english: 'money', store: true },
+  { id: 'tenin', kana: 'てんいん', romaji: "ten'in", english: 'shop clerk', store: true },
 ];
 
 export const wordById = (id: string) => WORDS.find((w) => w.id === id)!;
@@ -101,8 +116,9 @@ export function saveProgress(p: Progress): void {
 }
 
 /** The next word to ask for, never the same one twice running. */
-export function nextWord(p: Progress, last: string | null): Word | null {
-  const pool = p.heard.filter((id) => id !== last);
+/** `here` lists the words that can be found where she is standing, so she is never asked for something in another room. */
+export function nextWord(p: Progress, last: string | null, here: Set<string>): Word | null {
+  const pool = p.heard.filter((id) => id !== last && here.has(id));
   if (!pool.length) return null;
   const due = pool.filter((id) => (p.due[id] ?? 0) <= p.asked);
   const from = due.length ? due : pool;

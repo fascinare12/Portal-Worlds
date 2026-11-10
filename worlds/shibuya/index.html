@@ -18,6 +18,11 @@
       #count { position: fixed; top: 16px; right: 14px; font-size: 18px; font-variant-numeric: tabular-nums; z-index: 3; }
       #mute { position: fixed; top: 70px; right: 14px; font-size: 14px; max-width: 46vw; border-color: var(--pink); box-shadow: 0 0 14px rgba(255, 79, 163, 0.45); z-index: 3; }
 
+      /* Something said to her as she comes and goes. */
+      #toast { position: fixed; left: 50%; top: 84px; transform: translateX(-50%); text-align: center; border-radius: 20px; padding: 8px 20px; max-width: 90vw; z-index: 4; }
+      #toast .kana { font: 800 clamp(22px, 5.5vw, 34px)/1.2 var(--kana); }
+      #toast .romaji { font-size: 14px; opacity: 0.8; }
+
       /* The name that floats over something she has tapped. */
       #label { position: fixed; transform: translate(-50%, -100%); text-align: center; pointer-events: none; z-index: 4; background: rgba(20, 10, 46, 0.82); border: 2px solid var(--pink); border-radius: 16px; padding: 6px 16px 8px; box-shadow: 0 0 18px rgba(255, 79, 163, 0.6); }
       #label .kana { font: 800 44px/1.15 var(--kana); text-shadow: 0 0 12px var(--pink); }
@@ -58,6 +63,7 @@
     <button id="home" aria-label="Back to the wood"></button>
     <div id="count" class="chip"></div>
     <div id="mute" class="chip" hidden>No Japanese voice on this device, so words are shown but not spoken.</div>
+    <div id="toast" class="chip" hidden><div class="kana"></div><div class="romaji"></div></div>
     <div id="label" hidden><div class="kana"></div><div class="romaji"></div><div class="english"></div></div>
     <div id="ask" class="chip" hidden>
       <button id="again" aria-label="Hear it again">🔊</button>

@@ -26,6 +26,8 @@ export interface City {
   things: Thing[];
   /** The puddle that leads back to the wood. */
   puddle: THREE.Mesh;
+  /** The front of the convenience store; tapping it goes inside. */
+  storeDoor: THREE.Object3D;
   /** Her tags on the walls; tapping one opens it for writing. */
   tags: { id: string; mesh: THREE.Mesh }[];
   /** Puts a word's tag on the next free stretch of wall: an outline until she has written it herself. */
@@ -420,6 +422,8 @@ export async function buildCity(): Promise<City> {
   // building fronts as the buildings are made, so nothing hangs past the edge of a wall.
   const slots: { x: number; z: number; turn: number }[] = [];
   const muralQueue = WORDS.filter((w) => w.mural);
+  const storeDoor = new THREE.Group();
+  let storeBuilt = false;
   let fronts = 0;
   const signs: THREE.Mesh[] = [];
   const spills: { x: number; z: number; color: string }[] = [];
@@ -468,7 +472,7 @@ export async function buildCity(): Promise<City> {
   surface(bg, photo.concrete, 128, 128, '#3a3852');
   const baseMap = texture(bc);
   const roofStuff = new THREE.MeshLambertMaterial({ map: baseMap });
-  const signWords = WORDS.map((w) => w.kana);
+  const signWords = WORDS.filter((w) => !w.store).map((w) => w.kana);
   const building = (x: number, z: number, w: number, d: number, h: number, faceX: number, faceZ: number) => {
     const wide = faceX ? d : w; // how long the street face is
     const turn = faceX ? (faceX * Math.PI) / 2 : faceZ > 0 ? 0 : Math.PI;
@@ -491,6 +495,48 @@ export async function buildCity(): Promise<City> {
     }
     // The ground floor: a shutter or a shop facing the street, on a concrete base.
     city.add(box(roofStuff, w, 3.4, d, x, 1.7, z));
+    // One building near where she arrives is the convenience store: a bright glass front she can walk into.
+    if (!storeBuilt && faceX === 1 && z > 27 && z < 40) {
+      storeBuilt = true;
+      const lit = new THREE.MeshBasicMaterial({ color: 0xf4fbff });
+      const frame = lambert(0xe8ecef);
+      storeDoor.add(box(lit, wide - 0.8, 2.7, 0.1, 0, 1.55, 0)); // the glass, glowing from inside
+      for (const a of [-(wide - 0.8) / 2, -1.1, 1.1, (wide - 0.8) / 2]) storeDoor.add(box(frame, 0.12, 2.7, 0.16, a, 1.55, 0.03));
+      // Shelves glimpsed through the glass.
+      for (let i = 0; i < 9; i++) {
+        const a = -(wide - 2) / 2 + (i / 8) * (wide - 2);
+        if (Math.abs(a) < 1.2) continue;
+        storeDoor.add(box(lambert(pick([0xff7a8a, 0x6fc3ff, 0xffe27a, 0x9be08a]), 0.5), 0.5, 0.5 + rnd() * 0.5, 0.05, a, 0.9, 0.06));
+      }
+      // The sign band: green, white and orange stripes, with the shop's name. Convenience store is
+      // written コンビニ, in the other script, so its reading is given underneath in hiragana.
+      const [c, g] = canvas(768, 160);
+      g.fillStyle = '#ffffff';
+      g.fillRect(0, 0, 768, 160);
+      g.fillStyle = '#2f9a6a';
+      g.fillRect(0, 0, 768, 30);
+      g.fillStyle = '#f4a23a';
+      g.fillRect(0, 130, 768, 30);
+      g.fillStyle = '#1f6a4a';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.font = `900 70px ${KANA_FONT}`;
+      g.fillText('コンビニ', 384, 66);
+      g.font = `700 26px ${KANA_FONT}`;
+      g.fillText('こんびに', 384, 112);
+      const band = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(wide - 0.4, 7.5), 1.05), new THREE.MeshBasicMaterial({ map: texture(c) }));
+      band.position.set(0, 3.5, 0.5);
+      storeDoor.add(band, box(lambert(0x2f9a6a), 2.2, 0.08, 1, 0, 2.95, 0.5));
+      const [dx0, dz0] = onFace(0, 0.1);
+      storeDoor.position.set(dx0, 0.2, dz0);
+      storeDoor.rotation.y = turn;
+      city.add(storeDoor);
+      city.add(box(roofStuff, w, 3.4, d, x, 1.7, z));
+      const [lx, lz] = onFace(0, 2.4);
+      spills.push({ x: lx, z: lz, color: '#eaffff' });
+      light(lx, 2.4, lz, '#eaffff', 7);
+      return;
+    }
     const floor = pick(floors);
     const front = new THREE.Mesh(new THREE.PlaneGeometry(wide - 0.6, 3), floor.mat);
     const [fx, fz] = onFace(0, 0.03);
@@ -830,7 +876,8 @@ export async function buildCity(): Promise<City> {
   }
 
   // ---- Strings of lights and red lanterns across the street, and street lamps.
-  const lantern = new THREE.MeshBasicMaterial({ color: 0xff5a3a });
+  // Paper lanterns: a ribbed barrel of glowing paper with a black cap at each end and a tassel below.
+  const lanterns: { x: number; y: number; z: number; size: number }[] = [];
   for (let z = -42; z <= 42; z += 7) {
     if (Math.abs(z) < 8) continue;
     for (let i = 0; i <= 14; i++) {
@@ -838,11 +885,8 @@ export async function buildCity(): Promise<City> {
       const x = (t * 2 - 1) * 10.6;
       const y = 8.6 - Math.sin(t * Math.PI) * 1.8;
       if (i % 5 === 2) {
-        const l = new THREE.Mesh(new THREE.SphereGeometry(0.42, 18, 14), lantern);
-        l.scale.y = 1.2;
-        l.position.set(x, y - 0.5, z);
-        city.add(l);
-        light(x, y - 0.5, z, '#ff6a3a', 3.2);
+        lanterns.push({ x, y: y - 0.65, z, size: 1 });
+        light(x, y - 0.65, z, '#ff7a3a', 2.1);
       } else {
         light(x, y, z, '#ffe0a0', 1.2);
       }
@@ -856,6 +900,7 @@ export async function buildCity(): Promise<City> {
     }
   }
 
+  if (!storeBuilt) console.warn('Shibuya: no building fell where the convenience store goes');
   if (muralQueue.length) console.warn(`Shibuya: ${muralQueue.length} murals found no wall`);
   // Her tags fill the walls nearest to where she arrives first.
   slots.sort((a, b) => Math.hypot(a.x, a.z - 41) - Math.hypot(b.x, b.z - 41));
@@ -1138,10 +1183,8 @@ export async function buildCity(): Promise<City> {
     stall.position.set(24, 0.2, -(ROAD + 1.6));
     city.add(stall);
     for (let i = 0; i < 5; i++) {
-      const l = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12), new THREE.MeshBasicMaterial({ color: 0xff5a3a }));
-      l.position.set(21 + i * 1.5, 3.4, -(ROAD + 0.2));
-      city.add(l);
-      light(l.position.x, 3.4, l.position.z, '#ff6a3a', 3);
+      lanterns.push({ x: 21 + i * 1.5, y: 3.3, z: -(ROAD + 0.2), size: 0.7 });
+      light(21 + i * 1.5, 3.3, -(ROAD + 0.2), '#ff7a3a', 1.8);
     }
     light(24, 2.4, -(ROAD + 1), '#ffe0a0', 9);
     const onCounter = (word: string, x: number, parts: THREE.Object3D[]) => {
@@ -1291,6 +1334,38 @@ export async function buildCity(): Promise<City> {
   const petals = new THREE.Points(petalGeo, new THREE.PointsMaterial({ color: 0xffc8ec, size: 0.22, transparent: true, opacity: 0.85, map: roundDot, alphaTest: 0.3 }));
   petals.frustumCulled = false;
   scene.add(petals);
+
+  // All the lanterns, drawn in one go per part.
+  {
+    // The paper: brightest round the middle where the flame is, with a wire rib every hand's width.
+    const [lc, lg] = canvas(64, 128);
+    const paper = lg.createLinearGradient(0, 0, 0, 128);
+    paper.addColorStop(0, '#d8301a');
+    paper.addColorStop(0.5, '#ffb04a');
+    paper.addColorStop(1, '#d8301a');
+    lg.fillStyle = paper;
+    lg.fillRect(0, 0, 64, 128);
+    lg.fillStyle = 'rgba(120, 20, 10, 0.55)';
+    for (let y = 6; y < 128; y += 11) lg.fillRect(0, y, 64, 2);
+    // The swelling outline of a lantern, turned on a lathe.
+    const profile: THREE.Vector2[] = [];
+    for (let i = 0; i <= 12; i++) {
+      const t = i / 12;
+      profile.push(new THREE.Vector2(0.16 + Math.sin(t * Math.PI) * 0.26, (t - 0.5) * 1.0));
+    }
+    const body = new THREE.InstancedMesh(new THREE.LatheGeometry(profile, 18), new THREE.MeshBasicMaterial({ map: texture(lc) }), lanterns.length);
+    const caps = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.19, 0.19, 0.1, 14), new THREE.MeshBasicMaterial({ color: 0x15101a }), lanterns.length * 2);
+    const tassels = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.035, 0.012, 0.42, 6), new THREE.MeshBasicMaterial({ color: 0xffd24a }), lanterns.length);
+    const m = new THREE.Matrix4();
+    lanterns.forEach((l, i) => {
+      const k = l.size;
+      body.setMatrixAt(i, m.makeScale(k, k, k).setPosition(l.x, l.y, l.z));
+      caps.setMatrixAt(i * 2, m.makeScale(k, k, k).setPosition(l.x, l.y + 0.54 * k, l.z));
+      caps.setMatrixAt(i * 2 + 1, m.makeScale(k, k, k).setPosition(l.x, l.y - 0.54 * k, l.z));
+      tassels.setMatrixAt(i, m.makeScale(k, k, k).setPosition(l.x, l.y - 0.84 * k, l.z));
+    });
+    city.add(body, caps, tassels);
+  }
 
   // The small repeated parts of the buildings, each kind drawn in one go.
   {
@@ -1493,6 +1568,7 @@ export async function buildCity(): Promise<City> {
     scene,
     things,
     puddle,
+    storeDoor,
     tags,
     tag(id, kana, filled, animate) {
       // Once the ground-floor walls are full, a second row starts above the ledge.

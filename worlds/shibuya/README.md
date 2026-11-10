@@ -17,7 +17,7 @@ Japanese is learned from zero. It is a separate page with its own code.
    turn, each stroke in the proper order and direction. Paint only goes on
    while she follows the stroke. Finishing the word fills the tag with colour.
 
-The counter shows words found and words written, out of 38.
+The counter shows words found and words written, out of 50.
 
 Only words she has already heard are asked. Words missed at the first try
 come back soonest; words she knows come back later. Romaji under a word is
@@ -36,6 +36,12 @@ puddle, or the green button, leads back to the wood.
 - **The café terrace** (left at the crossing): いす chair, ほん book,
   かばん bag, じてんしゃ bicycle, とり bird.
 
+- **The convenience store** (the bright shop front near where she arrives;
+  tap it to go in, and tap the door marked でぐち to come out):
+  おべんとう boxed lunch, おかし snacks, たまご egg, ぎゅうにゅう milk,
+  みかん mandarin orange, もも peach, いちご strawberry, やさい vegetables,
+  ざっし magazine, かご basket, おかね money, てんいん shop clerk.
+  Inside, she is only asked for things that are in the store.
 - **Murals** (pictures painted on building fronts, for common words with no
   place in a city street): やま mountain, うみ sea, たいよう sun, くも cloud,
   にじ rainbow, あめ rain, ゆき snow, ひ fire, いえ house, ふね boat, め eye,
@@ -44,6 +50,8 @@ puddle, or the green button, leads back to the wood.
 Phrases: おはよう / こんにちは / こんばんは (the greeting follows the real time
 of day), 〜 は どこ？ (where is 〜?), 〜 を ください (〜, please),
 せいかい / すごい / いいね (correct / amazing / nice), またね (see you),
+いらっしゃいませ (welcome, said by shop staff as she enters),
+ありがとう ございました (thank you very much, as she leaves),
 はじめる (start).
 
 **The words and phrases were written from memory and should be checked
@@ -86,6 +94,8 @@ on a tablet.
 - `speak.ts`: speech and sounds.
 - `trace.ts`: writing kana with the spray can.
 - `strokes.json`: the strokes of every hiragana, in writing order (KanjiVG, CC BY-SA 3.0).
+- `store.ts`: the inside of the convenience store.
+- `murals.ts`: the pictures painted on the walls.
 - `main.ts`: walking, tapping, and the listen-and-find game.
 
 Progress is kept in the browser on each device. Nothing is sent anywhere.
