@@ -3,8 +3,10 @@ import { Finish } from '../../src/finish';
 import { fbm, lerp, smoothstep } from '../../src/noise';
 import { buildSphinx } from '../../src/world/creatures/sphinxModel';
 import { paint } from '../../src/world/paint';
+import { figuresFor } from './figures';
+import type { Figure } from './figures';
 import { HEIGHT, PLOT } from './modes';
-import type { Cell, Mode } from './modes';
+import type { Cell, Mode, Setting } from './modes';
 
 /**
  * The building site: a square plot in the desert where blocks are placed on a
@@ -39,8 +41,6 @@ export interface BuilderEvents {
 }
 
 const HALF = PLOT / 2;
-const SKY_LOW = new THREE.Color(0xf6e2b8);
-const SKY_HIGH = new THREE.Color(0x7fb6e6);
 const SUN = new THREE.Vector3(0.5, 0.62, -0.6).normalize();
 const POOL = new THREE.Vector3(-(HALF + 5), 0.04, -(HALF + 5));
 const POOL_RADIUS = 2.6;
@@ -51,11 +51,35 @@ const MAX_DIST = PLOT * 2.6;
 const keyOf = (x: number, y: number, z: number) => x + z * PLOT + y * PLOT * PLOT;
 const centre = (x: number, y: number, z: number, out: THREE.Vector3) => out.set(x - HALF + 0.5, y + 0.5, z - HALF + 0.5);
 
-/** Flat around the plot, rising into dunes further out. */
-function sandHeight(x: number, z: number): number {
+/** Everything beyond this distance from the middle may rise, fall or grow trees; inside it is level. */
+const LEVEL = HALF * 1.42 + 14;
+
+interface Look {
+  skyLow: number;
+  skyHigh: number;
+  /** Colour of light bouncing up off the ground. */
+  bounce: number;
+  ground: [number, number];
+  paving: [string, string];
+  line: string;
+}
+
+const LOOKS: Record<Setting, Look> = {
+  desert: { skyLow: 0xf6e2b8, skyHigh: 0x7fb6e6, bounce: 0xc99a5a, ground: [0xd9b06c, 0xf0d49a], paving: ['#e9cf9c', '#e2c48c'], line: 'rgba(120, 90, 50, 0.35)' },
+  forest: { skyLow: 0xd6ecd0, skyHigh: 0x78b4ea, bounce: 0x5f8a4a, ground: [0x4f8f48, 0x86bb5c], paving: ['#9ccb78', '#90c16e'], line: 'rgba(40, 80, 30, 0.35)' },
+  coast: { skyLow: 0xe2f1f4, skyHigh: 0x57a4e8, bounce: 0xbfae84, ground: [0xe0c890, 0xf4e4b8], paving: ['#d3d7da', '#c6cace'], line: 'rgba(70, 80, 90, 0.4)' },
+};
+
+/** The lie of the land around the plot: dunes in the desert, hills in the forest, a shore on the coast. */
+function landHeight(setting: Setting, x: number, z: number): number {
   const d = Math.hypot(x, z);
+  const out = smoothstep(LEVEL, LEVEL + 60, d);
+  if (setting === 'forest') return Math.max(0, fbm(x * 0.015 + 9, z * 0.015 + 9, 3) * 20 - 6) * out;
   const dunes = Math.max(0, fbm(x * 0.012 + 5, z * 0.012 + 5, 3) * 30 - 8) + Math.sin(x * 0.05 + z * 0.03) * 1.5;
-  return dunes * smoothstep(HALF * 1.42 + 14, HALF * 1.42 + 70, d);
+  if (setting === 'desert') return dunes * out;
+  // Coast: low dunes inland, and the beach running down into the sea on one side.
+  const sea = smoothstep(LEVEL - 4, LEVEL + 40, x);
+  return dunes * 0.25 * out * (1 - sea) - sea * 7;
 }
 
 export class Builder {
@@ -76,6 +100,14 @@ export class Builder {
   private meshes: THREE.InstancedMesh[] = [];
   private meshKeys: number[][] = [];
   private plot: THREE.Mesh;
+  private skyLow = new THREE.Color();
+  private skyHigh = new THREE.Color();
+  private fog = new THREE.FogExp2(0xffffff, 0.004);
+  private bounce = new THREE.HemisphereLight(0xfff1d0, 0xc99a5a, 1.25);
+  private land = new THREE.Group();
+  /** Whoever came out when the blueprint was finished, walking round the building. */
+  private visitors: { figure: Figure; angle: number; ring: number; out: number }[] = [];
+  private setting: Setting | null = null;
   private pool: THREE.Mesh;
   private poolTime = { value: 0 };
 
@@ -112,39 +144,20 @@ export class Builder {
     this.finish = new Finish(this.renderer);
 
     const { scene } = this;
-    scene.fog = new THREE.FogExp2(SKY_LOW, 0.004);
-    scene.add(new THREE.HemisphereLight(0xfff1d0, 0xc99a5a, 1.25));
+    scene.fog = this.fog;
+    scene.add(this.bounce);
     const sun = new THREE.DirectionalLight(0xfff0cf, 2.1);
     sun.position.copy(SUN).multiplyScalar(100);
     scene.add(sun);
 
-    // Sand.
-    const sand = new THREE.PlaneGeometry(500, 500, 160, 160);
-    sand.rotateX(-Math.PI / 2);
-    const sp = sand.attributes.position;
-    const sc = new Float32Array(sp.count * 3);
-    const light = new THREE.Color(0xf0d49a);
-    const dark = new THREE.Color(0xd9b06c);
-    const tone = new THREE.Color();
-    for (let i = 0; i < sp.count; i++) {
-      const x = sp.getX(i);
-      const z = sp.getZ(i);
-      sp.setY(i, sandHeight(x, z));
-      tone.copy(dark).lerp(light, fbm(x * 0.05, z * 0.05, 3));
-      sc.set([tone.r, tone.g, tone.b], i * 3);
-    }
-    sand.setAttribute('color', new THREE.BufferAttribute(sc, 3));
-    sand.computeVertexNormals();
-    scene.add(new THREE.Mesh(sand, new THREE.MeshLambertMaterial({ vertexColors: true })));
-
-    // Sky.
+    // Sky. Its colours change with the setting.
     scene.add(
       new THREE.Mesh(
         new THREE.SphereGeometry(500, 32, 16),
         new THREE.ShaderMaterial({
           side: THREE.BackSide,
           depthWrite: false,
-          uniforms: { uLow: { value: SKY_LOW }, uHigh: { value: SKY_HIGH }, uSun: { value: SUN } },
+          uniforms: { uLow: { value: this.skyLow }, uHigh: { value: this.skyHigh }, uSun: { value: SUN } },
           vertexShader: `varying vec3 vDir; void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
           fragmentShader: `
             uniform vec3 uLow; uniform vec3 uHigh; uniform vec3 uSun; varying vec3 vDir;
@@ -159,29 +172,8 @@ export class Builder {
       ),
     );
 
-    // The plot: paved, with the grid marked out so every block has an obvious place.
-    const paving = document.createElement('canvas');
-    paving.width = paving.height = PLOT * 32;
-    const g = paving.getContext('2d')!;
-    for (let x = 0; x < PLOT; x++) {
-      for (let z = 0; z < PLOT; z++) {
-        g.fillStyle = (x + z) % 2 ? '#e9cf9c' : '#e2c48c';
-        g.fillRect(x * 32, z * 32, 32, 32);
-      }
-    }
-    g.strokeStyle = 'rgba(120, 90, 50, 0.35)';
-    g.lineWidth = 2;
-    for (let i = 0; i <= PLOT; i++) {
-      g.beginPath();
-      g.moveTo(i * 32, 0);
-      g.lineTo(i * 32, PLOT * 32);
-      g.moveTo(0, i * 32);
-      g.lineTo(PLOT * 32, i * 32);
-      g.stroke();
-    }
-    const pavingMap = new THREE.CanvasTexture(paving);
-    pavingMap.colorSpace = THREE.SRGBColorSpace;
-    this.plot = new THREE.Mesh(new THREE.PlaneGeometry(PLOT, PLOT), new THREE.MeshLambertMaterial({ map: pavingMap }));
+    // The plot, with the grid marked out so every block has an obvious place.
+    this.plot = new THREE.Mesh(new THREE.PlaneGeometry(PLOT, PLOT), new THREE.MeshLambertMaterial());
     this.plot.rotation.x = -Math.PI / 2;
     this.plot.position.y = 0.02;
     scene.add(this.plot);
@@ -236,6 +228,132 @@ export class Builder {
     this.renderer.setAnimationLoop(() => this.frame(Math.min(clock.getDelta(), 0.1)));
   }
 
+  /** Puts the plot in its setting: desert, forest or coast. */
+  private dress(setting: Setting): void {
+    if (setting === this.setting) return;
+    this.setting = setting;
+    const look = LOOKS[setting];
+    this.skyLow.set(look.skyLow);
+    this.skyHigh.set(look.skyHigh);
+    this.fog.color.set(look.skyLow);
+    this.bounce.groundColor.set(look.bounce);
+
+    this.scene.remove(this.land);
+    this.land.traverse((o) => {
+      if (o instanceof THREE.Mesh) o.geometry.dispose();
+    });
+    this.land = new THREE.Group();
+    this.scene.add(this.land);
+
+    // The ground.
+    const geo = new THREE.PlaneGeometry(500, 500, 160, 160);
+    geo.rotateX(-Math.PI / 2);
+    const gp = geo.attributes.position;
+    const gc = new Float32Array(gp.count * 3);
+    const dark = new THREE.Color(look.ground[0]);
+    const light = new THREE.Color(look.ground[1]);
+    const wet = new THREE.Color(0xc9ae78);
+    const tone = new THREE.Color();
+    for (let i = 0; i < gp.count; i++) {
+      const x = gp.getX(i);
+      const z = gp.getZ(i);
+      const y = landHeight(setting, x, z);
+      gp.setY(i, y);
+      tone.copy(dark).lerp(light, fbm(x * 0.05, z * 0.05, 3));
+      if (setting === 'coast') tone.lerp(wet, smoothstep(-0.2, -1.2, y));
+      gc.set([tone.r, tone.g, tone.b], i * 3);
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(gc, 3));
+    geo.computeVertexNormals();
+    this.land.add(new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true })));
+
+    // The sea, on the coast.
+    if (setting === 'coast') {
+      const sea = new THREE.Mesh(
+        new THREE.PlaneGeometry(700, 700),
+        new THREE.MeshLambertMaterial({ color: 0x3f9fd0, transparent: true, opacity: 0.86 }),
+      );
+      sea.rotation.x = -Math.PI / 2;
+      sea.position.y = -1.1;
+      this.land.add(sea);
+    }
+
+    // Trees: a wood all round in the forest, a few palms inland on the coast.
+    if (setting !== 'desert') {
+      const palms = setting === 'coast';
+      const count = palms ? 26 : 260;
+      const bark = paint({ dab: 0.6 });
+      const leaf = paint({ dab: 1.1 });
+      const trunkGeo = new THREE.CylinderGeometry(palms ? 0.16 : 0.3, palms ? 0.3 : 0.6, 1, 7);
+      trunkGeo.translate(0, 0.5, 0);
+      const trunks = new THREE.InstancedMesh(trunkGeo, bark, count);
+      const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), leaf, count * 2);
+      const greens = palms ? [0x4f9a55, 0x62ab5a] : [0x2f7a45, 0x3f8f4c, 0x57a653, 0x7bb85a, 0x266a48];
+      const dummy = new THREE.Object3D();
+      const tint = new THREE.Color();
+      let seed = 7;
+      const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      for (let i = 0; i < count; i++) {
+        let x = 0;
+        let z = 0;
+        // Outside the level ground; on the coast, only on the landward side.
+        for (let tries = 0; tries < 30; tries++) {
+          const a = rnd() * Math.PI * 2;
+          const d = LEVEL - 6 + Math.sqrt(rnd()) * (palms ? 40 : 95);
+          x = Math.cos(a) * d;
+          z = Math.sin(a) * d;
+          if (Math.hypot(x - POOL.x, z - POOL.z) > POOL_RADIUS + 4 && (!palms || x < LEVEL - 12)) break;
+        }
+        const y = landHeight(setting, x, z) - 0.2;
+        const h = palms ? 6 + rnd() * 4 : 5 + rnd() * 6;
+        const r = palms ? 2.6 + rnd() : 2.6 + rnd() * 2.2;
+        dummy.position.set(x, y, z);
+        dummy.rotation.set((rnd() - 0.5) * (palms ? 0.35 : 0.08), rnd() * 6.28, (rnd() - 0.5) * (palms ? 0.35 : 0.08));
+        dummy.scale.set(1, h, 1);
+        dummy.updateMatrix();
+        trunks.setMatrixAt(i, dummy.matrix);
+        trunks.setColorAt(i, tint.set(palms ? 0xa8875a : rnd() < 0.5 ? 0x6a4a36 : 0x7a5a44));
+        for (let c = 0; c < 2; c++) {
+          dummy.position.set(x + (c ? (rnd() - 0.5) * r : 0), y + h + (c ? -r * 0.2 : r * 0.3), z + (c ? (rnd() - 0.5) * r : 0));
+          dummy.rotation.set(0, rnd() * 6.28, 0);
+          const size = r * (c ? 0.75 : 1);
+          dummy.scale.set(size, size * (palms ? 0.32 : 0.8), size);
+          dummy.updateMatrix();
+          crowns.setMatrixAt(i * 2 + c, dummy.matrix);
+          crowns.setColorAt(i * 2 + c, tint.set(greens[Math.floor(rnd() * greens.length)]));
+        }
+      }
+      this.land.add(trunks, crowns);
+    }
+
+    // The plot's surface: sandstone paving, a mown clearing, or a launch pad.
+    const paving = document.createElement('canvas');
+    paving.width = paving.height = PLOT * 32;
+    const g = paving.getContext('2d')!;
+    for (let x = 0; x < PLOT; x++) {
+      for (let z = 0; z < PLOT; z++) {
+        g.fillStyle = look.paving[(x + z) % 2];
+        g.fillRect(x * 32, z * 32, 32, 32);
+      }
+    }
+    g.strokeStyle = look.line;
+    g.lineWidth = 2;
+    for (let i = 0; i <= PLOT; i++) {
+      g.beginPath();
+      g.moveTo(i * 32, 0);
+      g.lineTo(i * 32, PLOT * 32);
+      g.moveTo(0, i * 32);
+      g.lineTo(PLOT * 32, i * 32);
+      g.stroke();
+    }
+    const map = new THREE.CanvasTexture(paving);
+    map.colorSpace = THREE.SRGBColorSpace;
+    const surface = this.plot.material as THREE.MeshLambertMaterial;
+    surface.map?.dispose();
+    surface.map = map;
+    surface.needsUpdate = true;
+  }
+
   /** Starts (or resumes) a build. */
   load(mode: Mode, save: BuildSave, followPlan: boolean): void {
     for (const m of this.meshes) {
@@ -243,6 +361,7 @@ export class Builder {
       m.dispose();
     }
     this.mode = mode;
+    this.dress(mode.setting);
     const box = new THREE.BoxGeometry(1, 1, 1);
     this.meshes = mode.blocks.map((type) => {
       const mat = paint({ color: type.color, dab: 0.45 });
@@ -267,6 +386,20 @@ export class Builder {
     this.selected = 0;
     this.erasing = false;
     this.refresh();
+    // A build whose blueprint was finished on an earlier visit still has its visitors.
+    this.welcome(this.done && followPlan, false);
+  }
+
+  /** Brings out the visitors for this build; `fresh` makes them walk out from the middle. */
+  welcome(show: boolean, fresh: boolean): void {
+    for (const v of this.visitors) this.scene.remove(v.figure.group);
+    this.visitors = [];
+    if (!show || !this.mode) return;
+    const figures = figuresFor(this.mode.id);
+    figures.forEach((figure, i) => {
+      this.scene.add(figure.group);
+      this.visitors.push({ figure, angle: (i / figures.length) * Math.PI * 2 + 1, ring: 8.5 + (i % 3) * 1.4, out: fresh ? 0 : 1 });
+    });
   }
 
   /** What to store so this build can be picked up again later. */
@@ -475,6 +608,19 @@ export class Builder {
       life: this.life,
       glance: this.caught ? 0.4 : 0,
     });
+
+    // Visitors stroll round the finished building; when new, they walk out from its middle.
+    for (const v of this.visitors) {
+      v.out = Math.min(1, v.out + dt / 4);
+      const r = v.ring * smoothstep(0, 1, v.out);
+      v.angle += (dt * v.figure.speed) / v.ring;
+      const phase = v.angle * v.ring * 5;
+      v.figure.step(phase);
+      const g = v.figure.group;
+      g.position.set(Math.cos(v.angle) * r, Math.abs(Math.sin(phase)) * v.figure.bounce + (1 - v.out) * 0.01, Math.sin(v.angle) * r);
+      // Facing along the path once out; facing outward while leaving the building.
+      g.rotation.y = v.out < 1 ? Math.atan2(Math.cos(v.angle), Math.sin(v.angle)) : Math.atan2(-Math.sin(v.angle), Math.cos(v.angle));
+    }
 
     // Camera: ease towards where the child has swung it, or go face to face with the sphinx.
     const ease = 1 - Math.exp(-dt * 7);
