@@ -6,6 +6,8 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   base: './',
   build: {
+    // Modern browsers only: the Shibuya world waits for its textures before building the street.
+    target: 'es2022',
     rollupOptions: {
       input: {
         wood: resolve(__dirname, 'index.html'),
