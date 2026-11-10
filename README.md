@@ -23,6 +23,13 @@ golden evenings, and night with a moon, stars and fireflies. To try another
 time while developing, add `?sun=` and the sun's height in degrees to the
 address (`?sun=50` noon, `?sun=1` sunset, `?sun=-20` night).
 
+## Seasons
+
+Leaf colour and fallen leaves follow the calendar in Brevard: blossom in
+spring, deep green in summer, turning in early fall, dark red in late fall,
+thin brown crowns in winter. To try another, add `?season=` with `spring`,
+`summer`, `earlyFall`, `lateFall` or `winter`.
+
 ## Run it
 
 ```

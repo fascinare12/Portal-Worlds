@@ -22,6 +22,8 @@ function addSway(mat: THREE.Material, amount: number, byHeight: boolean): void {
         `#include <begin_vertex>
         float swayPhase = instanceMatrix[3].x * 0.31 + instanceMatrix[3].z * 0.27;
         float sway = sin(uWind * 0.9 + swayPhase) + 0.5 * sin(uWind * 2.3 + swayPhase * 1.7);
+        // Distant plants hold still: their movement would only show as shimmer.
+        sway *= smoothstep(95.0, 45.0, distance(cameraPosition, instanceMatrix[3].xyz));
         float swayScale = ${byHeight ? 'max(position.y, 0.0) * 2.0' : '1.0'};
         transformed.x += sway * swayScale * ${amount.toFixed(3)};
         transformed.z += sway * swayScale * ${(amount * 0.6).toFixed(3)};`,

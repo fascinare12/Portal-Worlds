@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { fbm, smoothstep } from '../noise';
 import { noiseTexture } from './noiseTexture';
 import { daylight } from './daylight';
+import { season } from './season';
 import { GROUND_SIZE, groundHeight, pools, trees } from './layout';
 
 export interface TerrainView {
@@ -19,7 +20,7 @@ export function createTerrain(): TerrainView {
   const colors = new Float32Array(pos.count * 3);
   const moss = new THREE.Color(0x4a8748);
   const grass = new THREE.Color(0x86b257);
-  const leafLitter = new THREE.Color(0xa9984f);
+  const leafLitter = new THREE.Color(season.litter);
   const shade = new THREE.Color(0x1f4a40);
   const bank = new THREE.Color(0x355f45);
   const mud = new THREE.Color(0x20302a);
@@ -32,7 +33,7 @@ export function createTerrain(): TerrainView {
     pos.setY(i, y);
 
     c.copy(moss).lerp(grass, fbm(x * 0.045, z * 0.045, 3));
-    c.lerp(leafLitter, smoothstep(0.58, 0.8, fbm(x * 0.07 + 70, z * 0.07 + 70, 3)) * 0.6);
+    c.lerp(leafLitter, smoothstep(0.58, 0.8, fbm(x * 0.07 + 70, z * 0.07 + 70, 3)) * 0.6 * (0.5 + season.litterAmount));
 
     // Soft pools of shade under each canopy.
     let shadow = 0;
@@ -43,6 +44,8 @@ export function createTerrain(): TerrainView {
       if (dx > reach || dx < -reach || dz > reach || dz < -reach) continue;
       shadow = Math.max(shadow, 1 - smoothstep(reach * 0.25, reach, Math.hypot(dx, dz)));
     }
+    // Fallen leaves gather thickest under the trees that dropped them.
+    c.lerp(leafLitter, shadow * 0.4 * season.litterAmount);
     c.lerp(shade, shadow * 0.5);
 
     for (const p of pools) {

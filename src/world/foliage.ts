@@ -4,6 +4,7 @@ import leavesUrl from '../textures/leaves.webp';
 import { daylight } from './daylight';
 import { trees } from './layout';
 import { wind } from './paint';
+import { season } from './season';
 
 export interface Foliage {
   mesh: THREE.Mesh;
@@ -31,15 +32,15 @@ export function createFoliage(): Foliage {
   const tint = new Float32Array(count * 3);
   const shape = new Float32Array(count * 3); // size, rotation, sway phase
 
-  // Mostly greens from deep teal to spring; a few amber and rose trees for accent.
-  const greens = [0x1f6b52, 0x2f8552, 0x4fa457, 0x7fb95c, 0xa9c85e];
-  const accents = [0xe0a43c, 0xd07f62, 0xe9c75a];
+  // Leaf colours follow the season in Brevard: see season.ts.
+  const greens = season.leaves;
+  const accents = season.accents;
   const colour = new THREE.Color();
   const dir = new THREE.Vector3();
 
   let clump = 0;
   for (const t of trees) {
-    const hex = rand() < 0.09 ? accents[Math.floor(rand() * accents.length)] : greens[Math.floor(rand() * greens.length)];
+    const hex = rand() < season.accentShare ? accents[Math.floor(rand() * accents.length)] : greens[Math.floor(rand() * greens.length)];
     for (const c of t.clumps) {
       for (let slot = 0; slot < INNER + OUTER; slot++) {
         const n = slot * clumps + clump;
@@ -75,7 +76,7 @@ export function createFoliage(): Foliage {
   geo.setAttribute('aFacing', new THREE.InstancedBufferAttribute(facing, 3));
   geo.setAttribute('aTint', new THREE.InstancedBufferAttribute(tint, 3));
   geo.setAttribute('aShape', new THREE.InstancedBufferAttribute(shape, 3));
-  geo.instanceCount = count;
+  geo.instanceCount = clumps * (INNER + Math.max(2, Math.round(OUTER * season.fullness)));
 
   const leaves = new THREE.TextureLoader().load(leavesUrl);
   leaves.colorSpace = THREE.SRGBColorSpace;
@@ -106,6 +107,9 @@ export function createFoliage(): Foliage {
         vUv = uv;
         vec3 c = aCentre;
         float sway = sin(uWind * 0.9 + aShape.z) + 0.5 * sin(uWind * 2.1 + aShape.z * 1.7);
+        // Far away the movement is smaller than a pixel and only makes the leaves
+        // shimmer, so distant trees hold still.
+        sway *= smoothstep(95.0, 45.0, distance(cameraPosition, aCentre));
         c.x += sway * 0.1;
         c.z += sway * 0.06;
         vec4 mvPosition = viewMatrix * vec4(c, 1.0);
@@ -145,7 +149,7 @@ export function createFoliage(): Foliage {
   return {
     mesh,
     setDensity(amount) {
-      const outer = Math.max(3, Math.round(OUTER * amount));
+      const outer = Math.max(2, Math.round(OUTER * amount * season.fullness));
       geo.instanceCount = clumps * (INNER + outer);
     },
   };
