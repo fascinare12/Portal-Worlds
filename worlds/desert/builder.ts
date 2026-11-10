@@ -21,6 +21,8 @@ export interface BuildSave {
   stock: number[];
   /** The blueprint has been completed at least once. */
   done: boolean;
+  /** How wide the plot was when this was saved, so older builds can be re-centred on a bigger one. */
+  plot?: number;
 }
 
 export interface BuilderEvents {
@@ -40,9 +42,11 @@ const HALF = PLOT / 2;
 const SKY_LOW = new THREE.Color(0xf6e2b8);
 const SKY_HIGH = new THREE.Color(0x7fb6e6);
 const SUN = new THREE.Vector3(0.5, 0.62, -0.6).normalize();
-const POOL = new THREE.Vector3(-13.5, 0.04, -13.5);
+const POOL = new THREE.Vector3(-(HALF + 5), 0.04, -(HALF + 5));
 const POOL_RADIUS = 2.6;
-const SPHINX_RING = 11.5;
+const SPHINX_RING = HALF * 1.42 + 4; // just outside the corners of the plot
+
+const MAX_DIST = PLOT * 2.6;
 
 const keyOf = (x: number, y: number, z: number) => x + z * PLOT + y * PLOT * PLOT;
 const centre = (x: number, y: number, z: number, out: THREE.Vector3) => out.set(x - HALF + 0.5, y + 0.5, z - HALF + 0.5);
@@ -51,7 +55,7 @@ const centre = (x: number, y: number, z: number, out: THREE.Vector3) => out.set(
 function sandHeight(x: number, z: number): number {
   const d = Math.hypot(x, z);
   const dunes = Math.max(0, fbm(x * 0.012 + 5, z * 0.012 + 5, 3) * 30 - 8) + Math.sin(x * 0.05 + z * 0.03) * 1.5;
-  return dunes * smoothstep(24, 80, d);
+  return dunes * smoothstep(HALF * 1.42 + 14, HALF * 1.42 + 70, d);
 }
 
 export class Builder {
@@ -84,9 +88,11 @@ export class Builder {
   // Camera: swings round the middle of the plot.
   private yaw = 0.7;
   private pitch = 0.55;
-  private dist = 30;
-  private goal = { yaw: 0.7, pitch: 0.55, dist: 30 };
+  private dist = 42;
+  private goal = { yaw: 0.7, pitch: 0.7, dist: 42 };
   private look = new THREE.Vector3(0, 2.5, 0);
+  /** The spot on the plot the camera swings round; two fingers (or shift-drag) slide it about. */
+  private focus = new THREE.Vector3(0, 2.5, 0);
 
   private sphinx = buildSphinx();
   private sphinxAngle = 0;
@@ -250,7 +256,10 @@ export class Builder {
       return mesh;
     });
     this.blocks.clear();
-    for (const [x, y, z, t] of save.blocks) this.blocks.set(keyOf(x, y, z), t);
+    // A build saved on a smaller plot is moved to the middle of this one.
+    const shift = Math.floor((PLOT - (save.plot ?? 15)) / 2);
+    for (const [x, y, z, t] of save.blocks) this.blocks.set(keyOf(x + shift, y, z + shift), t);
+    this.focus.set(0, 2.5, 0);
     this.stock = mode.blocks.map((_, i) => save.stock[i] ?? 0);
     this.done = save.done;
     this.plan = mode.blueprint();
@@ -266,7 +275,7 @@ export class Builder {
     for (const [k, t] of this.blocks) {
       blocks.push([k % PLOT, Math.floor(k / (PLOT * PLOT)), Math.floor(k / PLOT) % PLOT, t]);
     }
-    return { blocks, stock: [...this.stock], done: this.done };
+    return { blocks, stock: [...this.stock], done: this.done, plot: PLOT };
   }
 
   /** Lets go of a child the sphinx was holding. */
@@ -388,17 +397,26 @@ export class Builder {
     el.addEventListener('pointermove', (e) => {
       const prev = pointers.get(e.pointerId);
       if (!prev || this.caught) return;
-      if (pointers.size === 1) {
+      const dx = e.clientX - prev.x;
+      const dy = e.clientY - prev.y;
+      if (pointers.size === 1 && !(e.shiftKey || e.buttons & 2)) {
         // Drag to swing right round the building and to look from higher or lower.
-        this.goal.yaw -= (e.clientX - prev.x) * 0.008;
-        this.goal.pitch = Math.min(1.35, Math.max(0.12, this.goal.pitch + (e.clientY - prev.y) * 0.006));
+        this.goal.yaw -= dx * 0.008;
+        this.goal.pitch = Math.min(1.35, Math.max(0.12, this.goal.pitch + dy * 0.006));
+      } else {
+        // Two fingers (or shift-drag, or right-drag) slide the view across the plot.
+        const k = (this.dist * 0.0018) / pointers.size;
+        const sin = Math.sin(this.yaw);
+        const cos = Math.cos(this.yaw);
+        this.focus.x = Math.min(HALF, Math.max(-HALF, this.focus.x - (cos * dx + sin * dy) * k));
+        this.focus.z = Math.min(HALF, Math.max(-HALF, this.focus.z - (-sin * dx + cos * dy) * k));
       }
       prev.x = e.clientX;
       prev.y = e.clientY;
       if (pointers.size === 2) {
         const [a, b] = [...pointers.values()];
         const d = Math.hypot(a.x - b.x, a.y - b.y);
-        if (pinch) this.goal.dist = Math.min(48, Math.max(9, this.goal.dist * (pinch / d)));
+        if (pinch) this.goal.dist = Math.min(MAX_DIST, Math.max(9, this.goal.dist * (pinch / d)));
         pinch = d;
       }
     });
@@ -410,6 +428,7 @@ export class Builder {
       if (e.type === 'pointercancel' || !t) return;
       if (Math.hypot(e.clientX - t.x, e.clientY - t.y) <= 10 && performance.now() - t.t <= 450) this.tap(e.clientX, e.clientY);
     };
+    el.addEventListener('contextmenu', (e) => e.preventDefault());
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', up);
     el.addEventListener(
@@ -418,7 +437,7 @@ export class Builder {
         e.preventDefault();
         if (this.caught) return;
         const step = Math.max(-120, Math.min(120, e.deltaY)) * 0.0012;
-        this.goal.dist = Math.min(48, Math.max(9, this.goal.dist * (1 + step)));
+        this.goal.dist = Math.min(MAX_DIST, Math.max(9, this.goal.dist * (1 + step)));
       },
       { passive: false },
     );
@@ -462,7 +481,7 @@ export class Builder {
     let yaw = this.goal.yaw;
     let pitch = this.goal.pitch;
     let dist = this.goal.dist;
-    const target = new THREE.Vector3(0, 2.5, 0);
+    const target = this.focus.clone();
     if (this.caught) {
       yaw = outward;
       pitch = 0.16;

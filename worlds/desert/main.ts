@@ -196,7 +196,7 @@ function start(m: Mode): void {
   const old = saved.builds[child]?.[m.id];
   builder.load(m, old ?? { blocks: [], stock: m.blocks.map((b) => (b.special ? 0 : 0)), done: false }, followPlan);
   // A few blocks to begin with, so the first thing a child does is build.
-  if (!old) builder.stock[0] = 6;
+  if (!old) builder.stock[0] = 12;
   what.hidden = true;
   top.hidden = palette.hidden = false;
   drawTop();
@@ -354,15 +354,16 @@ function ask(problem: Problem, badge?: HTMLElement): Promise<{ correct: boolean;
 
 /** How many blocks a right answer brings. */
 function batch(problem: Problem, quick: boolean): number {
-  if (child === 'C') return problem.kind === 'count' ? Math.max(3, problem.answer) : 5;
-  return (child === 'R' ? 6 : 8) + (quick ? 3 : 0);
+  // Sized so that a child answers about one question for every 40 seconds of building.
+  if (child === 'C') return problem.kind === 'count' ? Math.max(8, problem.answer * 2) : 10;
+  return (child === 'R' ? 12 : 16) + (quick ? 5 : 0);
 }
 
 let busy = false;
 
 /** Order more of a block: answer a question, receive a batch. */
 async function order(type: number): Promise<void> {
-  if (busy || mode.blocks[type].special || builder.stock[type] >= 16) return;
+  if (busy || mode.blocks[type].special || builder.stock[type] >= 32) return;
   busy = true;
   builder.enabled = false;
   const progress = saved.progress[child];
@@ -420,7 +421,7 @@ async function riddles(): Promise<void> {
       won++;
       // Give whichever special block they have fewest of.
       const give = specials.sort((a, b) => builder.stock[a] - builder.stock[b])[0];
-      builder.stock[give]++;
+      builder.stock[give] += 2;
     }
   }
   if (won === 3) celebrate();

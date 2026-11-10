@@ -32,7 +32,7 @@ export interface Mode {
 }
 
 /** The building plot is a square this many blocks wide, and this many high. */
-export const PLOT = 15;
+export const PLOT = 31;
 export const HEIGHT = 12;
 const MID = Math.floor(PLOT / 2);
 
@@ -192,9 +192,10 @@ const town: Mode = {
         }
       }
     };
-    house(1, 1, 5, 0);
-    house(9, 2, 4, 1);
-    house(5, 9, 5, 1);
+    const o = MID - 7; // the three houses sit together in the middle of the plot
+    house(o + 1, o + 1, 5, 0);
+    house(o + 9, o + 2, 4, 1);
+    house(o + 5, o + 9, 5, 1);
     return cells;
   },
 };
