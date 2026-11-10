@@ -95,6 +95,7 @@ const builder = new Builder(document.getElementById('world') as HTMLCanvasElemen
   },
   finished: () => {
     celebrate();
+    builder.welcome(true, true); // the pharaoh, knight, monkeys, astronauts or townspeople come out
     // Finishing a blueprint earns two of each special block.
     mode.blocks.forEach((b, i) => {
       if (b.special) builder.stock[i] += 2;

@@ -5,6 +5,9 @@
 
 export type ModeId = 'pyramid' | 'castle' | 'treefort' | 'rocket' | 'town';
 
+/** Where a build stands: sand and dunes, a clearing in a wood, or a launch pad by the sea. */
+export type Setting = 'desert' | 'forest' | 'coast';
+
 export interface BlockType {
   color: number;
   /** Indoor blocks furnish the inside; outdoor blocks make the shell. */
@@ -25,6 +28,7 @@ export interface Cell {
 
 export interface Mode {
   id: ModeId;
+  setting: Setting;
   /** A small drawing for the mode's tile, as the inside of an SVG with a 0..40 box. */
   icon: string;
   blocks: BlockType[];
@@ -41,6 +45,7 @@ const GLASS: BlockType = { color: 0x9fe0f5, glow: 0x2a6a80, special: true };
 
 const pyramid: Mode = {
   id: 'pyramid',
+  setting: 'desert',
   icon: '<path d="M20 5 37 34H3Z" fill="#e2bd76"/><path d="M20 5 37 34H20Z" fill="#c79b55"/>',
   blocks: [
     { color: 0xdcb878 }, // sandstone
@@ -68,6 +73,7 @@ const pyramid: Mode = {
 
 const castle: Mode = {
   id: 'castle',
+  setting: 'forest',
   icon: '<path d="M5 34V12h5v4h4v-4h5v4h3v-4h5v4h4v-4h5v22Z" fill="#9aa3ad"/><path d="M17 34V24a3 3 0 0 1 6 0v10Z" fill="#5d4a3e"/>',
   blocks: [
     { color: 0xa7adb5 }, // stone
@@ -103,6 +109,7 @@ const castle: Mode = {
 
 const treefort: Mode = {
   id: 'treefort',
+  setting: 'forest',
   icon: '<rect x="17" y="18" width="6" height="17" fill="#7a5a3c"/><circle cx="20" cy="13" r="11" fill="#4f9a55"/><rect x="9" y="20" width="22" height="4" fill="#b98a55"/>',
   blocks: [
     { color: 0xc49a62 }, // planks
@@ -131,6 +138,7 @@ const treefort: Mode = {
 
 const rocket: Mode = {
   id: 'rocket',
+  setting: 'coast',
   icon: '<path d="M20 3c7 7 8 17 6 26H14C12 20 13 10 20 3Z" fill="#eef1f5"/><circle cx="20" cy="15" r="3.5" fill="#6fd0ee"/><path d="M14 24 7 34h8Zm12 0 7 10h-8Z" fill="#d94f4f"/><path d="M16 29h8l-4 9Z" fill="#ffa53a"/>',
   blocks: [
     { color: 0xeef1f5 }, // hull
@@ -165,6 +173,7 @@ const rocket: Mode = {
 
 const town: Mode = {
   id: 'town',
+  setting: 'forest',
   icon: '<path d="M3 34V20l8-7 8 7v14Z" fill="#c9694f"/><path d="M21 34V16l8-7 8 7v18Z" fill="#f1e2c2"/><path d="M1 21 11 12l10 9M19 17 29 8l10 9" fill="none" stroke="#a84f3a" stroke-width="2.5"/>',
   blocks: [
     { color: 0xc9694f }, // brick

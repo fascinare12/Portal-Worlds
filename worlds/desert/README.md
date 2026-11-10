@@ -20,6 +20,21 @@ shares nothing with the wood's rules.
    asks three harder questions. Each right answer wins two special blocks that
    cannot be ordered.
 
+## Settings and rewards
+
+Each build stands in its own setting, and finishing its blueprint brings
+someone out to walk round it. They are still there on later visits.
+
+| Build | Setting | Who comes out |
+|---|---|---|
+| Pyramid | Desert | A golden pharaoh |
+| Castle | Forest clearing | A knight on a horse |
+| Tree fort | Forest clearing | Three monkeys |
+| Rocket | Launch pad on the coast | Two astronauts |
+| Town | Forest clearing | Five townspeople |
+
+Finishing also gives two of each special block.
+
 ## How much a right answer brings
 
 Sized for roughly one question per 40 seconds of building.
