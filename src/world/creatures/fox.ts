@@ -145,21 +145,38 @@ export function createFox(pool: Pool, stirPool: () => void): Fox {
     stage = next;
     clock = 0;
   };
-  /** Trots towards a point; true once it arrives. */
+  let turning = 0; // how hard it is turning, for leaning into bends
+  /** Trots towards a point along a curving, wandering line, as an animal does; true once it arrives. */
   const trotTo = (target: THREE.Vector2, dt: number, speed = 1.9): boolean => {
     const d = target.clone().sub(at);
     const far = d.length();
-    if (far < 0.15) return true;
-    heading = turnToward(heading, Math.atan2(d.x, d.y), 1 - Math.exp(-dt * 7));
-    at.add(d.multiplyScalar(Math.min(1, (speed * dt) / far)));
+    if (far < 0.4) return true;
+    // It steers gradually and weaves a little, so its path is an arc, never a ruled line.
+    // Close to the target it steers harder and stops weaving, so it does not circle it.
+    const close = 1 - smoothstep(0.8, 2.6, far);
+    const weave = Math.sin(life * 1.9) * 0.55 * (1 - close);
+    const before = heading;
+    heading = turnToward(heading, Math.atan2(d.x, d.y) + weave, 1 - Math.exp(-dt * lerp(2.4, 9, close)));
+    turning = lerp(turning, (heading - before) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
+    at.x += Math.sin(heading) * speed * dt;
+    at.y += Math.cos(heading) * speed * dt;
     stride += dt * 13;
     return false;
   };
-  /** A leap from one spot to another along an arc; `t` runs 0 to 1. */
+  /**
+   * A leap from one spot to another; `t` runs 0 to 1. It gathers speed off the ground and
+   * slows into the landing, and the body follows the curve of its flight: nose up as it
+   * rises, level over the top, nose down as it comes in.
+   */
   const leap = (t: number, height: number) => {
-    at.lerpVectors(from, to, t);
-    want.lift = pose.lift = Math.sin(t * Math.PI) * height;
-    want.pitch = pose.pitch = lerp(-0.7, 0.9, t); // nose up on the way up, nose down coming in
+    const along = t * t * (3 - 2 * t); // ease out of the take-off and into the landing
+    at.lerpVectors(from, to, along);
+    want.lift = pose.lift = Math.sin(along * Math.PI) * height;
+    const slope = Math.cos(along * Math.PI); // +1 rising, 0 at the top, -1 falling
+    const settle = smoothstep(0, 0.18, t); // tip up gradually from the crouch
+    want.pitch = pose.pitch = -slope * 0.8 * settle;
+    // Legs tuck at the top of the arc and reach for the ground on the way down.
+    want.crouch = pose.crouch = Math.sin(along * Math.PI) * 0.5;
   };
 
   return {
@@ -169,6 +186,7 @@ export function createFox(pool: Pool, stirPool: () => void): Fox {
       clock += dt;
       let moving = false;
       Object.assign(want, { lift: 0, crouch: 0, lie: 0, curl: 0, nose: 0, tilt: 0, prick: 0, bow: 0, roll: 0, pitch: 0 });
+      turning *= Math.exp(-dt * 4);
 
       switch (stage) {
         case 'away':
@@ -184,8 +202,8 @@ export function createFox(pool: Pool, stirPool: () => void): Fox {
           }
           break;
         case 'emerge': // springs out of the water onto the bank
-          leap(Math.min(1, clock / 0.9), 1.5);
-          if (clock > 0.9) go('shake');
+          leap(Math.min(1, clock / 1.1), 1.5);
+          if (clock > 1.1) go('shake');
           break;
         case 'shake': // shakes itself dry, nose to tail
           want.roll = pose.roll = Math.sin(clock * 34) * 0.32 * (1 - clock / 1.1);
@@ -212,8 +230,8 @@ export function createFox(pool: Pool, stirPool: () => void): Fox {
           }
           break;
         case 'pounce': // the high, arching leap of a hunting fox, landing nose first
-          leap(Math.min(1, clock / 0.75), 1.25);
-          if (clock > 0.75) go('nuzzle');
+          leap(Math.min(1, clock / 0.95), 1.25);
+          if (clock > 0.95) go('nuzzle');
           break;
         case 'nuzzle': // nose in the grass, rump in the air, tail waving
           want.bow = 1;
@@ -253,9 +271,9 @@ export function createFox(pool: Pool, stirPool: () => void): Fox {
           }
           break;
         case 'dive': // one jump, and it is gone
-          leap(Math.min(1, clock / 0.8), 1.3);
-          if (clock > 0.55 && clock - dt <= 0.55) stirPool();
-          if (clock > 0.8) {
+          leap(Math.min(1, clock / 1.0), 1.3);
+          if (clock > 0.7 && clock - dt <= 0.7) stirPool();
+          if (clock > 1.0) {
             group.visible = false;
             wait = 70 + Math.random() * 60;
             go('away');
@@ -279,7 +297,8 @@ export function createFox(pool: Pool, stirPool: () => void): Fox {
       body.position.y = lerp(0.42, 0.16, Math.max(pose.lie, pose.crouch * 0.55)) + bounce + breath;
       // Pitch: nose down for a bow or a dive, with the rump up.
       body.rotation.x = pose.pitch + pose.bow * 0.5;
-      body.rotation.z = pose.roll;
+      // It leans into its turns, like anything running a bend.
+      body.rotation.z = pose.roll - Math.max(-0.35, Math.min(0.35, turning * 0.16)) * (moving ? 1 : 0);
 
       legs.forEach((l, i) => {
         const front = i < 2;

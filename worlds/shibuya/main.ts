@@ -6,6 +6,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { KERB, ROAD, buildCity } from './city';
 import type { Thing } from './city';
 import { hasVoice, say, sound } from './speak';
+import { buildStore } from './store';
 import { openTrace } from './trace';
 import { WORDS, loadProgress, nextWord, record, saveProgress, wordById } from './words';
 import type { Word } from './words';
@@ -42,6 +43,11 @@ composer.addPass(new OutputPass());
 let quality = new URLSearchParams(window.location.search).has('plain') ? 0 : 2; // 2 = everything, 1 = no glow, 0 = no glow, reflections or rain
 const progress = loadProgress();
 
+// The convenience store is a second place, entered through its front on the street.
+const store = buildStore();
+let inside = false;
+const thingsHere = () => (inside ? store.things : city.things);
+
 // Tags already earned are on the walls from the start.
 progress.sprayed ??= [];
 for (const id of progress.tagged) city.tag(id, wordById(id).kana, progress.sprayed.includes(id), false);
@@ -61,6 +67,8 @@ resize();
 const EYE = 1.7;
 /** How far one tap walks. */
 const STRIDE = 4;
+/** Where she was standing on the street when she went into the store. */
+const outside = { x: 0, z: 41, yaw: 0 };
 const at = new THREE.Vector2(0, 41);
 const goal = at.clone();
 let yaw = 0; // 0 looks up the street, away from where she arrives
@@ -70,6 +78,8 @@ let pitchGoal = pitch;
 
 /** Keeps a spot on the roads: the main street, or the street that crosses it. */
 function onRoad(p: THREE.Vector2): THREE.Vector2 {
+  // Inside the store, she can walk anywhere on its floor.
+  if (inside) return new THREE.Vector2(Math.max(-store.half.x, Math.min(store.half.x, p.x)), Math.max(-store.half.z, Math.min(store.half.z, p.y)));
   const main = new THREE.Vector2(Math.max(-KERB + 1, Math.min(KERB - 1, p.x)), Math.max(-46, Math.min(46, p.y)));
   const cross = new THREE.Vector2(Math.max(-44, Math.min(44, p.x)), Math.max(-ROAD, Math.min(ROAD, p.y)));
   return main.distanceTo(p) <= cross.distanceTo(p) ? main : cross;
@@ -111,28 +121,34 @@ function tapped(x: number, y: number): void {
   if (writing) return;
   ray.setFromCamera(new THREE.Vector2((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1), camera);
   // A thing with a name?
-  const hit = ray.intersectObjects(city.things.map((t) => t.object), true)[0];
+  const hit = ray.intersectObjects(thingsHere().map((t) => t.object), true)[0];
   if (hit) {
-    const thing = city.things.find((t) => {
+    const thing = thingsHere().find((t) => {
       for (let o: THREE.Object3D | null = hit.object; o; o = o.parent) if (o === t.object) return true;
       return false;
     });
     if (thing) return touch(thing);
   }
   // One of her tags on the wall: write it with the spray can.
-  const tagHit = ray.intersectObjects(city.tags.map((t) => t.mesh))[0];
+  const tagHit = inside ? undefined : ray.intersectObjects(city.tags.map((t) => t.mesh))[0];
   if (tagHit) {
     const t = city.tags.find((x) => x.mesh === tagHit.object)!;
     return write(t.id);
   }
-  if (ray.intersectObject(city.puddle).length) return goHome();
+  if (inside) {
+    if (ray.intersectObject(store.exit, true).length) return goThrough(false);
+  } else {
+    if (ray.intersectObject(city.storeDoor, true).length) return goThrough(true);
+    if (ray.intersectObject(city.puddle).length) return goHome();
+  }
   // Otherwise walk to the spot on the road.
   const d = ray.ray.direction;
   if (d.y < -0.02) {
     const k = -ray.ray.origin.y / d.y;
     // A tap is a few steps in that direction, not a journey: tap again to keep going.
     const to = new THREE.Vector2(ray.ray.origin.x + d.x * k, ray.ray.origin.z + d.z * k).sub(at);
-    if (to.length() > STRIDE) to.setLength(STRIDE);
+    const stride = inside ? 2 : STRIDE;
+    if (to.length() > stride) to.setLength(stride);
     goal.copy(onRoad(to.add(at)));
   }
 }
@@ -184,7 +200,7 @@ function touch(thing: Thing): void {
       ask.classList.add('right');
       const first = !progress.tagged.includes(w.id);
       const cheer = PRAISE[Math.floor(Math.random() * PRAISE.length)];
-      ask.querySelector('.hint')!.textContent = `${cheer[0]} (${cheer[1]})` + (first ? '  Now tap its outline on the wall to spray it.' : '');
+      ask.querySelector('.hint')!.textContent = `${cheer[0]} (${cheer[1]})` + (first ? (inside ? '  Its outline is waiting on a wall outside, for you to spray.' : '  Now tap its outline on the wall to spray it.') : '');
       setTimeout(() => say(cheer[0].replace('！', '')), 900);
       quest = null;
       questTimer = 2.6;
@@ -192,7 +208,7 @@ function touch(thing: Thing): void {
       // Not that one: it tells her its own name, and the question stands.
       quest.firstTry = false;
     }
-  } else if (questTimer <= 0 && progress.heard.length >= 4) {
+  } else if (questTimer <= 0 && thingsHere().filter((t) => progress.heard.includes(t.word)).length >= (inside ? 3 : 4)) {
     questTimer = 2.5; // enough heard: the street starts asking
   }
   saveProgress(progress);
@@ -223,14 +239,14 @@ function write(id: string): void {
 }
 
 function newQuest(): void {
-  const w = nextWord(progress, lastAsked);
+  const w = nextWord(progress, lastAsked, new Set(thingsHere().map((t) => t.word)));
   if (!w) return;
   quest = { word: w, firstTry: true };
   lastAsked = w.id;
   ask.classList.remove('right');
   // Things in the street are looked for; food at the stall is asked for, as a customer would.
   const frame = w.food
-    ? { kana: 'を ください', romaji: 'o kudasai', spoken: 'をください', hint: '〜 を ください means “〜, please.”  Find it at the stall and tap it.' }
+    ? { kana: 'を ください', romaji: 'o kudasai', spoken: 'をください', hint: '〜 を ください means “〜, please.”  Find it and tap it.' }
     : { kana: 'は どこ？', romaji: 'wa doko?', spoken: 'はどこ？', hint: '〜 は どこ？ means “where is 〜?”  Find it and tap it.' };
   questSpoken = `${w.kana}${frame.spoken}`;
   ask.querySelector('.kana')!.textContent = `${w.kana} ${frame.kana}`;
@@ -245,6 +261,50 @@ let questSpoken = '';
 $('again').onclick = () => {
   if (quest) say(questSpoken);
 };
+
+// ---- Going into the store and coming out ----
+
+const toast = $('toast');
+let toastTimer = 0;
+function announce(kana: string, note: string): void {
+  toast.querySelector('.kana')!.textContent = kana;
+  toast.querySelector('.romaji')!.textContent = note;
+  toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => (toast.hidden = true), 4500);
+  say(kana);
+}
+
+/** Steps through the shop door, in either direction, with a quick wash of light. */
+function goThrough(entering: boolean): void {
+  veil.style.transition = 'opacity 0.35s ease';
+  veil.style.background = '#ffffff';
+  veil.classList.remove('open');
+  setTimeout(() => {
+    if (entering) {
+      Object.assign(outside, { x: at.x, z: at.y, yaw });
+      at.set(0, store.half.z - 0.2);
+      yaw = yawGoal = 0;
+    } else {
+      at.set(outside.x, outside.z);
+      yaw = yawGoal = outside.yaw;
+    }
+    goal.copy(at);
+    pitch = pitchGoal = 0;
+    inside = entering;
+    // Whatever was being asked for is in the other place now.
+    quest = null;
+    ask.hidden = true;
+    label.hidden = true;
+    shown = null;
+    questTimer = 5;
+    veil.classList.add('open');
+    // What shop staff call out when a customer comes in, and what they say as one leaves.
+    if (entering) announce('いらっしゃいませ', 'irasshaimase: welcome! (said by shop staff)');
+    else announce('ありがとう ございました', 'arigatō gozaimashita: thank you very much');
+    setTimeout(() => (veil.style.transition = ''), 500);
+  }, 380);
+}
 
 // ---- Arriving and leaving ----
 
@@ -282,6 +342,8 @@ $('start').onclick = () => {
   }, 1200);
   if (progress.heard.length >= 4) questTimer = 3;
   // For trying the writing practice directly: add ?write=neko (a word's id) to the address.
+  // For going straight into the store: add ?store to the address.
+  if (new URLSearchParams(window.location.search).has('store')) goThrough(true);
   const test = new URLSearchParams(window.location.search).get('write');
   if (test && wordById(test)) write(test);
 };
@@ -309,7 +371,15 @@ renderer.setAnimationLoop(() => {
   // Walk towards the goal at a steady pace.
   const step = goal.clone().sub(at);
   const far = step.length();
-  if (far > 0.01) at.add(step.multiplyScalar(Math.min(1, (dt * 4.5) / far)));
+  if (far > 0.01) {
+    const before = at.clone();
+    at.add(step.multiplyScalar(Math.min(1, (dt * 4.5) / far)));
+    // In the store she stops at the furniture and does not walk through it.
+    if (inside && store.blocked(at.x, at.y)) {
+      at.copy(before);
+      goal.copy(at);
+    }
+  }
   yaw += (yawGoal - yaw) * (1 - Math.exp(-dt * 10));
   pitch += (pitchGoal - pitch) * (1 - Math.exp(-dt * 10));
   const bob = far > 0.05 ? Math.sin(time * 9) * 0.04 : 0;
@@ -317,6 +387,7 @@ renderer.setAnimationLoop(() => {
   camera.lookAt(at.x + Math.sin(yaw) * Math.cos(pitch), EYE + bob + Math.sin(pitch), at.y - Math.cos(yaw) * Math.cos(pitch));
 
   city.update(time, dt, camera.position);
+  store.update(time);
 
   // Watch the frame rate over three-second stretches and shed the costliest effect if it sags.
   if (time > 4 && raw < 0.5) {
@@ -333,7 +404,7 @@ renderer.setAnimationLoop(() => {
 
   if (questTimer > 0) {
     questTimer -= dt;
-    if (questTimer <= 0 && !quest && $('intro').hidden) newQuest();
+    if (questTimer <= 0 && !quest && $('intro').hidden && !writing) newQuest();
   }
 
   // The label follows the thing it names.
@@ -350,6 +421,8 @@ renderer.setAnimationLoop(() => {
     }
   }
 
-  if (quality === 2) composer.render();
+  // The store is brightly lit, so it is drawn plainly; the glow is for the night outside.
+  if (inside) renderer.render(store.scene, camera);
+  else if (quality === 2) composer.render();
   else renderer.render(city.scene, camera);
 });
