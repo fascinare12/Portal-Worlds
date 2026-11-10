@@ -41,6 +41,8 @@ export interface City {
 /** Half the width of the road, and of the road plus its pavements. */
 export const ROAD = 7;
 export const KERB = 11;
+/** Walkers closer to the middle of the junction than this are on the crossing street's roadway. */
+const CROSSING = ROAD + 0.6;
 
 const NEON = ['#ff4fa3', '#39e6ff', '#ffe14a', '#8cff6a', '#c58bff', '#ff7a3a'];
 const KANA_FONT = '"Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", "Noto Sans JP", "Noto Sans CJK JP", sans-serif';
@@ -1317,13 +1319,14 @@ export async function buildCity(): Promise<City> {
     const p = person(pick([0xff4fa3, 0xffe14a, 0x8cff6a, 0xc58bff, 0xff7a3a, 0xe8e8f0]), rnd() < 0.6);
     p.group.position.set(side * (ROAD + 2.4 + rnd() * 0.9), 0.2, (rnd() * 2 - 1) * 44);
     const dir = rnd() < 0.5 ? 1 : -1;
-    p.group.rotation.y = dir > 0 ? 0 : Math.PI;
+    // Faces are on the +z side of a figure, so someone walking towards -z must be turned right round.
+    p.group.rotation.y = dir > 0 ? Math.PI : 0;
     scene.add(p.group);
     const t: Thing = { word: 'hito', object: p.group, anchor: new THREE.Vector3() };
     things.push(t);
     walkers.push({ ...p, dir, speed: 1 + rnd() * 0.8, thing: t });
   }
-  const traffic: { group: THREE.Group; dir: number; thing: Thing }[] = [];
+  const traffic: { group: THREE.Group; dir: number; speed: number; thing: Thing }[] = [];
   for (const [colour, lane, dir] of [[0xe8e8f0, 3.4, 1], [0x39a0d0, -3.4, -1]] as const) {
     const g = car(colour, false);
     g.position.set(-dir * 70, 0, lane);
@@ -1331,7 +1334,7 @@ export async function buildCity(): Promise<City> {
     scene.add(g);
     const t: Thing = { word: 'kuruma', object: g, anchor: new THREE.Vector3() };
     things.push(t);
-    traffic.push({ group: g, dir, thing: t });
+    traffic.push({ group: g, dir, speed: 9, thing: t });
   }
 
   // Steam rising from the tea, the stall, and gratings in the road.
@@ -1519,16 +1522,27 @@ export async function buildCity(): Promise<City> {
       }
       for (const w of walkers) {
         const g = w.group;
-        g.position.z -= w.dir * w.speed * dt;
+        // At the kerb of the crossing street, wait for any car that is close before stepping out.
+        const next = g.position.z - w.dir * w.speed * dt;
+        const stepsOut = Math.abs(g.position.z) >= CROSSING && Math.abs(next) < CROSSING;
+        const carNear = traffic.some((c) => Math.abs(c.group.position.x - g.position.x) < 24);
+        const waiting = stepsOut && carNear;
+        if (!waiting) g.position.z = next;
         if (g.position.z < -46) g.position.z = 46;
         if (g.position.z > 46) g.position.z = -46;
-        const swing = Math.sin(time * 6 * w.speed + g.position.x) * 0.5;
+        const swing = waiting ? 0 : Math.sin(time * 6 * w.speed + g.position.x) * 0.5;
         w.legs[0].rotation.x = swing;
         w.legs[1].rotation.x = -swing;
         w.thing.anchor.set(g.position.x, 3, g.position.z);
       }
       for (const c of traffic) {
-        c.group.position.x += c.dir * 9 * dt;
+        // Cars stop short of anyone who is already on the road ahead of them.
+        const blocked = walkers.some((w) => {
+          const ahead = (w.group.position.x - c.group.position.x) * c.dir;
+          return Math.abs(w.group.position.z) < CROSSING && ahead > 0 && ahead < 11;
+        });
+        c.speed += ((blocked ? 0 : 9) - c.speed) * Math.min(1, dt * 4);
+        c.group.position.x += c.dir * c.speed * dt;
         if (c.group.position.x * c.dir > 70) c.group.position.x = -c.dir * (70 + Math.random() * 60);
         c.thing.anchor.set(c.group.position.x, 2.8, c.group.position.z);
       }
