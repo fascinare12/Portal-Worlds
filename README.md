@@ -16,6 +16,21 @@ browser: no server, no accounts, no data collected.
 | Go to a spot or a pool | tap it | click it |
 | Wake a sleeping pool | touch it | pass the mouse over it |
 
+## Worlds
+
+The wood is the hub. A pool that leads somewhere shows that place when you
+stand over it: tap the pool once to lean in, and again to dive through. You
+arrive rising out of a matching pool, which is also the way home.
+
+Each world is a separate page in its own folder under `worlds/`, with its own
+code and its own rules. To add one, create `worlds/<name>/index.html`, list it
+in `vite.config.ts`, and set `world: '<name>'` on a pool in
+`src/world/layout.ts`.
+
+| World | Folder | Pool |
+|---|---|---|
+| Desert | `worlds/desert/` | pale sand; shows a pyramid being built |
+
 ## Time of day
 
 The sky follows the real sun over Brevard, North Carolina: morning light,

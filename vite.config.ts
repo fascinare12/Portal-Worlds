@@ -1,4 +1,16 @@
+import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
 // Relative base so the built site works from any static host or subfolder.
-export default defineConfig({ base: './' });
+// Each world is its own page in its own folder; add new worlds to `input`.
+export default defineConfig({
+  base: './',
+  build: {
+    rollupOptions: {
+      input: {
+        wood: resolve(__dirname, 'index.html'),
+        desert: resolve(__dirname, 'worlds/desert/index.html'),
+      },
+    },
+  },
+});

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { lerp, smoothstep } from './noise';
 import { WORLD_RADIUS, groundHeight, poolAt, trees } from './world/layout';
-import type { Tree } from './world/layout';
+import type { Pool, Tree } from './world/layout';
 
 /**
  * One continuous camera. Zoomed out it looks down on the whole wood like a map;
@@ -23,6 +23,8 @@ interface View {
   z: number;
   yaw: number;
   zoom: number;
+  /** 0 = the usual view; 1 = standing over a pool and peering straight down into it. */
+  peer: number;
 }
 
 const distanceAt = (zoom: number) => FAR * Math.pow(NEAR / FAR, zoom);
@@ -32,8 +34,8 @@ const eyeLiftAt = (zoom: number) => lerp(0, 1.3, zoom);
 
 /** Places a camera for a view and returns the height it looks at. */
 function place(cam: THREE.PerspectiveCamera, v: View): number {
-  const d = distanceAt(v.zoom);
-  const p = pitchAt(v.zoom);
+  const d = lerp(distanceAt(v.zoom), 11, v.peer);
+  const p = lerp(pitchAt(v.zoom), 1.12, v.peer);
   const lookY = groundHeight(v.x, v.z) + eyeLiftAt(v.zoom);
   cam.position.set(
     v.x + Math.sin(v.yaw) * Math.cos(p) * d,
@@ -57,7 +59,7 @@ for (const t of trees) {
 export class CameraRig {
   readonly camera = new THREE.PerspectiveCamera(FOV, 1, 0.3, 600);
 
-  private now: View = { x: 0, z: 0, yaw: 0.5, zoom: 0.22 };
+  private now: View = { x: 0, z: 0, yaw: 0.5, zoom: 0.22, peer: 0 };
   private goal: View = { ...this.now };
 
   private pointers = new Map<number, { x: number; y: number }>();
@@ -72,6 +74,10 @@ export class CameraRig {
   private glide = { x: 0, z: 0 };
   private lastDrag = 0;
   private stride = 0;
+
+  /** Called when someone leaning over a pool that leads somewhere taps it again. */
+  onDive: ((pool: Pool) => void) | null = null;
+  private diving: { pool: Pool; t: number } | null = null;
 
   constructor(
     private el: HTMLCanvasElement,
@@ -104,6 +110,7 @@ export class CameraRig {
     const move = { x: -cos * right - sin * forward, z: sin * right - cos * forward };
     this.goal.x += move.x;
     this.goal.z += move.z;
+    if (Math.abs(move.x) + Math.abs(move.z) > 0.001) this.goal.peer = 0; // walking away stops the peering
     this.clampGoal();
     return move;
   }
@@ -144,6 +151,7 @@ export class CameraRig {
 
   /** Zooms while keeping the ground under the finger or cursor where it is. */
   private zoomAt(amount: number, clientX: number, clientY: number): void {
+    this.goal.peer = 0;
     const before = this.groundUnder(clientX, clientY, this.goal);
     this.goal.zoom = Math.min(1, Math.max(0, this.goal.zoom + amount));
     const after = before && this.groundUnder(clientX, clientY, this.goal);
@@ -154,7 +162,20 @@ export class CameraRig {
     this.clampGoal();
   }
 
+  /** Tip forward and plunge into a pool. */
+  dive(pool: Pool): void {
+    this.diving = { pool, t: 0 };
+    this.glide.x = this.glide.z = 0;
+  }
+
+  /** Start standing over a pool, as if just risen out of it. */
+  arriveAt(pool: Pool): void {
+    this.now = { x: pool.x, z: pool.z, yaw: this.now.yaw, zoom: 0.78, peer: 1 };
+    this.goal = { ...this.now };
+  }
+
   private onDown = (e: PointerEvent): void => {
+    if (this.diving) return;
     this.el.setPointerCapture(e.pointerId);
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     this.tap = this.pointers.size === 1 ? { x: e.clientX, y: e.clientY, t: performance.now() } : null;
@@ -165,7 +186,7 @@ export class CameraRig {
 
   private onMove = (e: PointerEvent): void => {
     const prev = this.pointers.get(e.pointerId);
-    if (!prev) return;
+    if (!prev || this.diving) return;
     const dx = e.clientX - prev.x;
     const dy = e.clientY - prev.y;
     prev.x = e.clientX;
@@ -227,14 +248,23 @@ export class CameraRig {
     const hit = this.raycaster.intersectObject(this.ground)[0];
     if (!hit) return;
     const pool = poolAt(hit.point.x, hit.point.z);
+    // Already leaning over this pool, and it leads somewhere: dive in.
+    const leaning = pool && Math.hypot(this.goal.x - pool.x, this.goal.z - pool.z) < 0.5 && this.now.zoom > 0.6;
+    if (pool && leaning && pool.world && this.onDive) {
+      this.onDive(pool);
+      return;
+    }
     this.goal.x = pool ? pool.x : hit.point.x;
     this.goal.z = pool ? pool.z : hit.point.z;
     if (pool) this.goal.zoom = Math.max(this.goal.zoom, 0.72);
+    // A pool that leads somewhere: stand over it and look straight in.
+    this.goal.peer = pool?.world ? 1 : 0;
     this.clampGoal();
   }
 
   private onWheel = (e: WheelEvent): void => {
     e.preventDefault();
+    if (this.diving) return;
     const delta = Math.max(-120, Math.min(120, e.deltaY)) * (e.ctrlKey ? 0.004 : 0.0011);
     this.zoomAt(-delta, e.clientX, e.clientY);
   };
@@ -277,6 +307,7 @@ export class CameraRig {
     this.now.z = lerp(this.now.z, this.goal.z, ease);
     this.now.yaw = lerp(this.now.yaw, this.goal.yaw, ease);
     this.now.zoom = lerp(this.now.zoom, this.goal.zoom, 1 - Math.exp(-dt * 6));
+    this.now.peer = lerp(this.now.peer, this.goal.peer, 1 - Math.exp(-dt * 4));
 
     const lookY = place(this.camera, this.now);
     const cam = this.camera.position;
@@ -308,5 +339,16 @@ export class CameraRig {
     const bob = Math.sin(this.stride) * 0.045 * smoothstep(0.7, 1, this.now.zoom);
     cam.y += bob;
     this.camera.lookAt(this.now.x, lookY + bob, this.now.z);
+
+    // Diving: the view swings over the pool and drops into the water.
+    if (this.diving) {
+      const { pool } = this.diving;
+      this.diving.t = Math.min(1, this.diving.t + dt / 1.6);
+      const t = smoothstep(0, 1, this.diving.t);
+      cam.x = lerp(cam.x, pool.x, t);
+      cam.z = lerp(cam.z, pool.z + 0.01, t);
+      cam.y = lerp(cam.y, pool.level + 0.35, t * t);
+      this.camera.lookAt(pool.x, pool.level - 3, pool.z);
+    }
   }
 }

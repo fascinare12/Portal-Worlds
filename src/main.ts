@@ -5,6 +5,7 @@ import { lerp, smoothstep } from './noise';
 import { createAtmosphere } from './world/atmosphere';
 import { daylight, updateDaylight } from './world/daylight';
 import { createForest } from './world/forest';
+import { pools } from './world/layout';
 import { wind } from './world/paint';
 import { createPools } from './world/pools';
 import { createTerrain } from './world/terrain';
@@ -67,8 +68,38 @@ function wake(e: PointerEvent): void {
 canvas.addEventListener('pointermove', wake);
 canvas.addEventListener('pointerdown', wake);
 
+// Diving through a pool: the view drops into the water, the screen fills with the
+// pool's colour, and the other world loads. Each world lives in its own folder
+// under worlds/ and runs by its own rules.
+const veil = document.getElementById('veil') as HTMLDivElement;
+rig.onDive = (pool) => {
+  rig.dive(pool);
+  veil.style.background = '#' + pool.color.toString(16).padStart(6, '0');
+  setTimeout(() => veil.classList.add('closed'), 500);
+  setTimeout(() => {
+    window.location.href = `worlds/${pool.world}/index.html`;
+  }, 1700);
+};
+// Coming home: rise out of the pool that leads to the world just left.
+const cameFrom = window.location.hash.replace('#from-', '');
+const homePool = pools.find((p) => p.world && p.world === cameFrom);
+if (homePool) {
+  rig.arriveAt(homePool);
+  veil.style.background = '#' + homePool.color.toString(16).padStart(6, '0');
+  veil.classList.add('closed', 'instant');
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+}
+// If the browser brings this page back from its history, lift the veil again.
+window.addEventListener('pageshow', (e) => {
+  if (e.persisted) window.location.reload();
+});
+
 // The picture fades in once its painted textures have arrived.
-const reveal = () => canvas.classList.add('ready');
+const reveal = () => {
+  canvas.classList.add('ready');
+  veil.classList.remove('instant');
+  requestAnimationFrame(() => veil.classList.remove('closed'));
+};
 THREE.DefaultLoadingManager.onLoad = reveal;
 setTimeout(reveal, 5000);
 

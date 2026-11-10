@@ -9,10 +9,15 @@
       canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; opacity: 0; transition: opacity 1.2s ease; }
       canvas.ready { opacity: 1; }
       canvas:active { cursor: grabbing; }
+      /* Fills the screen with a pool's colour while passing between worlds. */
+      #veil { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity 1.1s ease; }
+      #veil.closed { opacity: 1; }
+      #veil.instant { transition: none; }
     </style>
   </head>
   <body>
     <canvas id="world"></canvas>
+    <div id="veil"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
