@@ -7,14 +7,33 @@ import { daylight } from './daylight';
 import { createFoliage } from './foliage';
 import { groundHeight, poolAt, pools, trees } from './layout';
 import { paint, wind } from './paint';
+import { season } from './season';
 
 const dummy = new THREE.Object3D();
 const color = new THREE.Color();
 
 /** Makes an instanced material sway gently; `amount` is in world units at the top of the shape. */
-function addSway(mat: THREE.Material, amount: number, byHeight: boolean): void {
+function addSway(mat: THREE.Material, amount: number, byHeight: boolean, bloom?: number): void {
+  // Materials that differ only in these options must not share one compiled shader.
+  mat.customProgramCacheKey = () => `sway:${amount}:${byHeight}:${bloom !== undefined}`;
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uWind = wind;
+    if (bloom !== undefined) {
+      // Repaint the flowers (the warm-coloured parts of the picture) in this season's colour,
+      // keeping the painter's lights and darks.
+      shader.uniforms.uBloom = { value: new THREE.Color(bloom) };
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform vec3 uBloom;')
+        .replace(
+          '#include <map_fragment>',
+          `vec4 painted = texture2D(map, vMapUv);
+          if (painted.r > painted.g * 1.08) {
+            float value = max(painted.r, max(painted.g, painted.b));
+            painted.rgb = uBloom * (0.5 + 0.6 * value);
+          }
+          diffuseColor *= painted;`,
+        );
+    }
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nuniform float uWind;')
       .replace(
@@ -130,6 +149,8 @@ interface PlantKind {
   /** Smallest and largest height in world units. */
   size: [number, number];
   tints: number[];
+  /** Colour its flowers are repainted in, if it flowers. */
+  bloom?: number;
   /** Where this plant grows: returns true to accept a spot. */
   grows(x: number, z: number, chance: number): boolean;
 }
@@ -147,21 +168,23 @@ function createGroundCover(): { group: THREE.Group; meshes: THREE.InstancedMesh[
       url: grassUrl,
       count: 48000,
       size: [0.5, 1.1],
-      tints: [0xa9c79a, 0xc4d8a6, 0x9dbf95, 0xd8e2b0],
+      tints: season.grass,
       grows: (x, z, chance) => fbm(x * 0.11 + 30, z * 0.11 + 30, 2) > 0.14 + chance * 0.18, // nearly everywhere, thinner in places
     },
     {
       url: sprigUrl,
-      count: 7000,
+      count: Math.round(7000 * season.bloomShare),
       size: [0.7, 1.4],
       tints: [0xffffff, 0xe6efd8],
+      bloom: season.sprayBloom,
       grows: (x, z) => fbm(x * 0.06 + 200, z * 0.06 + 200, 2) > 0.47, // meadows
     },
     {
       url: spikeUrl,
-      count: 4000,
+      count: Math.round(4000 * season.bloomShare),
       size: [0.8, 1.6],
       tints: [0xffffff, 0xf2ead8],
+      bloom: season.spikeBloom,
       grows: (x, z) => fbm(x * 0.05 + 400, z * 0.05 + 400, 2) > 0.5, // rarer patches
     },
   ];
@@ -171,7 +194,7 @@ function createGroundCover(): { group: THREE.Group; meshes: THREE.InstancedMesh[
     map.colorSpace = THREE.SRGBColorSpace;
     const mat = new THREE.MeshBasicMaterial({ map, alphaTest: 0.5, side: THREE.DoubleSide });
     mat.color = daylight.ambient; // painted plants dim and cool with the light
-    addSway(mat, 0.07, true);
+    addSway(mat, 0.07, true, kind.bloom);
     const mesh = new THREE.InstancedMesh(geo, mat, kind.count);
     let n = 0;
     let tries = 0;

@@ -65,6 +65,8 @@ export function paint(opts: PaintOptions = {}): THREE.MeshToonMaterial {
          transformed.x += swayNow * ${sway.toFixed(3)};
          transformed.z += swayNow * ${(sway * 0.6).toFixed(3)};`
       : '';
+  // Materials that differ only in these options must not share one compiled shader.
+  mat.customProgramCacheKey = () => `paint:${dab}:${sway}:${!!opts.bark}:${!!opts.spots}`;
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uWind = wind;
     shader.uniforms.uNoise = { value: noiseTexture };

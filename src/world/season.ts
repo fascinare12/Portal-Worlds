@@ -15,6 +15,15 @@ export interface Season {
   /** Colour and amount (0..1) of fallen leaves on the ground. */
   litter: number;
   litterAmount: number;
+  /** Ground colours: mossy shade and open grass. */
+  ground: [number, number];
+  /** Tints laid over the painted grass. */
+  grass: number[];
+  /** What is in flower: the colour of the small sprays and of the tall spikes. */
+  sprayBloom: number;
+  spikeBloom: number;
+  /** How much is in flower compared with high summer. */
+  bloomShare: number;
 }
 
 const SEASONS: Record<string, Season> = {
@@ -26,6 +35,11 @@ const SEASONS: Record<string, Season> = {
     fullness: 0.35,
     litter: 0x8a7458,
     litterAmount: 0.9,
+    ground: [0x5c7146, 0x8d985a],
+    grass: [0xa9b08c, 0xb8b894, 0x98a583, 0xc2bd96],
+    sprayBloom: 0xf4f4ee, // snowdrops and hellebores
+    spikeBloom: 0xe0527a, // camellias
+    bloomShare: 0.3,
   },
   spring: {
     name: 'spring',
@@ -35,6 +49,11 @@ const SEASONS: Record<string, Season> = {
     fullness: 0.85,
     litter: 0xa9984f,
     litterAmount: 0.3,
+    ground: [0x4f9048, 0x90c060],
+    grass: [0xb4dca0, 0xd0ecb0, 0xa6d296, 0xe0f0b8],
+    sprayBloom: 0xf7b6d6, // phlox and spring beauty
+    spikeBloom: 0xff5a4a, // fire pink
+    bloomShare: 1,
   },
   summer: {
     name: 'summer',
@@ -44,6 +63,11 @@ const SEASONS: Record<string, Season> = {
     fullness: 1,
     litter: 0xa9984f,
     litterAmount: 0.45,
+    ground: [0x4a8748, 0x86b257],
+    grass: [0xa9c79a, 0xc4d8a6, 0x9dbf95, 0xd8e2b0],
+    sprayBloom: 0xe9a6c8,
+    spikeBloom: 0xe03a2e, // cardinal flower
+    bloomShare: 1,
   },
   earlyFall: {
     name: 'early fall',
@@ -53,6 +77,11 @@ const SEASONS: Record<string, Season> = {
     fullness: 1,
     litter: 0xc98a2b,
     litterAmount: 0.7,
+    ground: [0x548244, 0x94ae54],
+    grass: [0xb4c890, 0xcfd69a, 0xa6bc88, 0xdcd89c],
+    sprayBloom: 0xf2c230, // goldenrod
+    spikeBloom: 0x7d4fc9, // ironweed
+    bloomShare: 0.9,
   },
   lateFall: {
     name: 'late fall',
@@ -62,6 +91,11 @@ const SEASONS: Record<string, Season> = {
     fullness: 0.9,
     litter: 0x8f3a22,
     litterAmount: 1,
+    ground: [0x587a42, 0x93a352],
+    grass: [0xb9c08a, 0xc9c78c, 0xa8b47e, 0xd6c98a],
+    sprayBloom: 0x8a6fd6, // the last asters
+    spikeBloom: 0xf2d23c, // witch hazel, in flower from October to December
+    bloomShare: 0.6,
   },
 };
 
