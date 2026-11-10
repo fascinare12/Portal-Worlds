@@ -143,24 +143,24 @@ function createGroundCover(): { group: THREE.Group; meshes: THREE.InstancedMesh[
   const kinds: PlantKind[] = [
     {
       url: grassUrl,
-      count: 9000,
+      count: 18000,
       size: [0.5, 1.1],
       tints: [0xa9c79a, 0xc4d8a6, 0x9dbf95, 0xd8e2b0],
-      grows: (x, z, chance) => fbm(x * 0.11 + 30, z * 0.11 + 30, 2) > 0.36 + chance * 0.2, // in drifts
+      grows: (x, z, chance) => fbm(x * 0.11 + 30, z * 0.11 + 30, 2) > 0.28 + chance * 0.2, // in drifts
     },
     {
       url: sprigUrl,
-      count: 900,
+      count: 2600,
       size: [0.7, 1.4],
       tints: [0xffffff, 0xe6efd8],
-      grows: (x, z) => fbm(x * 0.06 + 200, z * 0.06 + 200, 2) > 0.57, // meadows
+      grows: (x, z) => fbm(x * 0.06 + 200, z * 0.06 + 200, 2) > 0.52, // meadows
     },
     {
       url: spikeUrl,
-      count: 500,
+      count: 1500,
       size: [0.8, 1.6],
       tints: [0xffffff, 0xf2ead8],
-      grows: (x, z) => fbm(x * 0.05 + 400, z * 0.05 + 400, 2) > 0.62, // rarer patches
+      grows: (x, z) => fbm(x * 0.05 + 400, z * 0.05 + 400, 2) > 0.56, // rarer patches
     },
   ];
 
