@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { KERB, ROAD, buildCity } from './city';
 import type { Thing } from './city';
 import { hasVoice, say, sound } from './speak';
+import { openTrace } from './trace';
 import { WORDS, loadProgress, nextWord, record, saveProgress, wordById } from './words';
 import type { Word } from './words';
 
@@ -29,7 +30,8 @@ const city = buildCity();
 const progress = loadProgress();
 
 // Tags already earned are on the walls from the start.
-for (const id of progress.tagged) city.tag(wordById(id).kana, false);
+progress.sprayed ??= [];
+for (const id of progress.tagged) city.tag(id, wordById(id).kana, progress.sprayed.includes(id), false);
 
 function resize(): void {
   renderer.setSize(window.innerWidth, window.innerHeight, false);
@@ -89,6 +91,7 @@ window.addEventListener('keydown', (e) => keys.add(e.key.toLowerCase()));
 window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
 
 function tapped(x: number, y: number): void {
+  if (writing) return;
   ray.setFromCamera(new THREE.Vector2((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1), camera);
   // A thing with a name?
   const hit = ray.intersectObjects(city.things.map((t) => t.object), true)[0];
@@ -98,6 +101,12 @@ function tapped(x: number, y: number): void {
       return false;
     });
     if (thing) return touch(thing);
+  }
+  // One of her tags on the wall: write it with the spray can.
+  const tagHit = ray.intersectObjects(city.tags.map((t) => t.mesh))[0];
+  if (tagHit) {
+    const t = city.tags.find((x) => x.mesh === tagHit.object)!;
+    return write(t.id);
   }
   if (ray.intersectObject(city.puddle).length) return goHome();
   // Otherwise walk to the spot on the road.
@@ -109,6 +118,13 @@ function tapped(x: number, y: number): void {
 }
 
 // ---- Words ----
+
+/** Said when she finds something. */
+const PRAISE: [string, string][] = [
+  ['せいかい！', 'seikai: correct'],
+  ['すごい！', 'sugoi: amazing'],
+  ['いいね！', 'ii ne: nice'],
+];
 
 let shown: { thing: Thing; until: number } | null = null;
 let quest: { word: Word; firstTry: boolean } | null = null;
@@ -142,11 +158,14 @@ function touch(thing: Thing): void {
       setTimeout(() => sound.boom(), 250);
       if (!progress.tagged.includes(w.id)) {
         progress.tagged.push(w.id);
-        city.tag(w.kana, true);
+        city.tag(w.id, w.kana, false, true);
         sound.spray();
       }
       ask.classList.add('right');
-      ask.querySelector('.hint')!.textContent = 'せいかい！ (seikai: correct)';
+      const first = !progress.tagged.includes(w.id);
+      const cheer = PRAISE[Math.floor(Math.random() * PRAISE.length)];
+      ask.querySelector('.hint')!.textContent = `${cheer[0]} (${cheer[1]})` + (first ? '  Now tap its outline on the wall to spray it.' : '');
+      setTimeout(() => say(cheer[0].replace('！', '')), 900);
       quest = null;
       questTimer = 2.6;
     } else {
@@ -161,7 +180,26 @@ function touch(thing: Thing): void {
 }
 
 function drawCount(): void {
-  count.textContent = `${progress.tagged.length} / ${WORDS.length}`;
+  // Found, and of those, written by her own hand.
+  count.textContent = `🔎 ${progress.tagged.length}  ✍ ${progress.sprayed!.length} / ${WORDS.length}`;
+}
+
+let writing = false;
+/** Opens a word on the wall for writing; finishing it fills the tag with colour. */
+function write(id: string): void {
+  if (writing) return;
+  writing = true;
+  label.hidden = true;
+  shown = null;
+  openTrace(wordById(id), (finished) => {
+    writing = false;
+    if (!finished) return;
+    if (!progress.sprayed!.includes(id)) progress.sprayed!.push(id);
+    city.fill(id);
+    city.firework();
+    saveProgress(progress);
+    drawCount();
+  });
 }
 
 function newQuest(): void {
@@ -170,21 +208,29 @@ function newQuest(): void {
   quest = { word: w, firstTry: true };
   lastAsked = w.id;
   ask.classList.remove('right');
-  ask.querySelector('.kana')!.textContent = `${w.kana} は どこ？`;
-  ask.querySelector('.romaji')!.textContent = needsRomaji(w.id) ? `${w.romaji} wa doko?` : '… wa doko?';
-  // The frame of the question is explained; the word itself is hers to remember.
-  ask.querySelector('.hint')!.textContent = progress.asked < 3 ? '〜 は どこ？ means “where is 〜?”  Find it and tap it.' : '';
+  // Things in the street are looked for; food at the stall is asked for, as a customer would.
+  const frame = w.food
+    ? { kana: 'を ください', romaji: 'o kudasai', spoken: 'をください', hint: '〜 を ください means “〜, please.”  Find it at the stall and tap it.' }
+    : { kana: 'は どこ？', romaji: 'wa doko?', spoken: 'はどこ？', hint: '〜 は どこ？ means “where is 〜?”  Find it and tap it.' };
+  questSpoken = `${w.kana}${frame.spoken}`;
+  ask.querySelector('.kana')!.textContent = `${w.kana} ${frame.kana}`;
+  ask.querySelector('.romaji')!.textContent = needsRomaji(w.id) ? `${w.romaji} ${frame.romaji}` : `… ${frame.romaji}`;
+  // The frame of the question is explained the first few times; the word itself is hers to remember.
+  const seen = w.food ? (progress.box['_kudasai'] = (progress.box['_kudasai'] ?? 0) + 1) : progress.asked + 1;
+  ask.querySelector('.hint')!.textContent = seen <= 3 ? frame.hint : '';
   ask.hidden = false;
-  say(`${w.kana}はどこ？`);
+  say(questSpoken);
 }
+let questSpoken = '';
 $('again').onclick = () => {
-  if (quest) say(`${quest.word.kana}はどこ？`);
+  if (quest) say(questSpoken);
 };
 
 // ---- Arriving and leaving ----
 
 function goHome(): void {
   saveProgress(progress);
+  say('またね'); // see you
   veil.style.background = '#4f9a5c';
   veil.classList.remove('open');
   setTimeout(() => {
@@ -196,14 +242,28 @@ window.addEventListener('pageshow', (e) => {
   if (e.persisted) window.location.reload();
 });
 
+// The greeting follows the real time of day, as it would in Japan.
+const hour = new Date().getHours();
+const greeting =
+  hour < 11
+    ? { kana: 'おはよう', romaji: 'ohayō: good morning' }
+    : hour < 17
+      ? { kana: 'こんにちは', romaji: 'konnichiwa: hello, good afternoon' }
+      : { kana: 'こんばんは', romaji: 'konbanwa: good evening' };
+$('greeting').textContent = `${greeting.kana}！`;
+$('greeting-romaji').textContent = greeting.romaji;
+
 $('start').onclick = () => {
   // Sound is only allowed after a tap, so the greeting is spoken here.
   $('intro').hidden = true;
-  say('こんばんは');
+  say(greeting.kana);
   setTimeout(() => {
     $('mute').hidden = hasVoice();
   }, 1200);
   if (progress.heard.length >= 4) questTimer = 3;
+  // For trying the writing practice directly: add ?write=neko (a word's id) to the address.
+  const test = new URLSearchParams(window.location.search).get('write');
+  if (test && wordById(test)) write(test);
 };
 drawCount();
 requestAnimationFrame(() => veil.classList.add('open'));

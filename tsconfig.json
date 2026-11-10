@@ -6,6 +6,7 @@
     "strict": true,
     "noUnusedLocals": true,
     "skipLibCheck": true,
+    "resolveJsonModule": true,
     "lib": ["ES2020", "DOM"]
   },
   "include": ["src", "worlds"]

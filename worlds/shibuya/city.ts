@@ -21,8 +21,12 @@ export interface City {
   things: Thing[];
   /** The puddle that leads back to the wood. */
   puddle: THREE.Mesh;
-  /** Sprays a word's tag onto the next free stretch of wall. */
-  tag(kana: string, animate: boolean): void;
+  /** Her tags on the walls; tapping one opens it for writing. */
+  tags: { id: string; mesh: THREE.Mesh }[];
+  /** Puts a word's tag on the next free stretch of wall: an outline until she has written it herself. */
+  tag(id: string, kana: string, filled: boolean, animate: boolean): void;
+  /** Fills a tag in with colour, once she has written the word. */
+  fill(id: string): void;
   /** Sets off a firework over the street. */
   firework(): void;
   update(time: number, dt: number): void;
@@ -52,31 +56,68 @@ function texture(c: HTMLCanvasElement): THREE.CanvasTexture {
   return t;
 }
 
-/** The face of a building: a dark wall with a grid of windows, some lit, and a bright ground floor. */
+/** The face of a building: a dark wall with a grid of windows, some lit. It tiles, so tall buildings get more floors. */
 function facade(): THREE.CanvasTexture {
-  const [c, g] = canvas(128, 256);
-  g.fillStyle = pick(['#15142e', '#1b1838', '#121a33', '#201636']);
-  g.fillRect(0, 0, 128, 256);
-  const cols = 4 + Math.floor(rnd() * 4);
-  const rows = 9 + Math.floor(rnd() * 6);
-  const cw = 128 / cols;
-  const rh = 224 / rows;
+  const [c, g] = canvas(128, 128);
+  g.fillStyle = pick(['#15142e', '#1b1838', '#121a33', '#201636', '#191526']);
+  g.fillRect(0, 0, 128, 128);
   const warm = ['#ffd27a', '#ffe9b0', '#ffbf66', '#fff3d0'];
-  for (let r = 0; r < rows; r++) {
-    for (let k = 0; k < cols; k++) {
+  for (let r = 0; r < 4; r++) {
+    for (let k = 0; k < 4; k++) {
       const lit = rnd();
-      g.fillStyle = lit < 0.5 ? pick(warm) : lit < 0.6 ? pick(NEON) : '#0b0b1c';
-      g.globalAlpha = lit < 0.6 ? 0.75 + rnd() * 0.25 : 1;
-      g.fillRect(k * cw + 2.5, r * rh + 2.5, cw - 5, rh - 5);
+      g.fillStyle = lit < 0.42 ? pick(warm) : lit < 0.5 ? pick(NEON) : '#0b0b1c';
+      g.globalAlpha = lit < 0.5 ? 0.6 + rnd() * 0.4 : 1;
+      g.fillRect(k * 32 + 5, r * 32 + 7, 22, 18);
+      // A sill under each window, and now and then an air conditioner.
+      g.globalAlpha = 1;
+      g.fillStyle = '#2c2a44';
+      g.fillRect(k * 32 + 3, r * 32 + 26, 26, 2);
+      if (rnd() < 0.15) {
+        g.fillStyle = '#4a4860';
+        g.fillRect(k * 32 + 9, r * 32 + 27, 12, 5);
+      }
     }
   }
-  g.globalAlpha = 1;
-  // The ground floor glows like a shopfront.
-  const glow = g.createLinearGradient(0, 224, 0, 256);
-  glow.addColorStop(0, pick(warm));
-  glow.addColorStop(1, '#ff9f5a');
-  g.fillStyle = glow;
-  g.fillRect(4, 228, 120, 28);
+  // Grime: streaks running down the wall.
+  for (let i = 0; i < 10; i++) {
+    g.fillStyle = `rgba(0,0,0,${0.1 + rnd() * 0.2})`;
+    g.fillRect(rnd() * 128, 0, 1 + rnd() * 3, 128);
+  }
+  const t = texture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+/** The ground floor of a building: a rolled-down metal shutter, or a lit shopfront. */
+function groundFloor(): THREE.CanvasTexture {
+  const [c, g] = canvas(256, 128);
+  if (rnd() < 0.55) {
+    // Shutter: corrugated grey metal, dented and stained.
+    for (let y = 0; y < 128; y += 6) {
+      g.fillStyle = y % 12 ? '#3c3a4c' : '#2e2c3c';
+      g.fillRect(0, y, 256, 6);
+    }
+    for (let i = 0; i < 14; i++) {
+      g.fillStyle = `rgba(0,0,0,${0.12 + rnd() * 0.2})`;
+      g.fillRect(rnd() * 256, rnd() * 40, 2 + rnd() * 6, 60 + rnd() * 60);
+    }
+  } else {
+    // Shopfront: warm light through glass, a doorway, shelves of things.
+    const glow = g.createLinearGradient(0, 0, 0, 128);
+    glow.addColorStop(0, pick(['#ffd27a', '#ffe9b0', '#bff3ff']));
+    glow.addColorStop(1, '#ff9f5a');
+    g.fillStyle = glow;
+    g.fillRect(0, 0, 256, 128);
+    g.fillStyle = '#15142e';
+    g.fillRect(0, 0, 256, 10);
+    for (let x = 0; x <= 256; x += 64) g.fillRect(x - 3, 0, 6, 128);
+    for (let i = 0; i < 40; i++) {
+      g.fillStyle = pick(NEON);
+      g.globalAlpha = 0.7;
+      g.fillRect(8 + rnd() * 236, 30 + Math.floor(rnd() * 3) * 30, 6 + rnd() * 8, 14);
+    }
+    g.globalAlpha = 1;
+  }
   return texture(c);
 }
 
@@ -113,11 +154,25 @@ function sign(kana: string, color: string, upright: boolean): THREE.Mesh {
 }
 
 /** Kana as if sprayed on a wall: thick, soft-edged, outlined, slightly tilted. */
-function tagTexture(kana: string, color: string): THREE.CanvasTexture {
+function tagTexture(kana: string, color: string, filled: boolean): THREE.CanvasTexture {
   const [c, g] = canvas(512, 256);
+  if (!filled) {
+    // Not yet written by her: a chalky dashed outline, waiting for paint.
+    g.translate(256, 128);
+    g.rotate(-0.07);
+    g.font = `900 ${kana.length > 3 ? 100 : 150}px ${KANA_FONT}`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.lineJoin = 'round';
+    g.setLineDash([10, 9]);
+    g.strokeStyle = 'rgba(255,255,255,0.85)';
+    g.lineWidth = 5;
+    g.strokeText(kana, 0, 0);
+    return texture(c);
+  }
   g.translate(256, 128);
   g.rotate(-0.07);
-  g.font = `900 ${kana.length > 3 ? 110 : 150}px ${KANA_FONT}`;
+  g.font = `900 ${kana.length > 3 ? 100 : 150}px ${KANA_FONT}`;
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.lineJoin = 'round';
@@ -138,18 +193,78 @@ function tagTexture(kana: string, color: string): THREE.CanvasTexture {
   return texture(c);
 }
 
-/** Wordless scribbles and shapes, so the walls look painted before she adds anything. */
+/** Wordless graffiti: bubble shapes with outlines, arrows, stars, crowns, drips and stickers, layered over each other. */
 function scribble(): THREE.CanvasTexture {
   const [c, g] = canvas(256, 128);
-  g.lineCap = 'round';
-  for (let i = 0; i < 5; i++) {
-    g.strokeStyle = pick(NEON);
-    g.globalAlpha = 0.55;
-    g.lineWidth = 5 + rnd() * 9;
-    g.beginPath();
-    g.moveTo(rnd() * 256, rnd() * 128);
-    g.bezierCurveTo(rnd() * 256, rnd() * 128, rnd() * 256, rnd() * 128, rnd() * 256, rnd() * 128);
-    g.stroke();
+  g.lineCap = g.lineJoin = 'round';
+  const layers = 2 + Math.floor(rnd() * 3);
+  for (let i = 0; i < layers; i++) {
+    const colour = pick(NEON);
+    const x = 40 + rnd() * 176;
+    const y = 30 + rnd() * 68;
+    const kind = Math.floor(rnd() * 5);
+    g.globalAlpha = 0.5 + rnd() * 0.45;
+    if (kind === 0) {
+      // A throw-up: a fat bubble shape with a dark outline and a highlight.
+      g.fillStyle = colour;
+      g.strokeStyle = '#0a0818';
+      g.lineWidth = 6;
+      g.beginPath();
+      for (let k = 0; k < 4; k++) g.ellipse(x - 36 + k * 24, y + (k % 2) * 8, 18, 22, 0, 0, 6.3);
+      g.fill();
+      g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,0.8)';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.arc(x - 40, y - 8, 9, 3.4, 4.6);
+      g.stroke();
+    } else if (kind === 1) {
+      // A quick one-line scrawl with an arrow on the end.
+      g.strokeStyle = colour;
+      g.lineWidth = 4 + rnd() * 5;
+      g.beginPath();
+      g.moveTo(x - 50, y);
+      g.bezierCurveTo(x - 20, y - 40, x, y + 40, x + 44, y - 6);
+      g.lineTo(x + 30, y - 14);
+      g.moveTo(x + 44, y - 6);
+      g.lineTo(x + 36, y + 8);
+      g.stroke();
+    } else if (kind === 2) {
+      // A star or a crown.
+      g.fillStyle = colour;
+      g.beginPath();
+      for (let k = 0; k < 10; k++) {
+        const r = k % 2 ? 9 : 22;
+        g.lineTo(x + Math.sin((k / 10) * 6.283) * r, y - Math.cos((k / 10) * 6.283) * r);
+      }
+      g.fill();
+    } else if (kind === 3) {
+      // A sticker: a small tilted rectangle with a border.
+      g.save();
+      g.translate(x, y);
+      g.rotate((rnd() - 0.5) * 0.6);
+      g.fillStyle = '#f4f0e6';
+      g.fillRect(-16, -11, 32, 22);
+      g.fillStyle = colour;
+      g.fillRect(-13, -8, 26, 16);
+      g.restore();
+    } else {
+      // Drips from a heavy line.
+      g.strokeStyle = colour;
+      g.lineWidth = 9;
+      g.beginPath();
+      g.moveTo(x - 40, y - 10);
+      g.lineTo(x + 40, y - 14);
+      g.stroke();
+      g.lineWidth = 3;
+      for (let k = 0; k < 5; k++) {
+        const dx = x - 34 + k * 17;
+        g.beginPath();
+        g.moveTo(dx, y - 10);
+        g.lineTo(dx, y + 8 + rnd() * 34);
+        g.stroke();
+      }
+    }
   }
   return texture(c);
 }
@@ -215,16 +330,40 @@ export function buildCity(): City {
   scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.8 })));
 
   // ---- Buildings, in rows along the main street and the street that crosses it.
-  const faces = Array.from({ length: 7 }, () => new THREE.MeshBasicMaterial({ map: facade() }));
+  const faces = Array.from({ length: 7 }, () => facade());
+  const floors = Array.from({ length: 8 }, () => new THREE.MeshBasicMaterial({ map: groundFloor() }));
+  const roofStuff = lambert(0x24223a);
   const signWords = WORDS.map((w) => w.kana);
   const building = (x: number, z: number, w: number, d: number, h: number, faceX: number, faceZ: number) => {
-    const b = box(pick(faces), w, h, d, x, h / 2, z);
+    // Windows stay the same size however big the building is.
+    const map = pick(faces).clone();
+    map.repeat.set(Math.max(1, Math.round((faceX ? d : w) / 5)), Math.max(2, Math.round(h / 5.5)));
+    map.needsUpdate = true;
+    const b = box(new THREE.MeshBasicMaterial({ map }), w, h, d, x, h / 2 + 3.4, z);
     city.add(b);
+    // The ground floor: a shutter or a shopfront facing the street, on a dark base.
+    city.add(box(roofStuff, w, 3.4, d, x, 1.7, z));
+    const front = new THREE.Mesh(new THREE.PlaneGeometry((faceX ? d : w) - 0.6, 3), pick(floors));
+    front.position.set(x + faceX * (w / 2 + 0.03), 1.7, z + faceZ * (d / 2 + 0.03));
+    front.rotation.y = faceX ? (faceX * Math.PI) / 2 : faceZ > 0 ? 0 : Math.PI;
+    city.add(front);
+    // A ledge over the ground floor, and clutter on the roof: a water tank, a hoarding, a red warning light.
+    city.add(box(roofStuff, w + (faceX ? 0.8 : 0), 0.3, d + (faceZ ? 0.8 : 0), x + faceX * 0.4, 3.5, z + faceZ * 0.4));
+    const top = h + 3.4;
+    if (rnd() < 0.5) city.add(box(roofStuff, 2, 2.2, 2, x + (rnd() - 0.5) * (w - 3), top + 1.1, z + (rnd() - 0.5) * (d - 3)));
+    if (rnd() < 0.35) {
+      const big = sign(pick(signWords), pick(NEON), false);
+      big.scale.setScalar(1.8);
+      big.position.set(x + faceX * (w / 2 - 0.4), top + 1.6, z + faceZ * (d / 2 - 0.4));
+      big.rotation.y = faceX ? (faceX * Math.PI) / 2 : faceZ > 0 ? 0 : Math.PI;
+      city.add(big);
+    }
+    if (h > 22) light(x, top + 0.4, z, '#ff3030', 2.2);
     // Most buildings carry a neon sign on the side facing the street.
-    if (rnd() < 0.75) {
-      const upright = rnd() < 0.6;
+    if (rnd() < 0.8) {
+      const upright = rnd() < 0.65;
       const s = sign(pick(signWords), pick(NEON), upright);
-      const y = 5 + rnd() * Math.min(8, h - 8);
+      const y = 6.5 + rnd() * Math.min(8, h - 8);
       s.position.set(x + faceX * (w / 2 + 0.25), y, z + faceZ * (d / 2 + 0.25));
       if (faceX) {
         s.rotation.y = (faceX * Math.PI) / 2;
@@ -241,14 +380,65 @@ export function buildCity(): City {
     for (let z = -46; z < 48; ) {
       const w = 7 + rnd() * 6;
       const mid = z + w / 2;
-      if (Math.abs(mid) > 9 + w / 2) building(side * (KERB + 5), mid, 10, w - 0.4, 10 + rnd() * 24, -side, 0);
+      if (Math.abs(mid) > 9 + w / 2) building(side * (KERB + 5), mid, 10, w - 0.4, 8 + rnd() * 24, -side, 0);
+      // Now and then, a narrow alley between two buildings, lit by one dim lamp.
       z += w;
+      if (rnd() < 0.3 && Math.abs(z) > 14) {
+        light(side * (KERB + 4), 2.6, z + 0.8, '#ff9f5a', 2.5);
+        z += 1.6;
+      }
     }
     for (const far of [-1, 1]) {
       for (let x = KERB + 10; x < 60; ) {
         const w = 7 + rnd() * 6;
-        building(side * (x + w / 2), far * (KERB + 3), w - 0.4, 10, 10 + rnd() * 22, 0, -far);
+        building(side * (x + w / 2), far * (KERB + 3), w - 0.4, 10, 8 + rnd() * 22, 0, -far);
         x += w;
+      }
+    }
+  }
+
+  // ---- Power poles along the kerb, strung with sagging wires: the skyline of any Japanese back street.
+  {
+    const dark = lambert(0x1a1828);
+    const wire = new THREE.LineBasicMaterial({ color: 0x0c0a18 });
+    for (const side of [-1, 1]) {
+      const x = side * (KERB - 0.5);
+      const tops: THREE.Vector3[] = [];
+      for (let z = -44; z <= 44; z += 11) {
+        if (Math.abs(z) < 9) continue;
+        city.add(box(dark, 0.26, 9.5, 0.26, x, 4.75, z), box(dark, 2.2, 0.14, 0.14, x, 9, z), box(dark, 1.6, 0.14, 0.14, x, 8.2, z));
+        if (rnd() < 0.6) city.add(box(lambert(0x5a5870), 0.5, 0.8, 0.5, x - side * 0.4, 7.3, z)); // transformer
+        tops.push(new THREE.Vector3(x, 9, z));
+      }
+      for (let i = 0; i + 1 < tops.length; i++) {
+        for (const off of [-1, 0, 1]) {
+          const pts: THREE.Vector3[] = [];
+          for (let k = 0; k <= 8; k++) {
+            const t = k / 8;
+            pts.push(new THREE.Vector3(tops[i].x + off, tops[i].y - Math.sin(t * Math.PI) * (0.5 + Math.abs(off) * 0.3) - (off ? 0 : 0.8), tops[i].z + (tops[i + 1].z - tops[i].z) * t));
+          }
+          city.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wire));
+        }
+      }
+    }
+    // Street clutter: cones, crates and bin bags by the kerb.
+    for (let i = 0; i < 26; i++) {
+      const side = rnd() < 0.5 ? -1 : 1;
+      const z = (rnd() * 2 - 1) * 44;
+      if (Math.abs(z) < 10) continue;
+      const x = side * (KERB - 0.9 - rnd() * 0.8);
+      const kind = rnd();
+      if (kind < 0.35) {
+        const cone = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.6, 8), lambert(0xff7a3a, 0.4));
+        cone.position.set(x, 0.5, z);
+        city.add(cone);
+      } else if (kind < 0.7) {
+        city.add(box(lambert(pick([0x39a0c0, 0xc0a039, 0x8a4a6a])), 0.7, 0.45, 0.5, x, 0.43, z));
+      } else {
+        const bag = new THREE.Mesh(new THREE.IcosahedronGeometry(0.4, 0), lambert(0x15131f));
+        bag.position.set(x, 0.5, z);
+        bag.scale.y = 0.8;
+        city.add(bag);
       }
     }
   }
@@ -299,9 +489,9 @@ export function buildCity(): City {
         l.scale.y = 1.2;
         l.position.set(x, y - 0.5, z);
         city.add(l);
-        light(x, y - 0.5, z, '#ff6a3a', 4.5);
+        light(x, y - 0.5, z, '#ff6a3a', 3.2);
       } else {
-        light(x, y, z, '#ffe0a0', 1.6);
+        light(x, y, z, '#ffe0a0', 1.2);
       }
     }
   }
@@ -313,25 +503,28 @@ export function buildCity(): City {
     }
   }
 
-  // ---- Graffiti: wordless scribbles to begin with; her own tags are added as she learns.
+  // ---- Graffiti: wordless pieces to begin with; her own tags are added as she learns.
   const slots: { x: number; z: number; side: number }[] = [];
-  for (let i = 0; i < 16; i++) {
-    const side = i % 2 ? 1 : -1;
-    const z = 38 - Math.floor(i / 2) * 6.2 - (side > 0 ? 3 : 0);
-    if (Math.abs(z) < 11) continue;
-    slots.push({ x: side * (KERB - 0.05), z, side });
+  for (let k = 0; k < 15; k++) {
+    for (const side of [-1, 1]) {
+      const z = 43 - k * 6 - (side > 0 ? 3 : 0);
+      if (Math.abs(z) < 11) continue;
+      slots.push({ x: side * (KERB - 0.1), z, side });
+    }
   }
-  for (let i = 0; i < 26; i++) {
+  for (let i = 0; i < 70; i++) {
     const side = rnd() < 0.5 ? -1 : 1;
     const z = (rnd() * 2 - 1) * 46;
     if (Math.abs(z) < 10) continue;
-    const s = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 1.7), new THREE.MeshBasicMaterial({ map: scribble(), transparent: true, depthWrite: false }));
-    s.position.set(side * (KERB - 0.02), 0.5 + rnd() * 2.6, z);
+    const size = 0.7 + rnd() * 0.8;
+    const s = new THREE.Mesh(new THREE.PlaneGeometry(3.4 * size, 1.7 * size), new THREE.MeshBasicMaterial({ map: scribble(), transparent: true, depthWrite: false }));
+    s.position.set(side * (KERB - 0.06 - rnd() * 0.02), 0.6 + rnd() * 2.4, z);
     s.rotation.y = (-side * Math.PI) / 2;
+    s.rotation.z = (rnd() - 0.5) * 0.2;
     city.add(s);
   }
 
-  // ---- The twelve things that carry a word.
+  // ---- The things that carry a word.
 
   // ねこ: a cat sitting on top of a glowing vending machine.
   {
@@ -532,6 +725,170 @@ export function buildCity(): City {
     thing('tokei', g, 5.1);
   }
 
+  // ほし: one star far brighter than the rest.
+  {
+    const star = new THREE.Mesh(new THREE.OctahedronGeometry(5, 0), new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false }));
+    star.position.set(120, 150, -240);
+    star.scale.set(1, 2.2, 1);
+    scene.add(star);
+    things.push({ word: 'hoshi', object: star, anchor: star.position.clone().add(new THREE.Vector3(0, 18, 0)) });
+  }
+
+  // The food stall, along the crossing street to the right: things here are asked for, not looked for.
+  {
+    const stall = new THREE.Group();
+    stall.add(box(lambert(0x8a4a2a), 7, 1, 1.4, 0, 0.7, 0)); // counter
+    stall.add(box(lambert(0xff4fa3, 0.5), 7.6, 0.25, 2.6, 0, 3.5, 0.2)); // awning
+    stall.add(box(lambert(0x2a2740), 0.14, 3.4, 0.14, -3.4, 1.7, 1), box(lambert(0x2a2740), 0.14, 3.4, 0.14, 3.4, 1.7, 1));
+    stall.position.set(24, 0.2, -(ROAD + 1.6));
+    city.add(stall);
+    for (let i = 0; i < 5; i++) {
+      const l = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff5a3a }));
+      l.position.set(21 + i * 1.5, 3.4, -(ROAD + 0.2));
+      city.add(l);
+      light(l.position.x, 3.4, l.position.z, '#ff6a3a', 3);
+    }
+    light(24, 2.4, -(ROAD + 1), '#ffe0a0', 9);
+    const onCounter = (word: string, x: number, parts: THREE.Object3D[]) => {
+      const g = new THREE.Group();
+      g.add(...parts);
+      g.position.set(24 + x, 1.95, -(ROAD + 1.3));
+      g.scale.setScalar(1.35);
+      thing(word, g, 1.5);
+    };
+    const ball = (color: number, r: number, glowing = 0.3) => new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), lambert(color, glowing));
+    // りんご: a red apple with a stalk and a leaf.
+    onCounter('ringo', -2.7, [ball(0xe0383a, 0.38), box(lambert(0x5a3a22), 0.05, 0.2, 0.05, 0, 0.42, 0), box(lambert(0x4fa860), 0.2, 0.04, 0.1, 0.1, 0.48, 0)]);
+    // おにぎり: a triangle of rice wrapped in a strip of seaweed.
+    {
+      const rice = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.3, 3).rotateX(Math.PI / 2).rotateZ(Math.PI), lambert(0xffffff, 0.35));
+      rice.position.y = 0.1;
+      onCounter('onigiri', -1.6, [rice, box(lambert(0x16241c), 0.3, 0.3, 0.33, 0, -0.08, 0)]);
+    }
+    // すし: rice with a slice of fish on top, on a small board.
+    onCounter('sushi', -0.5, [box(lambert(0x3a2a22), 0.9, 0.08, 0.5, 0, -0.3, 0), box(lambert(0xffffff, 0.3), 0.6, 0.22, 0.3, 0, -0.14, 0), box(lambert(0xff7a5a, 0.4), 0.7, 0.1, 0.34, 0, 0.02, 0)]);
+    // おちゃ: a cup of green tea.
+    {
+      const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, 0.42, 12), lambert(0xf4f0e6, 0.2));
+      const tea = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.02, 12), lambert(0x8fbf4a, 0.6));
+      tea.position.y = 0.2;
+      onCounter('ocha', 0.6, [cup, tea]);
+    }
+    // みず: a bottle of water.
+    {
+      const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.7, 10), new THREE.MeshLambertMaterial({ color: 0x9fe0ff, emissive: 0x39a0d0, emissiveIntensity: 0.5, transparent: true, opacity: 0.85 }));
+      bottle.position.y = 0.1;
+      onCounter('mizu', 1.6, [bottle, box(lambert(0x2f7fd0), 0.14, 0.12, 0.14, 0, 0.5, 0), box(lambert(0xffffff), 0.36, 0.2, 0.36, 0, 0.12, 0)]);
+    }
+    // さかな: a silver fish laid on ice.
+    {
+      const body = ball(0xa8c4d8, 0.3, 0.25);
+      body.scale.set(1.9, 0.75, 0.5);
+      const tail = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.34, 3).rotateZ(-Math.PI / 2), lambert(0xa8c4d8, 0.25));
+      tail.position.x = -0.68;
+      tail.scale.z = 0.4;
+      onCounter('sakana', 2.7, [box(lambert(0xdff4ff, 0.4), 1.3, 0.1, 0.6, 0, -0.28, 0), body, tail, box(lambert(0x15131f), 0.06, 0.06, 0.32, 0.36, 0.05, 0)]);
+    }
+  }
+
+  // The café terrace, along the crossing street to the left.
+  {
+    const cx = -24;
+    const cz = ROAD + 1.8;
+    const wood = lambert(0xb07a48);
+    const chairAt = (x: number, z: number, turn: number) => {
+      const g = new THREE.Group();
+      g.add(box(wood, 0.6, 0.08, 0.6, 0, 0.55, 0), box(wood, 0.6, 0.7, 0.08, 0, 0.95, -0.26));
+      for (const [lx, lz] of [[0.25, 0.25], [-0.25, 0.25], [0.25, -0.25], [-0.25, -0.25]]) g.add(box(wood, 0.07, 0.55, 0.07, lx, 0.27, lz));
+      g.position.set(x, 0.2, z);
+      g.rotation.y = turn;
+      g.scale.setScalar(1.3);
+      return g;
+    };
+    // A round table with a lamp on it.
+    const table = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.08, 16), lambert(0xf4f0e6, 0.2));
+    table.position.set(cx, 1.2, cz);
+    city.add(table, box(lambert(0x2a2740), 0.12, 1, 0.12, cx, 0.7, cz));
+    light(cx, 2, cz, '#ffe0a0', 7);
+    // いす: an empty chair.
+    thing('isu', chairAt(cx - 1.5, cz, Math.PI / 2), 2.2);
+    // かばん: a bag left on the other chair.
+    city.add(chairAt(cx + 1.5, cz, -Math.PI / 2));
+    {
+      const g = new THREE.Group();
+      g.add(box(lambert(0xc58bff, 0.35), 0.6, 0.5, 0.3, 0, 0, 0), box(lambert(0x8a5ad0), 0.62, 0.16, 0.32, 0, 0.2, 0));
+      const strap = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.03, 6, 12, Math.PI), lambert(0x8a5ad0));
+      strap.position.y = 0.26;
+      g.add(strap);
+      g.position.set(cx + 1.5, 1.25, cz);
+      thing('kaban', g, 1.3);
+    }
+    // ほん: an open book on the table.
+    {
+      const g = new THREE.Group();
+      const left = box(lambert(0xfff6dc, 0.4), 0.42, 0.04, 0.56, -0.21, 0, 0);
+      const right = box(lambert(0xfff6dc, 0.4), 0.42, 0.04, 0.56, 0.21, 0, 0);
+      left.rotation.z = 0.14;
+      right.rotation.z = -0.14;
+      g.add(left, right, box(lambert(0xe0383a, 0.3), 0.9, 0.03, 0.6, 0, -0.04, 0));
+      g.position.set(cx, 1.32, cz);
+      thing('hon', g, 1.3);
+    }
+    // じてんしゃ: a bicycle leaning by the terrace.
+    {
+      const g = new THREE.Group();
+      const frame = lambert(0x39e6ff, 0.5);
+      const tyre = lambert(0x15131f);
+      for (const x of [-0.75, 0.75]) {
+        const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.05, 6, 18), tyre);
+        wheel.position.set(x, 0.55, 0);
+        g.add(wheel);
+      }
+      const bar = (x1: number, y1: number, x2: number, y2: number) => {
+        const len = Math.hypot(x2 - x1, y2 - y1);
+        const b = box(frame, len, 0.07, 0.07, (x1 + x2) / 2, (y1 + y2) / 2, 0);
+        b.rotation.z = Math.atan2(y2 - y1, x2 - x1);
+        g.add(b);
+      };
+      bar(-0.75, 0.55, -0.15, 1.1);
+      bar(-0.15, 1.1, 0.5, 1.15);
+      bar(0.5, 1.15, 0.75, 0.55);
+      bar(-0.15, 1.1, 0.05, 0.5);
+      bar(0.05, 0.5, 0.5, 1.15);
+      bar(0.05, 0.5, -0.75, 0.55);
+      g.add(box(tyre, 0.34, 0.08, 0.16, -0.2, 1.2, 0), box(tyre, 0.08, 0.08, 0.6, 0.55, 1.4, 0), box(frame, 0.07, 0.3, 0.07, 0.53, 1.28, 0));
+      g.position.set(cx - 5, 0.2, cz + 0.6);
+      g.rotation.set(0.12, 0.3, 0);
+      g.scale.setScalar(1.25);
+      thing('jitensha', g, 2.5);
+    }
+    // とり: a pigeon pecking about on the pavement.
+    {
+      const g = new THREE.Group();
+      const grey = lambert(0x9aa0b4, 0.25);
+      const body = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 1), grey);
+      body.scale.set(0.8, 0.8, 1.3);
+      body.position.y = 0.36;
+      g.add(body, box(grey, 0.2, 0.22, 0.2, 0, 0.66, 0.3), box(lambert(0xffa53a, 0.6), 0.06, 0.05, 0.14, 0, 0.64, 0.46));
+      g.add(box(lambert(0xff7a5a), 0.04, 0.2, 0.04, 0.08, 0.1, 0), box(lambert(0xff7a5a), 0.04, 0.2, 0.04, -0.08, 0.1, 0), box(grey, 0.24, 0.05, 0.3, 0, 0.4, -0.45));
+      g.position.set(cx + 4.5, 0.2, cz - 0.4);
+      g.rotation.y = -0.8;
+      g.scale.setScalar(1.5);
+      g.name = 'bird';
+      thing('tori', g, 1.8);
+    }
+  }
+
+  // Petals drifting down past the lights.
+  const PETALS = 260;
+  const petalPos = new Float32Array(PETALS * 3);
+  for (let i = 0; i < PETALS; i++) petalPos.set([(rnd() * 2 - 1) * 30, rnd() * 16, (rnd() * 2 - 1) * 50], i * 3);
+  const petalGeo = new THREE.BufferGeometry();
+  petalGeo.setAttribute('position', new THREE.BufferAttribute(petalPos, 3));
+  const petals = new THREE.Points(petalGeo, new THREE.PointsMaterial({ color: 0xffc8ec, size: 0.16, transparent: true, opacity: 0.85 }));
+  petals.frustumCulled = false;
+  scene.add(petals);
+
   scene.add(city);
 
   // ---- Points of light: every bulb, lantern and sign glows softly, as in a night photograph.
@@ -608,7 +965,7 @@ export function buildCity(): City {
   scene.add(puddle);
 
   // ---- Her tags, sprayed onto the walls one by one.
-  const tags: { mesh: THREE.Mesh; age: number }[] = [];
+  const tags: { id: string; kana: string; mesh: THREE.Mesh; age: number; filled: boolean; colour: string }[] = [];
   let nextSlot = 0;
 
   // ---- Fireworks.
@@ -627,23 +984,35 @@ export function buildCity(): City {
 
   const train = city.getObjectByName('train')!;
   const tail = city.getObjectByName('tail')!;
+  const bird = city.getObjectByName('bird')!;
   let minute = -1;
 
   return {
     scene,
     things,
     puddle,
-    tag(kana, animate) {
+    tags,
+    tag(id, kana, filled, animate) {
       if (nextSlot >= slots.length) return;
       const s = slots[nextSlot++];
+      const colour = NEON[nextSlot % NEON.length];
       const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(4.2, 2.1),
-        new THREE.MeshBasicMaterial({ map: tagTexture(kana, NEON[nextSlot % NEON.length]), transparent: true, depthWrite: false, opacity: animate ? 0 : 1 }),
+        new THREE.MeshBasicMaterial({ map: tagTexture(kana, colour, filled), transparent: true, depthWrite: false, opacity: animate ? 0 : 1 }),
       );
       mesh.position.set(s.x, 1.9, s.z);
       mesh.rotation.y = (-s.side * Math.PI) / 2;
       scene.add(mesh);
-      tags.push({ mesh, age: animate ? 0 : 9 });
+      tags.push({ id, kana, mesh, age: animate ? 0 : 9, filled, colour });
+    },
+    fill(id) {
+      const t = tags.find((x) => x.id === id);
+      if (!t || t.filled) return;
+      t.filled = true;
+      t.age = 0;
+      const mat = t.mesh.material as THREE.MeshBasicMaterial;
+      mat.map?.dispose();
+      mat.map = tagTexture(t.kana, t.colour, true);
     },
     firework() {
       const c = new THREE.Color(NEON[Math.floor(Math.random() * NEON.length)]);
@@ -669,6 +1038,14 @@ export function buildCity(): City {
       const cycle = time % 40;
       train.position.x = cycle < 6 ? -70 + (cycle / 6) * 70 * (2 - cycle / 6) : cycle < 26 ? 0 : (cycle - 26) * (cycle - 26) * 0.5;
       tail.rotation.y = Math.sin(time * 1.4) * 0.5;
+      // The pigeon bobs its head as it pecks.
+      bird.rotation.x = Math.max(0, Math.sin(time * 3)) * 0.35;
+      for (let i = 0; i < PETALS; i++) {
+        petalPos[i * 3 + 1] -= dt * (0.5 + (i % 5) * 0.12);
+        petalPos[i * 3] += Math.sin(time * 0.8 + i) * dt * 0.4;
+        if (petalPos[i * 3 + 1] < 0) petalPos[i * 3 + 1] = 16;
+      }
+      petalGeo.attributes.position.needsUpdate = true;
       const now = new Date();
       if (now.getMinutes() !== minute) {
         minute = now.getMinutes();
@@ -680,6 +1057,10 @@ export function buildCity(): City {
         // A new tag fades up and swells slightly, as paint builds on the wall.
         (t.mesh.material as THREE.MeshBasicMaterial).opacity = Math.min(1, t.age / 1.2);
         t.mesh.scale.setScalar(0.85 + 0.15 * Math.min(1, t.age / 1.2));
+      }
+      // Outlines she has not written yet pulse gently, asking to be sprayed.
+      for (const t of tags) {
+        if (!t.filled && t.age > 2) (t.mesh.material as THREE.MeshBasicMaterial).opacity = 0.55 + 0.35 * Math.sin(time * 2.4);
       }
       for (let k = 0; k < SPARKS; k++) {
         if (fl[k] <= 0) continue;
