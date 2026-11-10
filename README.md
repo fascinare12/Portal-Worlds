@@ -14,6 +14,14 @@ browser: no server, no accounts, no data collected.
 | Zoom (overhead view down to standing in the wood) | pinch | scroll wheel, trackpad pinch, `+` / `-` |
 | Turn | twist with two fingers | right-drag, `Q` / `E` |
 | Go to a spot or a pool | tap it | click it |
+| Wake a sleeping pool | touch it | pass the mouse over it |
+
+## Time of day
+
+The sky follows the real sun over Brevard, North Carolina: morning light,
+golden evenings, and night with a moon, stars and fireflies. To try another
+time while developing, add `?sun=` and the sun's height in degrees to the
+address (`?sun=50` noon, `?sun=1` sunset, `?sun=-20` night).
 
 ## Run it
 

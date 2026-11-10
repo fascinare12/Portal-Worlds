@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { fbm, smoothstep } from '../noise';
 import { noiseTexture } from './noiseTexture';
+import { daylight } from './daylight';
 import { GROUND_SIZE, groundHeight, pools, trees } from './layout';
 
 export interface TerrainView {
@@ -60,6 +61,8 @@ export function createTerrain(): TerrainView {
 
   const uniforms = {
     uTime: { value: 0 },
+    uDay: { value: 1 },
+    uNight: { value: 0 },
     uNoise: { value: noiseTexture },
     uPools: { value: pools.map((p) => new THREE.Vector4(p.x, p.z, p.radius, 0)) },
     uPoolColors: { value: pools.map((p) => new THREE.Color(p.color || 0xffffff)) },
@@ -77,6 +80,8 @@ export function createTerrain(): TerrainView {
         `#include <common>
         varying vec3 vWPos;
         uniform float uTime;
+        uniform float uDay;
+        uniform float uNight;
         uniform vec4 uPools[${pools.length}];
         uniform vec3 uPoolColors[${pools.length}];
         uniform sampler2D uNoise;
@@ -89,7 +94,7 @@ export function createTerrain(): TerrainView {
         '#include <color_fragment>',
         `#include <color_fragment>
         // Sunlight falling through the leaves.
-        float sunSpot = dapple(vWPos.xz, uTime);
+        float sunSpot = dapple(vWPos.xz, uTime) * uDay;
         diffuseColor.rgb *= mix(0.86, 1.2, sunSpot);
         diffuseColor.rgb += vec3(0.09, 0.07, 0.0) * sunSpot;
         // Uneven washes of pigment, so the ground is never one flat fill.
@@ -103,7 +108,7 @@ export function createTerrain(): TerrainView {
         // Open pools light the ground around them in their own colour.
         for (int i = 0; i < ${pools.length}; i++) {
           float d = max(distance(vWPos.xz, uPools[i].xy) - uPools[i].z, 0.0);
-          totalEmissiveRadiance += uPoolColors[i] * uPools[i].w * exp(-d * 0.42) * 0.55;
+          totalEmissiveRadiance += uPoolColors[i] * uPools[i].w * exp(-d * 0.42) * (0.55 + 0.25 * uNight);
         }`,
       );
   };
@@ -112,6 +117,8 @@ export function createTerrain(): TerrainView {
     mesh: new THREE.Mesh(geo, mat),
     update(time, openness) {
       uniforms.uTime.value = time;
+      uniforms.uDay.value = daylight.day;
+      uniforms.uNight.value = daylight.night;
       pools.forEach((p, i) => {
         uniforms.uPools.value[i].w = openness[i];
         uniforms.uPoolColors.value[i].set(p.color || 0xffffff);

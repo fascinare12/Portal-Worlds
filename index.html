@@ -6,7 +6,8 @@
     <title>Portal Worlds</title>
     <style>
       html, body { margin: 0; height: 100%; overflow: hidden; background: #bcd8c0; }
-      canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+      canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; opacity: 0; transition: opacity 1.2s ease; }
+      canvas.ready { opacity: 1; }
       canvas:active { cursor: grabbing; }
     </style>
   </head>

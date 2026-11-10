@@ -14,11 +14,7 @@ export class Finish {
   private material: THREE.ShaderMaterial;
 
   constructor(private renderer: THREE.WebGLRenderer) {
-    this.target = new THREE.WebGLRenderTarget(1, 1, {
-      type: THREE.HalfFloatType,
-      samples: 4,
-      depthTexture: new THREE.DepthTexture(1, 1),
-    });
+    this.target = this.makeTarget(4);
     this.material = new THREE.ShaderMaterial({
       depthTest: false,
       depthWrite: false,
@@ -30,6 +26,7 @@ export class Finish {
         uNear: { value: 0.3 },
         uFar: { value: 600 },
         uFog: { value: 0.004 },
+        uBlur: { value: 0 },
       },
       vertexShader: /* glsl */ `
         varying vec2 vUv;
@@ -46,6 +43,7 @@ export class Finish {
         uniform float uNear;
         uniform float uFar;
         uniform float uFog;
+        uniform float uBlur;
         varying vec2 vUv;
 
         // Distance from the eye, in world units.
@@ -63,6 +61,17 @@ export class Finish {
           vec2 uv = vUv + wobble * px * 3.0 * scale;
 
           vec3 col = texture2D(tColor, uv).rgb;
+
+          // Down at child height, far things soften like the background of a painting.
+          float soft = uBlur * smoothstep(14.0, 70.0, dist(uv));
+          if (soft > 0.02) {
+            vec2 r = px * scale * 3.2 * soft;
+            col = (col * 2.0
+              + texture2D(tColor, uv + vec2(r.x, 0.0)).rgb + texture2D(tColor, uv - vec2(r.x, 0.0)).rgb
+              + texture2D(tColor, uv + vec2(0.0, r.y)).rgb + texture2D(tColor, uv - vec2(0.0, r.y)).rgb
+              + texture2D(tColor, uv + r * 0.7).rgb + texture2D(tColor, uv - r * 0.7).rgb
+              + texture2D(tColor, uv + vec2(r.x, -r.y) * 0.7).rgb + texture2D(tColor, uv - vec2(r.x, -r.y) * 0.7).rgb) / 10.0;
+          }
 
           // Ink where depth jumps. Comparing 1/distance ignores flat ground
           // seen at a slant, so only real silhouettes get a line.
@@ -105,17 +114,37 @@ export class Finish {
     this.scene.add(quad);
   }
 
+  private makeTarget(samples: number): THREE.WebGLRenderTarget {
+    return new THREE.WebGLRenderTarget(1, 1, {
+      type: THREE.HalfFloatType,
+      samples,
+      depthTexture: new THREE.DepthTexture(1, 1),
+    });
+  }
+
+  /** Slower devices give up edge smoothing. */
+  setSmoothing(on: boolean): void {
+    const samples = on ? 4 : 0;
+    if (this.target.samples === samples) return;
+    this.target.dispose();
+    this.target = this.makeTarget(samples);
+    this.material.uniforms.tColor.value = this.target.texture;
+    this.material.uniforms.tDepth.value = this.target.depthTexture;
+    this.resize();
+  }
+
   resize(): void {
     const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
     this.target.setSize(size.x, size.y);
     this.material.uniforms.uSize.value.copy(size);
   }
 
-  render(scene: THREE.Scene, camera: THREE.PerspectiveCamera, fogDensity: number): void {
+  render(scene: THREE.Scene, camera: THREE.PerspectiveCamera, fogDensity: number, blur: number): void {
     const u = this.material.uniforms;
     u.uNear.value = camera.near;
     u.uFar.value = camera.far;
     u.uFog.value = fogDensity;
+    u.uBlur.value = blur;
     this.renderer.setRenderTarget(this.target);
     this.renderer.render(scene, camera);
     this.renderer.setRenderTarget(null);
