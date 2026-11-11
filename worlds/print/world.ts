@@ -137,6 +137,7 @@ export function buildWorld(): PrintWorld {
 
           // Pale washes: soft patches of blue-green over the land, fading out to bare paper.
           float patchy = smoothstep(0.3, 0.75, noise(w * 0.03 + 3.0));
+          c = mix(c, vec3(0.84, 0.87, 0.76), on.y * land * 0.55 * (1.0 - west));
           c = mix(c, vec3(0.70, 0.82, 0.76), on.y * land * patchy * 0.75 * (1.0 - west));
           c = mix(c, vec3(0.71, 0.83, 0.87), on.y * water);
           // Deep blue: far water, and long bands lying across the nearer water.
@@ -264,8 +265,10 @@ export function buildWorld(): PrintWorld {
     seal: layer('seal', art.seal),
   };
 
-  // The mountain, which is moved every frame to stay ahead of her.
-  put(L.fuji, 0, -300, 118, { far: true, y: -14 });
+  // The mountain stands still, as mountains do: once far to the north, beyond the pines, and once
+  // to the south, across the sea. They are opposite each other, so the two are never seen together.
+  put(L.fuji, 30, -560, 170, { far: true, y: -20 });
+  put(L.fuji, -40, 600, 170, { far: true, y: -20, flip: true });
   // Far ranges all the way round, and nearer hills in a broad ring.
   for (let i = 0; i < 12; i++) {
     const a = (i / 12) * Math.PI * 2 + rnd() * 0.3;
@@ -275,7 +278,7 @@ export function buildWorld(): PrintWorld {
   for (let i = 0; i < 64; i++) {
     const [x, z] = around(REACH + 12, REACH + 60);
     if (z > shoreZ(x) - 14) continue;
-    put(pick(L.hills), x, z, 13 + rnd() * 15, { flip: rnd() < 0.5, y: -0.6 });
+    put(pick(L.hills), x, z, 13 + rnd() * 15, { flip: rnd() < 0.5, y: -0.6, far: true });
   }
   for (let i = 0; i < 40; i++) {
     const [x, z] = onLand(50, 175, 8);
@@ -445,13 +448,13 @@ export function buildWorld(): PrintWorld {
             // A cut-out whose foot fades into mist is broken up into specks rather than made see-through.
             float seen = distance(vW, cameraPosition);
             // Anything she walks right up to thins away, so no cut-out ever fills the view.
-            float closeBy = smoothstep(2.5 + vWide * 0.2, 6.5 + vWide * 0.4, distance(vFoot.xz, cameraPosition.xz));
+            float closeBy = smoothstep(1.5 + vWide * 0.12, 4.0 + vWide * 0.25, distance(vFoot.xz, cameraPosition.xz));
             float speck = hash(gl_FragCoord.xy);
             if (there < 0.04 + 0.92 * speck) discard;
             // It goes back to its bare outlines first, as if not yet printed, and then those go too.
             if (closeBy < 0.04 + 0.92 * speck && (key < 0.4 || closeBy < 0.2)) discard;
-            // How far this spot has been printed. A cut-out prints across its width, not all at once.
-            vec2 spot = mix(vFoot.xz, vW.xz, 0.6);
+            // How far the ground it stands on has been printed.
+            vec2 spot = vFoot.xz;
             float p = mix(texture2D(uField, spot / ${WORLD.toFixed(1)} + 0.5).r, uHere, vFar) + (noise(vW.xy * 0.45 + vW.z) - 0.5) * 0.12;
             // Each block is rubbed down from one side of a cut-out to the other, so it is seen to arrive.
             vec4 on = plates(p * 1.22 - vUv.x * 0.22);
@@ -480,8 +483,6 @@ export function buildWorld(): PrintWorld {
   }
   const rowsOf = (l: Layer) => ((l.mesh!.geometry as THREE.InstancedBufferGeometry).getAttribute('aPos') as THREE.InterleavedBufferAttribute).data;
 
-  let fujiTurn = 0;
-  let started = false;
 
   const toBytes = () => {
     for (let i = 0; i < progress.length; i++) bytes[i] = Math.round(progress[i] * 255);
@@ -496,31 +497,32 @@ export function buildWorld(): PrintWorld {
       uRight.value.set(Math.cos(yaw), 0, Math.sin(yaw));
       sky.position.copy(eye);
 
-      // Print the land round her. Near things finish; things further off get only as far as their
-      // outlines or their first washes, and wait for her to come closer.
+      // Print the land she is looking at.
       const cell = WORLD / CELLS;
       const ci = Math.floor((eye.x + WORLD / 2) / cell);
       const cj = Math.floor((eye.z + WORLD / 2) / cell);
-      const span = Math.ceil(84 / cell);
+      const RANGE = 175;
+      const span = Math.ceil(RANGE / cell);
       let fresh = 0;
       // Only what she is looking at prints. Turn away and it waits, half done; turn back and it carries on.
       const fx = Math.sin(yaw);
       const fz = -Math.cos(yaw);
-      const edge = Math.cos(Math.min(3.1, halfView + 0.12));
+      const edge = Math.cos(Math.min(3.1, halfView + 0.35));
       for (let j = Math.max(0, cj - span); j <= Math.min(CELLS - 1, cj + span); j++) {
         for (let i = Math.max(0, ci - span); i <= Math.min(CELLS - 1, ci + span); i++) {
           const x = (i + 0.5) * cell - WORLD / 2;
           const z = (j + 0.5) * cell - WORLD / 2;
           const d = Math.hypot(x - eye.x, z - eye.z);
           if (d > 5 && ((x - eye.x) * fx + (z - eye.z) * fz) / d < edge) continue;
-          const t = 1 - Math.min(1, Math.max(0, (d - 16) / 64));
-          const goal = t * t * (3 - 2 * t);
+          if (d > RANGE) continue;
           const k = j * CELLS + i;
-          if (goal > progress[k]) {
-            const step = Math.min(goal - progress[k], dt * 0.085); // slow enough to watch each block go down
-            progress[k] += step;
-            fresh += step;
-          }
+          if (progress[k] >= 1) continue;
+          // Everything in view prints right through to the last colour. What is near goes quickly and
+          // what is far takes its time, so there is always something still arriving further off.
+          const far = Math.min(1, Math.max(0, (d - 14) / (RANGE - 14)));
+          const step = Math.min(1 - progress[k], dt * 0.085 * (1 - 0.8 * Math.sqrt(far)));
+          progress[k] += step;
+          fresh += step;
         }
       }
       toBytes();
@@ -528,21 +530,6 @@ export function buildWorld(): PrintWorld {
       const k = Math.min(CELLS - 1, Math.max(0, cj)) * CELLS + Math.min(CELLS - 1, Math.max(0, ci));
       uHere.value = Math.max(uHere.value, Math.min(progress[k], uHere.value + dt * 0.07));
 
-      // The mountain is on every horizon.
-      if (!started) {
-        fujiTurn = yaw + 0.2;
-        started = true;
-      }
-      // It never moves while she can see it. Once she has turned until it is out of sight, it is
-      // quietly set down again just past the edge she is turning towards, so it comes into view
-      // from there as any mountain would.
-      const off = Math.atan2(Math.sin(fujiTurn - yaw), Math.cos(fujiTurn - yaw));
-      const hidden = halfView + 0.42; // half the view, plus half the mountain's own width
-      if (Math.abs(off) > hidden + 0.04) fujiTurn = yaw - Math.sign(off) * (hidden + 0.02);
-      const data = rowsOf(L.fuji);
-      data.array[0] = eye.x + Math.sin(fujiTurn) * 320;
-      data.array[2] = eye.z - Math.cos(fujiTurn) * 320;
-      data.needsUpdate = true;
       return fresh;
     },
     save() {

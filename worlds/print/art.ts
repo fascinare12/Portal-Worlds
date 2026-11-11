@@ -84,6 +84,11 @@ class Sheet {
   fill(p: Path2D, ink: string | CanvasGradient): void {
     this.c.fillStyle = ink;
     this.c.fill(p);
+    // Whatever is laid on top hides the lines of what is underneath.
+    this.l.save();
+    this.l.globalCompositeOperation = 'destination-out';
+    this.l.fill(p);
+    this.l.restore();
   }
   stroke(p: Path2D, width = 2.2): void {
     this.l.lineWidth = width;
@@ -418,116 +423,230 @@ export function bridge(): Art {
   return s.done();
 }
 
+const SKIN = '#ecc9a6';
+const HAT = '#efe2b6';
+
+/**
+ * One small figure, built on a skeleton so that it stands and moves like a
+ * person: a head a seventh of its height, a short belted coat, bare thighs,
+ * dark leggings and straw sandals, and whatever it is carrying.
+ *
+ * `k` is its height in pixels. `pose`: 0 a walker with a staff, 1 a traveller
+ * with a bundle on his back, 2 a worker bent to his task, 3 someone fishing,
+ * 4 a walker leaning into the wind, 5 a carrier with a pole and two baskets.
+ */
 function person(s: Sheet, x: number, y: number, k: number, pose: number, flip: number): void {
-  // k is the height of the figure in pixels; pose picks what they are doing.
   const f = flip;
-  const lean = [0.1, 0.35, 0.7, 0.05, 0.2][pose] * f;
-  const hip: Pt = [x, y - k * 0.42];
-  const neck: Pt = [x + lean * k * 0.4, y - k * 0.8];
-  // Legs: bare calves and indigo leggings, mid-stride.
-  for (const leg of [-1, 1]) {
-    const foot: Pt = [x + leg * k * 0.16 * (pose === 2 ? 0.6 : 1) + f * k * 0.03, y];
-    const limb = s.path([[hip[0] + leg * k * 0.05, hip[1]], [(hip[0] + foot[0]) / 2 + f * k * 0.05, (hip[1] + y) / 2], foot], false);
-    s.c.strokeStyle = leg > 0 ? DEEP : '#e8c9a8';
-    s.c.lineWidth = k * 0.06;
-    s.c.lineCap = 'round';
-    s.c.stroke(limb);
-    s.stroke(limb, 1);
-  }
-  // A short indigo coat, belted, and one arm reaching forward.
-  const coat = s.path([[hip[0] - k * 0.1, hip[1] + k * 0.07], [hip[0] - k * 0.085, hip[1] - k * 0.12], [neck[0] - k * 0.1, neck[1] + k * 0.03], [neck[0] + k * 0.01, neck[1] - k * 0.02], [neck[0] + k * 0.11, neck[1] + k * 0.05], [hip[0] + k * 0.09, hip[1] - k * 0.1], [hip[0] + k * 0.11, hip[1] + k * 0.08]]);
-  const arm = s.path([[neck[0] + f * k * 0.05, neck[1] + k * 0.07], [neck[0] + f * k * 0.2, neck[1] + k * 0.2], [neck[0] + f * k * 0.3, neck[1] + k * 0.16]], false);
-  s.c.strokeStyle = [DEEP, DEEP, GREEN, DEEP, MID][pose];
-  s.c.lineWidth = k * 0.055;
-  s.c.stroke(arm);
-  s.stroke(arm, 1);
-  s.fill(coat, [DEEP, DEEP, GREEN, DEEP, MID][pose]);
-  s.stroke(coat, 1.3);
+  const P = [
+    { lean: 0.1, stride: 1, crouch: 0, coat: DEEP, hat: 1 },
+    { lean: 0.3, stride: 0.8, crouch: 0.03, coat: MID, hat: 1 },
+    { lean: 0.75, stride: 0.5, crouch: 0.08, coat: GREEN, hat: 0 },
+    { lean: 0.05, stride: 0.35, crouch: 0, coat: DEEP, hat: 1 },
+    { lean: 0.5, stride: 1.1, crouch: 0.04, coat: MID, hat: 2 },
+    { lean: 0.15, stride: 0.9, crouch: 0.02, coat: DEEP, hat: 0 },
+  ][pose];
+  const at = (px: number, py: number): Pt => [x + f * px * k, y - py * k];
+  /** A limb: a tapered strip from a to b, filled and outlined. */
+  const limb = (a: Pt, b: Pt, wa: number, wb: number, ink: string) => {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = (-dy / len) * k;
+    const ny = (dx / len) * k;
+    s.shape([[a[0] + nx * wa, a[1] + ny * wa], [b[0] + nx * wb, b[1] + ny * wb], [b[0] - nx * wb, b[1] - ny * wb], [a[0] - nx * wa, a[1] - ny * wa]], ink, 1.2);
+  };
+  const hipY = 0.47 - P.crouch;
+  const hip = at(0, hipY);
+  const shoulder = at(P.lean * 0.3, hipY + 0.31 * Math.cos(P.lean * 0.9));
+  const head = at(P.lean * 0.3 + P.lean * 0.07 + 0.01, hipY + 0.31 * Math.cos(P.lean * 0.9) + 0.085);
+
+  // The far arm and far leg go down first, so the near ones overlap them.
+  const leg = (dir: number) => {
+    const foot = at(dir * 0.17 * P.stride, 0);
+    const knee = at(dir * 0.09 * P.stride + 0.045 + P.crouch, hipY * 0.5 + (dir < 0 ? 0.01 : 0));
+    limb(hip, knee, 0.05, 0.04, SKIN);
+    limb(knee, foot, 0.04, 0.028, DEEP);
+    // A straw sandal under a small foot.
+    s.shape([[foot[0] - f * k * 0.03, foot[1]], [foot[0] + f * k * 0.075, foot[1]], [foot[0] + f * k * 0.07, foot[1] - k * 0.022], [foot[0] - f * k * 0.02, foot[1] - k * 0.03]], HAT, 1);
+  };
+  const arm = (reach: number, drop: number, bend: number): Pt => {
+    const elbow: Pt = [shoulder[0] + f * k * reach * 0.5 - f * k * bend, shoulder[1] + k * drop * 0.55];
+    const hand: Pt = [shoulder[0] + f * k * reach, shoulder[1] + k * drop];
+    limb([shoulder[0], shoulder[1] + k * 0.02], elbow, 0.04, 0.034, P.coat);
+    limb(elbow, hand, 0.028, 0.022, SKIN);
+    return hand;
+  };
+  leg(-1);
+  arm(pose === 2 ? 0.2 : -0.1, pose === 2 ? 0.22 : 0.2, 0.03);
+  leg(1);
+
+  // What is carried behind the body.
   if (pose === 1) {
-    // A porter, bent under a bundle tied in green cloth.
-    const load = new Path2D();
-    load.ellipse(neck[0] - f * k * 0.17, neck[1] + k * 0.04, k * 0.19, k * 0.15, 0, 0, 6.3);
-    s.fill(load, GREEN);
-    s.stroke(load, 1.3);
-    s.dots(load, [neck[0] - f * k * 0.2 - k * 0.3, neck[1] - k * 0.2, k * 0.6, k * 0.45], 14, 1.2);
+    // A bundle wrapped in a green cloth, knotted across the chest.
+    const pack = at(P.lean * 0.3 - 0.16, hipY + 0.24);
+    const cloth = new Path2D();
+    cloth.ellipse(pack[0], pack[1], k * 0.15, k * 0.12, -0.3 * f, 0, 6.3);
+    s.fill(cloth, GREEN);
+    s.stroke(cloth, 1.3);
+    s.dots(cloth, [pack[0] - k * 0.16, pack[1] - k * 0.13, k * 0.32, k * 0.26], 10, 1.1);
   }
-  if (pose === 0 || pose === 4) s.stroke(s.path([[x + f * k * 0.28, y], [neck[0] + f * k * 0.34, neck[1] - k * 0.1]], false), 1.6); // a staff
-  if (pose === 3) {
-    // Someone fishing: a long rod and a line running out.
-    s.stroke(s.path([[neck[0] + f * k * 0.1, neck[1] + k * 0.2], [neck[0] + f * k * 1.3, neck[1] - k * 0.5]], false), 1.4);
-    s.stroke(s.path([[neck[0] + f * k * 1.3, neck[1] - k * 0.5], [neck[0] + f * k * 1.5, y - k * 0.05]], false), 0.8);
-  }
-  // The round straw hat, or a bare head with a headcloth.
-  const head: Pt = [neck[0] + f * k * 0.03, neck[1] - k * 0.1];
-  if (pose === 2) {
-    const face = new Path2D();
-    face.arc(head[0], head[1], k * 0.09, 0, 6.3);
-    s.fill(face, '#e8c9a8');
-    s.stroke(face, 1.1);
-    const cloth = s.path([[head[0] - k * 0.1, head[1] - k * 0.02], [head[0], head[1] - k * 0.13], [head[0] + k * 0.1, head[1] - k * 0.02]]);
-    s.fill(cloth, PAPER);
-    s.stroke(cloth, 1.1);
+
+  // The coat: narrow at the shoulders, belted, with a short flared skirt.
+  const coat: Pt[] = [
+    [shoulder[0] - f * k * 0.075, shoulder[1] + k * 0.01],
+    [shoulder[0] + f * k * 0.01, shoulder[1] - k * 0.03],
+    [shoulder[0] + f * k * 0.09, shoulder[1] + k * 0.03],
+    [hip[0] + f * k * 0.085, hip[1] - k * 0.03],
+    [hip[0] + f * k * 0.115, hip[1] + k * 0.09],
+    [hip[0] - f * k * 0.1, hip[1] + k * 0.1],
+    [hip[0] - f * k * 0.075, hip[1] - k * 0.03],
+  ];
+  s.shape(coat, P.coat, 1.4);
+  s.stroke(s.path([[hip[0] - f * k * 0.08, hip[1] - k * 0.02], [hip[0] + f * k * 0.09, hip[1] - k * 0.015]], false), 2.2); // the sash
+  s.stroke(s.path([[shoulder[0] + f * k * 0.01, shoulder[1]], [hip[0] + f * k * 0.03, hip[1] - k * 0.03]], false), 0.9); // where the coat folds over
+
+  // The head, then whatever is on it.
+  const face = new Path2D();
+  face.ellipse(head[0], head[1], k * 0.05, k * 0.058, 0, 0, 6.3);
+  s.fill(face, SKIN);
+  s.stroke(face, 1.1);
+  if (P.hat === 1) {
+    // A wide, shallow straw hat with its ribs showing.
+    const brim: Pt[] = [[head[0] - k * 0.16, head[1] - k * 0.015], [head[0] - f * k * 0.01, head[1] - k * 0.115], [head[0] + k * 0.16, head[1] - k * 0.015], [head[0], head[1] + k * 0.012]];
+    const hat = s.path(brim, true, false);
+    s.fill(hat, HAT);
+    s.stroke(hat, 1.3);
+    for (const e of [-0.1, -0.04, 0.04, 0.1]) s.stroke(s.path([[head[0] - f * k * 0.01, head[1] - k * 0.115], [head[0] + k * e, head[1] - k * 0.004]], false), 0.6);
+  } else if (P.hat === 2) {
+    // Head down against the wind: the hat is seen full on, and he holds it there.
+    const hat = new Path2D();
+    hat.ellipse(head[0] + f * k * 0.03, head[1] - k * 0.01, k * 0.12, k * 0.115, 0, 0, 6.3);
+    s.fill(hat, PINK);
+    s.stroke(hat, 1.3);
+    const boss = new Path2D();
+    boss.arc(head[0] + f * k * 0.03, head[1] - k * 0.01, k * 0.03, 0, 6.3);
+    s.stroke(boss, 0.8);
   } else {
-    const face = new Path2D();
-    face.arc(head[0], head[1] + k * 0.02, k * 0.06, 0, 6.3);
-    s.fill(face, '#e8c9a8');
-    s.stroke(face, 1);
-    if (pose === 4) {
-      // Bent into the wind, so the hat is seen from above: a full round.
-      const hat = new Path2D();
-      hat.arc(head[0] + f * k * 0.03, head[1] - k * 0.02, k * 0.13, 0, 6.3);
-      s.fill(hat, PINK);
-      s.stroke(hat, 1.3);
-    } else {
-      // A shallow cone of straw.
-      const hat = s.path([[head[0] - k * 0.17, head[1] - k * 0.005], [head[0] - f * k * 0.01, head[1] - k * 0.115], [head[0] + k * 0.17, head[1] - k * 0.005], [head[0], head[1] + k * 0.02]], true, false);
-      s.fill(hat, '#efe4c2');
-      s.stroke(hat, 1.3);
-      s.stroke(s.path([[head[0] - k * 0.09, head[1] - k * 0.05], [head[0] + k * 0.09, head[1] - k * 0.05]], false), 0.7);
+    // Bare-headed: a shaved crown, a topknot, and a twisted cloth round the brow.
+    s.stroke(s.path([[head[0] - k * 0.05, head[1] - k * 0.02], [head[0] + k * 0.05, head[1] - k * 0.025]], false), 2.4);
+    const knot = new Path2D();
+    knot.ellipse(head[0] - f * k * 0.02, head[1] - k * 0.065, k * 0.03, k * 0.014, 0, 0, 6.3);
+    s.fill(knot, DEEP);
+  }
+
+  // The near arm, and what it holds.
+  if (pose === 0) {
+    const hand = arm(0.2, 0.17, -0.02);
+    s.stroke(s.path([[hand[0] + f * k * 0.03, y], [hand[0] - f * k * 0.02, hand[1] - k * 0.32]], false), 2); // a staff taller than he is
+  } else if (pose === 1) {
+    arm(0.1, 0.2, -0.03);
+    s.stroke(s.path([[shoulder[0] - f * k * 0.06, shoulder[1] + k * 0.04], [shoulder[0] + f * k * 0.07, shoulder[1] + k * 0.12]], false), 2); // the knotted ends of the cloth
+  } else if (pose === 2) {
+    const hand = arm(0.26, 0.26, 0.02);
+    // A long-handled hoe, swung down at the ground.
+    s.stroke(s.path([[hand[0] - f * k * 0.2, hand[1] - k * 0.22], [hand[0] + f * k * 0.2, y - k * 0.03]], false), 2.2);
+    s.shape([[hand[0] + f * k * 0.2, y - k * 0.06], [hand[0] + f * k * 0.25, y - k * 0.03], [hand[0] + f * k * 0.16, y]], MID, 1.1, false);
+  } else if (pose === 3) {
+    const hand = arm(0.2, 0.1, -0.02);
+    // A rod, and the line running out from its tip.
+    const tip: Pt = [hand[0] + f * k * 0.95, hand[1] - k * 0.5];
+    s.stroke(s.path([[hand[0] - f * k * 0.08, hand[1] + k * 0.05], [hand[0] + f * k * 0.5, hand[1] - k * 0.3], tip], false), 1.5);
+    s.stroke(s.path([tip, [tip[0] + f * k * 0.12, y - k * 0.35], [tip[0] + f * k * 0.16, y - k * 0.02]], false), 0.7);
+  } else if (pose === 4) {
+    arm(0.12, -0.12, -0.05); // a hand up to the hat
+    s.shape([[hip[0] - f * k * 0.1, hip[1] + k * 0.02], [hip[0] - f * k * 0.3, hip[1] - k * 0.06], [hip[0] - f * k * 0.34, hip[1] + k * 0.08], [hip[0] - f * k * 0.12, hip[1] + k * 0.1]], P.coat, 1.2); // the coat blown out behind
+  } else {
+    // A pole across one shoulder with a basket slung from each end.
+    const hand = arm(0.16, -0.02, -0.03);
+    const front: Pt = [shoulder[0] + f * k * 0.42, shoulder[1] - k * 0.02];
+    const back: Pt = [shoulder[0] - f * k * 0.42, shoulder[1] - k * 0.06];
+    s.stroke(s.path([back, [shoulder[0], shoulder[1] - k * 0.05], [hand[0], hand[1] - k * 0.03], front], false), 2.6);
+    for (const end of [front, back]) {
+      const top = end[1] + k * 0.26;
+      s.stroke(s.path([end, [end[0] - k * 0.07, top]], false), 0.8);
+      s.stroke(s.path([end, [end[0] + k * 0.07, top]], false), 0.8);
+      const basket = s.shape([[end[0] - k * 0.085, top], [end[0] + k * 0.085, top], [end[0] + k * 0.065, top + k * 0.13], [end[0] - k * 0.065, top + k * 0.13]], STRAW, 1.2, false);
+      s.l.save();
+      s.l.clip(basket);
+      for (let i = 0; i < 5; i++) s.stroke(s.path([[end[0] - k * 0.09, top + k * 0.026 * i], [end[0] + k * 0.09, top + k * 0.026 * i]], false), 0.6);
+      s.l.restore();
+      const heap = new Path2D();
+      heap.ellipse(end[0], top, k * 0.08, k * 0.035, 0, Math.PI, 0);
+      s.fill(heap, LIME);
+      s.stroke(heap, 1);
     }
   }
 }
 
 /** Travellers on the road, caught mid-step. */
 export function travellers(seed: number): Art {
-  const s = new Sheet(520, 300, seed + 100);
+  const s = new Sheet(720, 330, seed + 100);
   const count = 1 + (seed % 3);
-  for (let i = 0; i < count; i++) person(s, 110 + i * 150 + s.rnd() * 30, 292, 240 + s.rnd() * 30, (seed + i * 2) % 5, seed % 2 ? 1 : -1);
+  const way = seed % 2 ? 1 : -1;
+  for (let i = 0; i < count; i++) person(s, 170 + i * 190 + s.rnd() * 30, 322, 250 + s.rnd() * 30, (seed + i * 2) % 6, way);
   return s.done();
 }
 
 /** A packhorse under a great load of straw, led by a man on foot. */
 export function packhorse(): Art {
-  const s = new Sheet(640, 420, 7);
-  const body = new Path2D();
-  body.ellipse(300, 250, 130, 62, -0.05, 0, 6.3);
-  for (const [x, bend] of [[215, -1], [255, 1], [350, -1], [395, 1]]) {
-    const leg = s.path([[x, 280], [x + bend * 14, 345], [x + bend * 4, 412]], false);
-    s.c.strokeStyle = PINK;
-    s.c.lineWidth = 26;
-    s.c.lineCap = 'round';
-    s.c.stroke(leg);
-    s.stroke(leg, 1.2);
-    const hoof = s.path([[x + bend * 4 - 10, 414], [x + bend * 4 - 7, 398], [x + bend * 4 + 9, 398], [x + bend * 4 + 12, 414]]);
-    s.fill(hoof, DEEP);
-  }
-  s.fill(body, PINK);
-  s.stroke(body, 2.2);
-  const neck = s.path([[395, 215], [470, 170], [530, 215], [545, 262], [512, 268], [480, 232], [420, 268]]);
-  s.fill(neck, PINK);
-  s.stroke(neck, 2.2);
-  s.stroke(s.path([[180, 232], [140, 270], [150, 330]], false), 5); // tail
-  // The load: a huge sheaf lashed on with rope.
-  const load = s.path([[150, 232], [190, 96], [300, 52], [420, 100], [452, 226], [300, 250]]);
-  s.fill(load, s.fade(50, 250, EARTH, TAN));
+  const s = new Sheet(760, 460, 7);
+  const g = 452; // the ground
+  /** One leg: three joints, tapering to a dark hoof. */
+  const leg = (top: Pt, knee: Pt, hock: Pt, foot: Pt, far: boolean) => {
+    const ink = far ? '#d99a80' : PINK;
+    const strip = (a: Pt, b: Pt, wa: number, wb: number) => {
+      const dx = b[0] - a[0];
+      const dy = b[1] - a[1];
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len;
+      const ny = dx / len;
+      s.shape([[a[0] + nx * wa, a[1] + ny * wa], [b[0] + nx * wb, b[1] + ny * wb], [b[0] - nx * wb, b[1] - ny * wb], [a[0] - nx * wa, a[1] - ny * wa]], ink, 1.3);
+    };
+    strip(top, knee, 19, 12);
+    strip(knee, foot, 12, 9);
+    void hock;
+    s.shape([[foot[0] - 11, g], [foot[0] - 8, foot[1] - 6], [foot[0] + 9, foot[1] - 6], [foot[0] + 13, g]], DEEP, 1.1, false);
+  };
+  // The far legs, then the tail, then the body over them.
+  leg([255, 290], [240, 352], [262, 392], [250, g - 12], true);
+  leg([420, 290], [436, 352], [426, 398], [440, g - 12], true);
+  const tail = s.path([[178, 222], [128, 262], [118, 340], [140, 372], [150, 300], [186, 256]]);
+  s.fill(tail, EARTH);
+  s.stroke(tail, 1.6);
+  s.l.save();
+  s.l.clip(tail);
+  for (let i = 0; i < 9; i++) s.stroke(s.path([[170 - i * 4, 232 + i * 6], [128 + i * 2, 300 + i * 8]], false), 0.8);
+  s.l.restore();
+  // Body, neck and head in one outline: a deep chest, a dipped back, a long head carried low.
+  const body: Pt[] = [
+    [176, 236], [200, 206], [270, 200], [350, 204], [396, 192], [440, 160], [480, 140], [494, 116], [502, 138], [514, 124], [520, 146],
+    [548, 184], [562, 222], [552, 236], [530, 230], [512, 208], [494, 200], [474, 228], [456, 266], [420, 300], [330, 312], [250, 304], [196, 286],
+  ];
+  s.shape(body, s.fade(84, 312, PINK, '#efc0a6'), 2.2);
+  // Mane, eye, nostril, and the halter.
+  for (let i = 0; i < 9; i++) s.stroke(s.path([[404 + i * 10, 186 - i * 6], [394 + i * 10, 206 - i * 5]], false), 1.6);
+  const eye = new Path2D();
+  eye.ellipse(522, 168, 5, 3.5, 0.5, 0, 6.3);
+  s.l.fill(eye);
+  s.stroke(s.path([[554, 222], [549, 228]], false), 2);
+  s.stroke(s.path([[516, 150], [534, 206], [558, 214]], false), 1.4);
+  s.stroke(s.path([[534, 206], [550, 194]], false), 1.4);
+  leg([232, 292], [212, 352], [238, 396], [224, g - 12], false);
+  leg([440, 286], [452, 350], [444, 398], [456, g - 12], false);
+  // The load: a great sheaf lashed across its back, over a saddle cloth.
+  s.shape([[230, 214], [380, 214], [392, 270], [222, 272]], DEEP, 1.4, false);
+  const load = s.path([[176, 226], [206, 86], [300, 44], [404, 84], [436, 220], [300, 242]]);
+  s.fill(load, s.fade(44, 242, EARTH, TAN));
   s.stroke(load, 2.4);
   s.l.save();
   s.l.clip(load);
-  for (let i = 0; i < 120; i++) s.strokes(150 + s.rnd() * 300, 70 + s.rnd() * 170, 2, 6, 34, Math.PI * 0.42 + s.rnd() * 0.5, 0.3, 1);
+  for (let i = 0; i < 150; i++) s.strokes(176 + s.rnd() * 260, 60 + s.rnd() * 180, 2, 6, 34, Math.PI * 0.42 + s.rnd() * 0.5, 0.3, 0.9);
   s.l.restore();
-  s.stroke(s.path([[190, 120], [300, 150], [420, 122]], false), 2.6);
-  s.stroke(s.path([[170, 190], [300, 214], [440, 190]], false), 2.6);
-  person(s, 590, 414, 250, 4, -1);
+  s.stroke(s.path([[204, 112], [300, 140], [406, 112]], false), 2.6);
+  s.stroke(s.path([[186, 186], [300, 208], [428, 184]], false), 2.6);
+  // The man leading it, and the rope between them.
+  person(s, 668, g, 262, 4, -1);
+  s.stroke(s.path([[556, 222], [606, 256], [640, 236]], false), 1.4);
   return s.done();
 }
 
