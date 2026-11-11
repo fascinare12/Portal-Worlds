@@ -17,6 +17,7 @@
  * shuffled before being shown.
  */
 
+import { BEYOND } from './beyond';
 import { CONQUEST } from './conquest';
 import { ROME } from './rome';
 import { NORTHMEN } from './vikings';
@@ -86,7 +87,7 @@ export interface Act {
   latin: string;
   meaning: string;
   /** Whose art the borders and beasts are taken from. */
-  style: 'roman' | 'norse' | 'bayeux' | 'norman';
+  style: 'roman' | 'norse' | 'bayeux' | 'norman' | 'margin';
   /** Told to the player once, at the head of the act: what the pictures here are modelled on. */
   modelled: string;
   /** Said when the whole act is stitched. */
@@ -623,8 +624,19 @@ export const ACTS: Act[] = [
     style: 'norman',
     modelled:
       'There is no tapestry of these events. Where a real line survives, the caption over a panel quotes it in its own language: the Old English of the conquered, the Latin of the king\'s clerks, or the mixed English of two centuries later. Rest the pointer on a caption, or tap it, to see what it says and where it is from. The pictures are stitched like the rest of the cloth, but borrow from what the Normans built: castles of earth and timber, great churches with round arches, and the zigzag they cut in stone round every door. The beasts in the border are the ones the king\'s surveyors counted, and the ones he kept for himself.',
-    closing: 'from a castle on every hill to an English with French in its mouth.',
+    closing: 'from a castle on every hill to an English with French in its mouth. The wider world comes next.',
     panels: CONQUEST,
+  },
+  {
+    numeral: 'V',
+    title: 'The World Beyond',
+    latin: 'Orbis Ultra',
+    meaning: 'The world beyond',
+    style: 'margin',
+    modelled:
+      'There is no tapestry of these events, and most of them happened far from England. Where a real line survives, the caption over a panel quotes it in its own language: Arabic, Latin, Catalan or English. Rest the pointer on a caption, or tap it, to see what it says and where it is from. The pictures are stitched like the rest of the cloth, but the borders are borrowed from books, since this act is about books: the trailing vines that scribes of every faith drew down their margins, the eight-pointed stars of Islamic pattern, and the camels, rats and snails that wander through them.',
+    closing: 'from the bookshops of Baghdad to a printing press in Mainz. That is the whole cloth.',
+    panels: BEYOND,
   },
 ];
 

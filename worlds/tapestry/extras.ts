@@ -53,6 +53,16 @@ export const ODD: Record<string, string> = {
   forest: 'The New Forest was unlucky for the family that made it. Two of William\'s sons died hunting there: Richard, in an accident, and King William Rufus, shot with an arrow in 1100. So did a grandson.',
   plough: 'A "sheriff" is a "shire-reeve": the king\'s man in the shire. The Normans kept both the office and the English word for it, and both are still in use, nine hundred years later, on both sides of the Atlantic.',
   reckoning: 'At William\'s funeral in Caen a man named Ascelin stood up and shouted that the church was built on land stolen from his father, and forbade the burial. The mourners had to pay him on the spot before it could go on. (Orderic Vitalis.)',
+  baghdad: 'Baghdad was laid out in 762 as a perfect circle more than a mile across, with the caliph\'s palace at the exact centre and four gates pointing to the four quarters of his empire.',
+  algebra: 'Al-Khwarizmi\'s name, in Latin, came out as "Algoritmi". That is where the word algorithm comes from. Every computer program is named after a man from Khwarazm, in what is now Uzbekistan, who died about the year 850.',
+  toledo: 'Not everyone trusted the new numbers. In 1299 the bankers\' guild of Florence forbade its members to keep accounts in them. One worry was forgery: a 0 is easily turned into a 6 or a 9.',
+  clermont: 'The crowds of poor crusaders were led by a preacher called Peter the Hermit, who rode a donkey. A writer of the time says people pulled hairs out of the donkey to keep as holy relics. (Guibert of Nogent, who thought this was silly.)',
+  jerusalem: 'A week before they took the city, the crusaders fasted and then walked barefoot all the way round the walls, singing, as Joshua did at Jericho. The defenders watched from the top and jeered.',
+  saladin: 'Usama tells of a Frankish knight, a friend of his, who offered to take Usama\'s teenage son home to Europe to learn wisdom and chivalry. Usama thought he could imagine no worse fate for the boy, and politely said that his grandmother would not allow it.',
+  roads: 'On his way through Cairo in 1324 Mansa Musa gave away so much gold that its price there collapsed. A writer who visited twelve years later says it had still not recovered. (Al-Umari.)',
+  plague: 'The word quarantine comes from the plague. Venice and other ports made arriving ships wait at anchor for forty days, "quaranta giorni", before anyone could come ashore.',
+  after: 'The king who rode out to face the rebels in 1381, Richard II, was fourteen years old. When their leader was cut down in front of them, he is said to have ridden forward alone, shouting that he would be their captain.',
+  press: 'Gutenberg did not get rich. The man who had lent him the money, Johann Fust, took him to court in 1455, just as the Bible was being finished, and won the workshop.',
 };
 
 export interface Poke {
@@ -69,6 +79,79 @@ export interface Poke {
 }
 
 export const POKES: Record<string, Poke[]> = {
+  baghdad: [
+    { x: 402, y: 70, h: 226, say: 'Find me every book there is. Then find the ones there are not.' },
+    { x: 540, h: 206, say: 'It is Greek to me. That is rather the point.' },
+    { x: 670, y: 6, h: 196, say: 'Galen wrote one hundred and twenty-nine books. I have done ninety-five. Do not rush me.' },
+    { x: 930, h: 110, w: 130, kind: 'thing', say: 'I carry the library. Nobody asks if I have read it.' },
+    { x: 170, h: 320, w: 260, kind: 'thing', say: 'A street of bookshops, just behind me. Mind the queue.' },
+  ],
+  algebra: [
+    { x: 130, h: 214, say: 'That one is Aldebaran. I named it. You are welcome.' },
+    { x: 430, y: 120, h: 130, w: 260, kind: 'thing', say: 'The round one at the end is nothing. It is the most useful thing here.' },
+    { x: 610, h: 208, say: 'Move one thing across and balance the other side. Al-jabr.' },
+    { x: 720, h: 210, say: 'Say "aah". No, I will not be consulting the planets.' },
+    { x: 950, h: 204, say: 'The light comes IN. I shut myself in a dark room to prove it.' },
+  ],
+  toledo: [
+    { x: 250, h: 208, say: 'It says "the sphere of the fixed stars". No, not fish. Fixed.' },
+    { x: 400, h: 200, say: 'I say it in Spanish, he writes it in Latin. Between us we are one scholar.' },
+    { x: 560, y: 6, h: 200, say: 'I came for one book. That was thirty years ago.' },
+    { x: 720, h: 208, say: 'Forty-eight. Two marks. Done.' },
+    { x: 930, h: 204, say: 'Ex, el, vee, eye, eye, eye... hold on, I have lost count.' },
+  ],
+  clermont: [
+    { x: 244, y: 46, h: 240, say: 'Stop fighting each other! Go and fight someone else!' },
+    { x: 420, h: 216, say: 'All my sins? Even the business with the abbot\'s pigs?' },
+    { x: 700, h: 196, say: 'Is it far? Nobody has said how far.' },
+    { x: 840, h: 140, say: 'Are we there yet?' },
+    { x: 930, h: 90, w: 110, kind: 'thing', say: 'I pull the cart. Two thousand miles. Nobody asked me either.' },
+  ],
+  jerusalem: [
+    { t: 0, x: 70, h: 214, say: 'Three years to get here. Three.' },
+    { t: 0, x: 228, h: 300, w: 80, kind: 'thing', say: 'I am a tower on wheels. They built me out of their own ships.' },
+    { t: 1, x: 440, h: 214, say: 'To Baghdad. Someone must tell them.' },
+    { t: 1, x: 300, h: 190, say: 'We lived beside the holy place. We thought that made it safe.' },
+    { t: 1, x: 356, h: 130, say: 'When can we go home?' },
+  ],
+  saladin: [
+    { x: 520, h: 156, kind: 'horse', say: 'Ten dinars a man. I am not here to do what was done in 1099.' },
+    { x: 320, h: 208, say: 'Thirty thousand for the seven thousand poorest. It is all we have.' },
+    { x: 398, h: 40, w: 60, kind: 'thing', say: 'Clink.' },
+    { x: 830, h: 214, say: 'He is a dreadful doctor and a decent neighbour.' },
+    { x: 930, h: 214, say: 'Pray over there if you like. I will keep the door.' },
+  ],
+  roads: [
+    { x: 220, h: 120, w: 140, kind: 'thing', say: 'Fifty days across the sand. I have opinions about it.' },
+    { x: 562, y: 70, h: 230, say: 'I brought a little gold for the journey. Cairo may take a while to get over it.' },
+    { x: 750, h: 130, kind: 'horse', say: 'One empire, one passport, fresh horses every thirty miles.' },
+    { x: 430, h: 200, say: 'I meant to go to Mecca and come straight home. That was twenty-nine years ago.' },
+    { x: 925, y: 44, h: 110, w: 140, kind: 'thing', say: 'Silk in the hold. And whatever else got aboard.' },
+  ],
+  plague: [
+    { t: 0, x: 120, h: 220, say: 'Saturn, Jupiter AND Mars. Well, there you are.' },
+    { t: 0, x: 200, h: 212, say: 'Burn rosemary. Leave town. Mostly leave town.' },
+    { t: 0, x: 330, y: 330, h: 60, w: 130, kind: 'thing', say: 'We were nowhere near it. We are millions of miles away.' },
+    { t: 1, x: 170, h: 40, w: 60, kind: 'thing', say: 'Nobody ever suspects the flea.' },
+    { t: 1, x: 380, y: 44, h: 150, w: 220, kind: 'thing', say: 'From the Black Sea. The crew have gone very quiet.' },
+    { t: 1, x: 42, h: 90, w: 50, kind: 'thing', say: 'I say only "died of pestilence". It took 684 years for anyone to ask which.' },
+  ],
+  after: [
+    { x: 90, h: 150, kind: 'horse', say: 'Twopence a day, as before the plague. It is the LAW.' },
+    { x: 270, h: 208, say: 'The lord in the next village said fourpence. And dinner.' },
+    { x: 444, y: 40, h: 220, say: 'When Adam dug and Eve span... go on, finish it.' },
+    { x: 560, h: 204, say: 'WHO WAS THEN THE GENTLEMAN!' },
+    { x: 806, h: 80, w: 50, kind: 'thing', say: 'I am the list of who owes what. I do not expect to see the morning.' },
+    { x: 920, h: 120, kind: 'horse', say: 'I am fourteen. Is this normal?' },
+  ],
+  press: [
+    { t: 0, x: 130, h: 214, say: 'One hundred and eighty Bibles. How long would that take you, scribe?' },
+    { t: 0, x: 260, h: 300, w: 200, kind: 'thing', say: 'I used to squeeze grapes. This is steadier work.' },
+    { t: 0, x: 440, h: 180, say: 'Every one the same! Even the mistakes!' },
+    { t: 1, x: 130, h: 206, say: 'Baked clay, an iron frame, a little wax. Four hundred years ago.' },
+    { t: 1, x: 390, h: 200, say: 'Ours are metal. 1377. It says so on the last page.' },
+    { t: 1, x: 256, y: 110, h: 50, w: 150, kind: 'thing', say: 'Three thousand of us to print one page. In Mainz they need twenty-six.' },
+  ],
   castles: [
     { x: 80, h: 204, say: 'I dug my own ditch for nothing. This one I dig for less.' },
     { x: 560, h: 196, say: 'It is a basket of earth. On my head. For a man I have never met.' },
