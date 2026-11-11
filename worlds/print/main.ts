@@ -313,7 +313,8 @@ renderer.setAnimationLoop(() => {
   camera.position.set(at.x, EYE + Math.sin(time * 6) * 0.05 * Math.min(1, pace / 6), at.z);
   camera.rotation.set(-0.03, -yaw, 0, 'YXZ');
 
-  const fresh = world.update(dt, time, camera.position, yaw);
+  const halfView = Math.atan(Math.tan((camera.fov * Math.PI) / 360) * camera.aspect);
+  const fresh = world.update(dt, time, camera.position, yaw, halfView);
 
   // Reaching a lantern stamps its seal.
   world.viewpoints.forEach((v, i) => {
@@ -330,8 +331,8 @@ renderer.setAnimationLoop(() => {
   // Music from the printing itself.
   sinceNote += dt;
   owed += fresh;
-  if (rub) rub.gain.value += (Math.min(0.05, fresh * 0.004) - rub.gain.value) * Math.min(1, dt * 6);
-  if (owed > 34 && sinceNote > 0.3) {
+  if (rub) rub.gain.value += (Math.min(0.05, fresh * 0.01) - rub.gain.value) * Math.min(1, dt * 6);
+  if (owed > 15 && sinceNote > 0.3) {
     owed = 0;
     nextNote(0.16);
   }

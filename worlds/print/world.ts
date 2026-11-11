@@ -61,7 +61,8 @@ export interface PrintWorld {
   scene: THREE.Scene;
   viewpoints: Viewpoint[];
   /** Moves the printing on. Returns how much new printing happened this frame, for the sound. */
-  update(dt: number, time: number, eye: THREE.Vector3, yaw: number): number;
+  /** `halfView` is half the width of what she can see, as an angle. Only what is in view prints. */
+  update(dt: number, time: number, eye: THREE.Vector3, yaw: number, halfView: number): number;
   /** The state of the sheet, to keep between visits, and to put back. */
   save(): string;
   load(data: string): void;
@@ -452,7 +453,8 @@ export function buildWorld(): PrintWorld {
             // How far this spot has been printed. A cut-out prints across its width, not all at once.
             vec2 spot = mix(vFoot.xz, vW.xz, 0.6);
             float p = mix(texture2D(uField, spot / ${WORLD.toFixed(1)} + 0.5).r, uHere, vFar) + (noise(vW.xy * 0.45 + vW.z) - 0.5) * 0.12;
-            vec4 on = plates(p);
+            // Each block is rubbed down from one side of a cut-out to the other, so it is seen to arrive.
+            vec4 on = plates(p * 1.22 - vUv.x * 0.22);
             if (on.x < 0.02) discard;
 
             vec3 paper = washi(uPaper, vW.xy * 0.5 + vW.z);
@@ -462,7 +464,9 @@ export function buildWorld(): PrintWorld {
             float printed = mix(mix(on.y, on.z, dark), on.w, warm);
             // Ink rubbed on by hand is never quite even.
             float rub = 0.95 + 0.09 * noise(vec2(vW.x * 0.8 + vW.z, vW.y * 5.0));
-            vec3 c = mix(paper, ink.rgb * rub, printed * step(0.5, ink.a));
+            // Fresh ink is wet: darker for a moment where the block has only just come down.
+            float wet = printed * (1.0 - printed) * 4.0;
+            vec3 c = mix(paper, ink.rgb * rub * (1.0 - 0.22 * wet), printed * step(0.5, ink.a));
             c = mix(c, uLine, key * on.x * 0.9);
             // Things far away are printed paler.
             c = mix(c, paper, smoothstep(60.0, 260.0, seen) * 0.5 * (1.0 - vFar));
@@ -487,7 +491,7 @@ export function buildWorld(): PrintWorld {
   return {
     scene,
     viewpoints,
-    update(dt, time, eye, yaw) {
+    update(dt, time, eye, yaw, halfView) {
       uTime.value = time;
       uRight.value.set(Math.cos(yaw), 0, Math.sin(yaw));
       sky.position.copy(eye);
@@ -499,16 +503,21 @@ export function buildWorld(): PrintWorld {
       const cj = Math.floor((eye.z + WORLD / 2) / cell);
       const span = Math.ceil(84 / cell);
       let fresh = 0;
+      // Only what she is looking at prints. Turn away and it waits, half done; turn back and it carries on.
+      const fx = Math.sin(yaw);
+      const fz = -Math.cos(yaw);
+      const edge = Math.cos(Math.min(3.1, halfView + 0.12));
       for (let j = Math.max(0, cj - span); j <= Math.min(CELLS - 1, cj + span); j++) {
         for (let i = Math.max(0, ci - span); i <= Math.min(CELLS - 1, ci + span); i++) {
           const x = (i + 0.5) * cell - WORLD / 2;
           const z = (j + 0.5) * cell - WORLD / 2;
           const d = Math.hypot(x - eye.x, z - eye.z);
+          if (d > 5 && ((x - eye.x) * fx + (z - eye.z) * fz) / d < edge) continue;
           const t = 1 - Math.min(1, Math.max(0, (d - 16) / 64));
           const goal = t * t * (3 - 2 * t);
           const k = j * CELLS + i;
           if (goal > progress[k]) {
-            const step = Math.min(goal - progress[k], dt * 0.2);
+            const step = Math.min(goal - progress[k], dt * 0.085); // slow enough to watch each block go down
             progress[k] += step;
             fresh += step;
           }
@@ -517,15 +526,19 @@ export function buildWorld(): PrintWorld {
       toBytes();
       // The sky, the far hills and the mountain print as the paper under her feet does.
       const k = Math.min(CELLS - 1, Math.max(0, cj)) * CELLS + Math.min(CELLS - 1, Math.max(0, ci));
-      uHere.value = Math.max(uHere.value, Math.min(progress[k], uHere.value + dt * 0.14));
+      uHere.value = Math.max(uHere.value, Math.min(progress[k], uHere.value + dt * 0.07));
 
-      // The mountain is on every horizon: whichever way she turns, it drifts round to stand ahead of her, a little to one side.
-      const want = yaw + 0.2;
+      // The mountain is on every horizon.
       if (!started) {
-        fujiTurn = want;
+        fujiTurn = yaw + 0.2;
         started = true;
       }
-      fujiTurn += Math.atan2(Math.sin(want - fujiTurn), Math.cos(want - fujiTurn)) * Math.min(1, dt * 1.1);
+      // It never moves while she can see it. Once she has turned until it is out of sight, it is
+      // quietly set down again just past the edge she is turning towards, so it comes into view
+      // from there as any mountain would.
+      const off = Math.atan2(Math.sin(fujiTurn - yaw), Math.cos(fujiTurn - yaw));
+      const hidden = halfView + 0.42; // half the view, plus half the mountain's own width
+      if (Math.abs(off) > hidden + 0.04) fujiTurn = yaw - Math.sign(off) * (hidden + 0.02);
       const data = rowsOf(L.fuji);
       data.array[0] = eye.x + Math.sin(fujiTurn) * 320;
       data.array[2] = eye.z - Math.cos(fujiTurn) * 320;
