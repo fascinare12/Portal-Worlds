@@ -815,3 +815,153 @@ export function braid(K: Stitcher, x0: number, x1: number, y: number, amp: numbe
     K.line(pts, ink, 2.6);
   }
 }
+
+/** Small things scattered through a scene so that the cloth is busy, as the real one is: birds overhead, plants and stones underfoot. */
+export function garnish(K: Stitcher, x: number, w: number): void {
+  const birds = 2 + Math.floor(K.rnd() * 3);
+  for (let i = 0; i < birds; i++) {
+    const bx = x + 40 + K.rnd() * (w - 80);
+    const by = 46 + K.rnd() * 70;
+    const s = 9 + K.rnd() * 7;
+    K.line([[bx - s, by - s * 0.3], [bx - s * 0.3, by - s * 0.7], [bx, by], [bx + s * 0.4, by - s * 0.8], [bx + s, by - s * 0.3]], i % 2 ? 'navy' : 'rust', 2);
+  }
+  const plants = Math.round(w / 90);
+  for (let i = 0; i < plants; i++) {
+    const px = x + 20 + ((i + K.rnd() * 0.8) / plants) * (w - 40);
+    const h = 16 + K.rnd() * 22;
+    const ink: Wool = (['sage', 'teal', 'ochre'] as Wool[])[i % 3];
+    K.line([[px, GROUND + 4], [px + 2, GROUND - h]], 'rust', 1.8);
+    for (const a of [-1, 0, 1]) K.oval(px + 2 + a * h * 0.3, GROUND - h - (a ? 0 : h * 0.22), h * 0.16, h * 0.26, ink, 'dark', a * 0.7);
+  }
+  for (let i = 0; i < Math.round(w / 260); i++) {
+    const sx = x + 60 + K.rnd() * (w - 120);
+    K.oval(sx, GROUND + 9, 13 + K.rnd() * 8, 6, 'buff');
+  }
+}
+
+/**
+ * What a wrong answer looks like when it is stitched: a small picture of the mistake itself,
+ * drawn in a box 320 wide and 300 high with the ground at 270.
+ */
+export const GAG_ART: Record<string, (K: Stitcher) => void> = {
+  elephant: (K) => {
+    for (const lx of [92, 132, 196, 232]) K.shape([[lx - 13, 270], [lx - 13, 190], [lx + 13, 190], [lx + 13, 270]], 'buff', 'dark', false);
+    K.oval(160, 160, 92, 60, 'buff');
+    K.oval(246, 122, 44, 42, 'buff');
+    K.shape([[214, 96], [196, 150], [232, 162], [244, 112]], 'rust');
+    K.line([[280, 132], [300, 190], [286, 240], [300, 252]], 'buff', 15);
+    K.line([[266, 150], [300, 172]], 'ochre', 5);
+    K.oval(256, 110, 3, 3, 'dark', null);
+    K.line([[70, 150], [50, 200]], 'buff', 4);
+    man(K, 150, 106, 110, { helmet: true, mail: true, arm: 'forward', hold: 'spear' });
+  },
+  cannon: (K) => {
+    K.shape([[70, 196], [210, 150], [222, 184], [84, 232]], 'navy');
+    K.oval(110, 240, 34, 34, 'rust');
+    K.oval(110, 240, 9, 9, 'ochre');
+    K.oval(268, 120, 15, 15, 'dark');
+    for (const [px, py, r] of [[232, 150, 16], [250, 168, 12], [226, 128, 11]]) K.oval(px, py, r, r, 'buff');
+    man(K, 40, 270, 150, { tunic: 'terracotta', arm: 'forward' });
+  },
+  cat: (K) => {
+    throne(K, 150, 270, 220, 1);
+    K.oval(170, 168, 34, 26, 'ochre');
+    K.oval(206, 138, 19, 17, 'ochre');
+    K.shape([[192, 128], [196, 108], [206, 124]], 'ochre', 'dark', false);
+    K.shape([[208, 124], [218, 106], [222, 128]], 'ochre', 'dark', false);
+    K.line([[138, 172], [112, 150], [118, 122]], 'ochre', 6);
+    K.oval(200, 136, 2.4, 2.4, 'dark', null);
+    K.oval(213, 136, 2.4, 2.4, 'dark', null);
+    for (const side of [-1, 1]) K.line([[207, 144], [207 + side * 24, 140 + side * 3]], 'dark', 1);
+  },
+  pope: (K) => {
+    man(K, 150, 270, 230, { priest: true, tunic: 'buff', cloak: 'terracotta', arm: 'up', hold: 'staff' });
+    for (let i = 0; i < 3; i++) K.shape([[136 + i * 4, 50 - i * 16], [182 - i * 4, 50 - i * 16], [176 - i * 4, 36 - i * 16], [142 + i * 4, 36 - i * 16]], 'ochre', 'dark', false);
+    for (let i = 0; i < 6; i++) K.line([[206 + i * 14, 268], [206 + i * 14, 250]], 'dark', 1.4);
+  },
+  vote: (K) => {
+    for (let i = 0; i < 4; i++) man(K, 50 + i * 62, 270, 150 - (i % 2) * 14, { ...ENGLISH, tunic: shields[i], arm: 'up' });
+    K.shape([[250, 270], [250, 210], [306, 210], [306, 270]], 'rust', 'dark', false);
+    K.line([[262, 210], [294, 210]], 'dark', 4);
+  },
+  squabble: (K) => {
+    man(K, 70, 270, 150, { crown: true, tunic: 'terracotta', arm: 'up', hold: 'sword' });
+    man(K, 160, 270, 150, { crown: true, f: -1, tunic: 'teal', arm: 'up', hold: 'axe' });
+    man(K, 250, 270, 150, { crown: true, f: -1, tunic: 'ochre', arm: 'up', hold: 'sword' });
+    for (const [sx, sy] of [[112, 80], [206, 70]]) for (let i = 0; i < 6; i++) K.line([[sx, sy], [sx + Math.cos(i) * 18, sy + Math.sin(i) * 18]], 'terracotta', 2);
+  },
+  sink: (K) => {
+    K.g.save();
+    K.g.translate(160, 200);
+    K.g.rotate(0.5);
+    ship(K, 0, 0, 230, 1, ['navy', 'buff'], 3);
+    K.g.restore();
+    K.shape([[0, 300], [0, 232], [320, 232], [320, 300]], 'teal', null, false);
+    waves(K, 0, 320, 226, 2);
+    for (const [bx, by] of [[240, 190], [262, 160], [250, 128]]) K.oval(bx, by, 8, 8, null, 'navy');
+  },
+  news: (K) => {
+    man(K, 110, 270, 200, { ...ENGLISH, tunic: 'navy', arm: 'forward' });
+    K.shape([[150, 110], [282, 96], [292, 214], [160, 224]], 'buff', 'dark', false);
+    for (let i = 0; i < 6; i++) K.line([[168, 132 + i * 14], [274, 122 + i * 14]], 'dark', i ? 1.4 : 4);
+  },
+  hermit: (K) => {
+    K.shape([[40, 270], [60, 110], [160, 60], [262, 110], [284, 270]], 'rust');
+    K.shape([[110, 270], [116, 170], [160, 132], [206, 170], [212, 270]], 'dark');
+    K.oval(160, 196, 21, 24, 'buff');
+    K.line([[140, 216], [160, 244], [180, 216]], 'buff', 9);
+    K.oval(152, 192, 2.6, 2.6, 'dark', null);
+    K.oval(169, 192, 2.6, 2.6, 'dark', null);
+  },
+  rain: (K) => {
+    for (const [cx, cy, r] of [[110, 70, 44], [170, 56, 52], [230, 74, 40]]) K.oval(cx, cy, r, r * 0.7, 'navy');
+    for (let i = 0; i < 12; i++) K.line([[70 + i * 17, 110 + (i % 3) * 14], [62 + i * 17, 140 + (i % 3) * 14]], 'teal', 2.2);
+    man(K, 110, 270, 150, { ...ENGLISH, helmet: true, shield: 'terracotta', arm: 'up' });
+    man(K, 210, 270, 150, { ...ENGLISH, helmet: true, shield: 'ochre', arm: 'up' });
+  },
+  planet: (K) => {
+    K.oval(160, 140, 78, 78, 'ochre');
+    K.oval(160, 140, 124, 26, null, 'terracotta', -0.3);
+    K.oval(134, 122, 7, 9, 'dark', null);
+    K.oval(184, 122, 7, 9, 'dark', null);
+    K.line([[128, 166], [160, 186], [192, 166]], 'dark', 3.4);
+  },
+  easel: (K) => {
+    man(K, 90, 270, 190, { ...ENGLISH, tunic: 'teal', arm: 'forward', hold: 'needle' });
+    K.line([[170, 270], [214, 90], [262, 270]], 'rust', 5);
+    K.shape([[168, 110], [270, 110], [270, 210], [168, 210]], 'buff', 'dark', false);
+    K.shape([[184, 196], [218, 140], [252, 196]], 'terracotta');
+    K.oval(240, 132, 10, 10, 'ochre');
+  },
+  purse: (K) => {
+    man(K, 60, 270, 190, { ...ENGLISH, tunic: 'rust', arm: 'forward' });
+    man(K, 262, 270, 190, { f: -1, tunic: 'navy', arm: 'forward' });
+    K.shape([[130, 230], [118, 170], [146, 138], [176, 138], [204, 170], [192, 230]], 'ochre');
+    K.line([[140, 142], [182, 142]], 'dark', 4);
+    for (let i = 0; i < 5; i++) K.oval(132 + i * 14, 250, 8, 5, 'ochre');
+  },
+  duck: (K) => {
+    waves(K, 0, 320, 244, 3);
+    K.shape([[50, 226], [70, 160], [190, 150], [250, 180], [236, 232], [90, 244]], 'buff');
+    K.oval(246, 118, 34, 30, 'buff');
+    K.line([[232, 148], [226, 170]], 'buff', 22);
+    K.shape([[274, 116], [312, 124], [276, 136]], 'ochre');
+    K.oval(254, 110, 3.4, 3.4, 'dark', null);
+    K.shape([[96, 190], [150, 170], [190, 196], [140, 214]], 'ochre');
+    for (let i = 0; i < 3; i++) K.oval(100 + i * 36, 140, 11, 13, 'buff');
+  },
+  fish: (K) => {
+    waves(K, 0, 320, 246, 2);
+    K.shape([[60, 200], [130, 150], [240, 168], [290, 200], [240, 232], [130, 250]], 'sage');
+    K.shape([[60, 200], [14, 156], [28, 200], [14, 244]], 'teal');
+    K.oval(250, 190, 5, 5, 'dark', null);
+    man(K, 160, 168, 140, { ...ENGLISH, crown: true, tunic: 'terracotta', arm: 'point', riding: true });
+  },
+  upside: (K) => {
+    K.g.save();
+    K.g.translate(160, 150);
+    K.g.rotate(Math.PI);
+    horse(K, 0, 90, 130, 'terracotta', 1, { helmet: true, mail: true, arm: 'up' });
+    K.g.restore();
+  },
+};

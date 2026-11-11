@@ -34,12 +34,62 @@ at its head:
 - Each panel starts as an under-drawing on bare linen.
 - At the desk below the cloth she reads a short account of what happened, with
   where the account comes from.
-- Then come two to four questions. Each right answer stitches the next part
-  of the panel. A wrong answer is stitched in the wrong wools, shivers, and is
-  unpicked; a creature from the border gives a hint; that answer is struck
-  out and she tries again.
-- When a panel is finished the desk says why it mattered, and the next panel's
-  under-drawing appears.
+- Then come two to four questions. Each right answer is **stitched while she
+  watches**: shape by shape, in the order the needle would take them, each
+  filled from the top down. When a stretch is done, the figures in it stir.
+- A wrong answer is stitched as **a small picture of the mistake itself** (say
+  William brought elephants, and elephants are what you get), which shivers
+  and is pulled off. The beasts of the border lean in: the Bird Who Is Always
+  Wrong agrees with her, and then the lion or the wyrm gives a real hint.
+- When a panel is finished the desk says why it mattered, and adds one thing
+  that is **true, and odd**, with who said so.
+
+## Playing with it
+
+None of this is examined. It is kept apart from the history on purpose: jokes
+are shown as speech or as pictures, never as fact.
+
+- **Poke anyone** in a stitched picture. They hop (horses rear) and say
+  something.
+- **The beasts.** Eight to collect, one every few panels. The lion button on
+  the desk shows them. Tap a beast in the border under a finished panel to
+  change it for one of yours.
+- **Runes.** One panel carries a real runic inscription. The desk has the
+  sixteen runes with their sounds, and a word of it to decode letter by
+  letter.
+
+## The languages
+
+A caption is in the language of whoever left the record, where a real record
+survives. Rest the pointer on a caption, or tap it, to see the language, a
+translation, and the source; or, if the caption was written for this cloth,
+that it is the scribe's own.
+
+| Panel | Language | From |
+| --- | --- | --- |
+| All of 1066 except two | Latin | the Bayeux Tapestry itself |
+| The raid on Lindisfarne | Old English | the Anglo-Saxon Chronicle, 793 |
+| ...and its second telling | Old Norse, in runes | the Yttergärde rune-stone (U 344) |
+| The road east | Arabic | Ibn Fadlan |
+| Cnut | Old English | the Anglo-Saxon Chronicle, 1017 |
+| Rollo | Latin | King Charles's charter of 918 |
+| The rest | Latin | the scribe's own |
+
+How well each is checked: the Old English lines and the rune-stone's reading
+were confirmed against search results quoting editions. The charter's wording
+is as scholars cite it. The Arabic line matched the text of the standard
+edition in a search, but the edition itself could not be opened from here.
+A second rune-stone that was wanted could not be confirmed and was left out.
+
+## The look
+
+- The ground is a photograph of real linen (see `textures/CREDITS.md`).
+- Every laid thread is drawn as its own strand: a shade lighter or darker than
+  its neighbours, uneven along its length, lit on top and shadowed below, and
+  held down by short stitches across. Outlines are a rope of stem stitch. The
+  wool throws a soft shadow on the cloth.
+- There are no colour gradients, because the real cloth has none.
+- Each scene is scattered with birds, plants and stones.
 
 **Whose account?** Five panels are told twice, from sources that disagree:
 
@@ -97,12 +147,14 @@ questions were answered right at the first attempt.
 
 ## Files
 
+- `extras.ts`: everything playful: the odd facts, what each figure says when
+  poked, the rules for silly wrong answers, and the beasts.
 - `acts.ts`: the acts, and the history of 1066. Every caption, account,
   source note, question and hint. The first answer listed for each question
   is the right one.
 - `vikings.ts`: the same for the Viking act.
-- `stitch.ts`: drawing as embroidery, in three manners: under-drawing,
-  stitched, and stitched wrong.
+- `stitch.ts`: drawing as embroidery, thread by thread, and a record of each
+  stitch so that the stitching can be played back.
 - `scenes.ts`: the figures, horses, ships and buildings, the twelve scenes,
   and the creatures of the border.
 - `main.ts`: the cloth, the desk, stitching, sound, and what is remembered.
