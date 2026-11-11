@@ -26,7 +26,7 @@ nothing to read: it is a place to sink through and touch.
 4. **Midnight.** Black water lit only by living things: plankton, chains of
    light, anglerfish with glowing lures.
 5. **The deep floor.** Hills threaded with veins of light, spires of veined
-   rock, vents with fire in their throats and shimmering plumes, tube worms
+   rock, blunt open-mouthed vents, a few with fire in their throats and most just smoking, tube worms
    with red plumes, tall glowing sea pens, and gardens of glowing stalks.
 
 ## Touching
