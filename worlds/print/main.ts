@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CELLS, REACH, buildWorld } from './world';
+import { CELLS, REACH, bridgeLift, buildWorld } from './world';
 
 /**
  * The Printer's World: a landscape that prints itself onto cream paper round
@@ -310,7 +310,8 @@ renderer.setAnimationLoop(() => {
   const dist = gap.length();
   const pace = Math.min(11, dist * 2.2);
   if (dist > 0.01) at.addScaledVector(gap, Math.min(1, (pace * dt) / dist));
-  camera.position.set(at.x, EYE + Math.sin(time * 6) * 0.05 * Math.min(1, pace / 6), at.z);
+  // The bridge is a real hump in the road: she climbs it and comes down the far side.
+  camera.position.set(at.x, EYE + bridgeLift(at.x, at.z) + Math.sin(time * 6) * 0.05 * Math.min(1, pace / 6), at.z);
   camera.rotation.set(-0.03, -yaw, 0, 'YXZ');
 
   const halfView = Math.atan(Math.tan((camera.fov * Math.PI) / 360) * camera.aspect);
