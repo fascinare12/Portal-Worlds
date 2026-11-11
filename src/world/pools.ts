@@ -235,53 +235,80 @@ const waterFragment = /* glsl */ `
     return mix(c, paper, lifted);
   }
 
-  // What you see when you lean over the golden pool: a strip of linen with a ruled border
-  // above and below, and between them a rank of soldiers behind long shields, being embroidered
-  // one after another in coloured wool as the cloth slides by.
+  // What you see when you lean over the golden pool: its whole surface is a strip of linen, with a
+  // ruled border above and below, and between them a rank of soldiers behind long shields, being
+  // embroidered one after another in coloured wool as the cloth slides by.
+
+  // Wool laid in rows: each thread a rounded ridge, lit along its top, with its own slight shade,
+  // and held down every so often by a thread across.
+  vec3 laid(vec3 wool, vec2 q, float rows) {
+    float along = q.x * 0.82 + q.y * 0.57;
+    float across = -q.x * 0.57 + q.y * 0.82;
+    float row = across * rows;
+    float ridge = abs(sin(row * 3.14159));
+    float own = fract(sin(floor(row) * 91.7) * 43758.5);
+    float twist = 0.5 + 0.5 * sin(along * rows * 2.2 + floor(row) * 2.4);
+    float tie = smoothstep(0.1, 0.03, abs(fract(along * rows * 0.14 + own * 0.5) - 0.5));
+    return wool * (0.62 + 0.42 * ridge) * (0.9 + 0.2 * own) * (0.93 + 0.1 * twist) * (1.0 - 0.3 * tie) + vec3(0.1) * pow(ridge, 6.0);
+  }
+  // A line of stem stitch: short slanting stitches that overlap, like a fine rope.
+  float stem(float d, float along, float width) {
+    float rope = 0.65 + 0.35 * sin(along * 260.0 + d * 380.0);
+    return smoothstep(width, width * 0.45, abs(d)) * rope;
+  }
   vec3 tapestryPicture(vec2 p, float t) {
-    float weave = 0.965 + 0.035 * sin(p.x * 230.0) * sin(p.y * 230.0);
-    vec3 linen = vec3(0.90, 0.86, 0.76) * weave * (0.95 + 0.08 * texture2D(uNoise, p * 1.3).r);
-    vec3 dark = vec3(0.23, 0.19, 0.17);
+    // The linen: warp and weft going over and under each other.
+    float fine = 150.0;
+    float over = step(0.0, sin(p.x * fine * 1.5708) * sin(p.y * fine * 1.5708));
+    float warp = abs(sin(p.x * fine * 3.14159));
+    float weft = abs(sin(p.y * fine * 3.14159));
+    float cloth = mix(warp, weft, over);
+    vec3 linen = vec3(0.90, 0.86, 0.75) * (0.8 + 0.24 * cloth) * (0.94 + 0.1 * texture2D(uNoise, p * 1.3).r);
+    vec3 dark = vec3(0.21, 0.17, 0.15);
     vec3 c = linen;
     float slide = p.x + t * 0.045;
     // The borders: two ruled lines each, with slanting bars between them.
     float edge = abs(p.y);
-    float rule = smoothstep(0.02, 0.008, abs(edge - 0.52)) + smoothstep(0.016, 0.006, abs(edge - 0.8));
-    float bars = smoothstep(0.03, 0.012, abs(fract((slide + p.y * 0.5) * 2.2) - 0.5)) * step(0.54, edge) * step(edge, 0.78);
-    c = mix(c, vec3(0.69, 0.31, 0.17), clamp(rule, 0.0, 1.0) * 0.9);
-    c = mix(c, vec3(0.25, 0.41, 0.40), bars * 0.85);
+    c = mix(c, laid(vec3(0.69, 0.31, 0.17), vec2(slide, p.y), 90.0), max(stem(edge - 0.52, slide, 0.02), stem(edge - 0.8, slide, 0.017)));
+    float between = step(0.545, edge) * step(edge, 0.778);
+    float bar = (fract((slide + p.y * 0.5) * 2.2) - 0.5) / 2.2;
+    c = mix(c, laid(vec3(0.25, 0.41, 0.40), vec2(slide, p.y), 90.0), stem(bar, p.y, 0.014) * between);
     if (edge < 0.5) {
       // One soldier to each stretch of cloth.
       float n = floor(slide * 3.0);
       float u = (fract(slide * 3.0) - 0.5) / 3.0;
       float v = p.y;
+      vec2 q = vec2(u, v);
       // How far the needle has got with this one: it works from the top down, then rests.
       float done = clamp(fract(t * 0.11 - n * 0.27) * 1.8, 0.0, 1.0);
       float frontier = 0.5 - done * 1.0;
       float stitched = step(frontier, v);
       // A long shield, round at the top and drawn to a point below.
       float wide = v > 0.08 ? 0.105 * sqrt(max(0.0, 1.0 - pow((v - 0.08) / 0.2, 2.0))) : 0.105 * max(0.0, (v + 0.38) / 0.46);
-      float shield = step(abs(u), wide) * step(-0.38, v) * step(v, 0.28);
-      float rim = smoothstep(0.012, 0.004, abs(abs(u) - wide)) * step(-0.38, v) * step(v, 0.285);
+      float inY = step(-0.38, v) * step(v, 0.28);
+      float shield = step(abs(u), wide) * inY;
+      float rim = stem(abs(u) - wide, v, 0.011) * step(-0.385, v) * step(v, 0.285);
       float kind = mod(n, 4.0);
-      vec3 wool = kind < 0.5 ? vec3(0.69, 0.31, 0.17) : kind < 1.5 ? vec3(0.25, 0.41, 0.40) : kind < 2.5 ? vec3(0.77, 0.59, 0.23) : vec3(0.16, 0.23, 0.33);
-      wool *= 0.9 + 0.1 * sin((u * 1.7 + v) * 330.0); // the rows of laid thread
+      vec3 wool = kind < 0.5 ? vec3(0.69, 0.31, 0.17) : kind < 1.5 ? vec3(0.25, 0.41, 0.40) : kind < 2.5 ? vec3(0.77, 0.59, 0.23) : vec3(0.17, 0.24, 0.35);
       // His head and pointed helmet above it, and a spear beside.
-      float head = step(length(vec2(u, v - 0.37)), 0.042);
+      float face = length(vec2(u, v - 0.37));
+      float head = step(face, 0.042);
       float helm = step(abs(u), (0.47 - v) * 0.55) * step(0.39, v) * step(v, 0.47);
-      float spear = smoothstep(0.008, 0.003, abs(u - 0.125)) * step(-0.4, v) * step(v, 0.49);
+      float spear = stem(u - 0.125, v, 0.007) * step(-0.4, v) * step(v, 0.49);
+      float boss = step(length(vec2(u, v - 0.1)), 0.022);
       // Before the needle comes, only the under-drawing shows.
-      float sketch = max(rim, max(spear, smoothstep(0.01, 0.004, abs(length(vec2(u, v - 0.37)) - 0.042)))) * 0.28;
+      float sketch = max(smoothstep(0.008, 0.003, abs(abs(u) - wide)) * inY, max(smoothstep(0.006, 0.002, abs(u - 0.125)) * step(-0.4, v) * step(v, 0.49), smoothstep(0.008, 0.003, abs(face - 0.042)))) * 0.3;
       c = mix(c, dark, sketch * (1.0 - stitched));
-      c = mix(c, vec3(0.85, 0.74, 0.56), head * stitched);
-      c = mix(c, vec3(0.77, 0.59, 0.23), helm * stitched);
-      c = mix(c, wool, shield * stitched);
-      c = mix(c, vec3(0.77, 0.59, 0.23), step(length(vec2(u, v - 0.1)), 0.02) * stitched);
-      c = mix(c, dark, max(rim, spear) * stitched * 0.9);
-      // The needle itself, at work.
+      c = mix(c, laid(vec3(0.85, 0.74, 0.56), q, 110.0), head * stitched);
+      c = mix(c, laid(vec3(0.77, 0.59, 0.23), q.yx, 110.0), helm * stitched);
+      c = mix(c, laid(wool, q, 95.0), shield * stitched);
+      c = mix(c, laid(vec3(0.80, 0.62, 0.24), q.yx, 120.0), boss * stitched);
+      c = mix(c, dark * 1.15, max(rim, spear) * stitched);
+      // The needle itself, at work, trailing its thread back to the last stitch.
       float working = step(0.02, done) * step(done, 0.98);
-      vec2 nd = vec2(u - 0.02 * sin(t * 9.0 + n), v - frontier);
-      c = mix(c, dark, working * smoothstep(0.012, 0.004, abs(nd.x + nd.y * 0.6)) * step(abs(nd.y - 0.04), 0.07));
+      vec2 nd = vec2(u - 0.03 * sin(t * 9.0 + n), v - frontier);
+      c = mix(c, vec3(0.75, 0.76, 0.78), working * smoothstep(0.009, 0.003, abs(nd.x + nd.y * 0.6)) * step(abs(nd.y - 0.05), 0.075));
+      c = mix(c, wool, working * smoothstep(0.006, 0.002, abs(nd.x - 0.02 * sin(nd.y * 40.0))) * step(-0.09, nd.y) * step(nd.y, -0.02));
     }
     return c;
   }
@@ -364,8 +391,11 @@ const waterFragment = /* glsl */ `
         // soak into its surface, right out to the bank, with the water still showing through.
         vec3 ink = printPicture(p * 0.56, uTime) / vec3(0.94, 0.90, 0.79);
         col = mix(col, col * ink, smoothstep(1.95, 1.6, length(p)) * uReveal);
+      } else if (uScene > 4.5) {
+        // The golden pool has no window either: the whole pool is the cloth, out to the bank.
+        col = mix(col, tapestryPicture(p * 0.56, uTime), smoothstep(1.95, 1.6, length(p)) * uReveal);
       } else {
-        col = mix(col, uScene > 4.5 ? tapestryPicture(p, uTime) : uScene > 2.5 ? seaPicture(p, uTime) : uScene > 1.5 ? kanjiPicture(p, uTime) : desertPicture(p, uTime), window);
+        col = mix(col, uScene > 2.5 ? seaPicture(p, uTime) : uScene > 1.5 ? kanjiPicture(p, uTime) : desertPicture(p, uTime), window);
       }
     }
     // The red pool has koi in it, circling just under the surface.
