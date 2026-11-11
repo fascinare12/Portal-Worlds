@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { lerp, smoothstep } from '../../noise';
 import { groundHeight } from '../layout';
 import type { Pool } from '../layout';
-import { paint } from '../paint';
+import furUrl from '../../textures/fur.webp';
 
 /**
  * A white fox with red markings that comes through the red pool from the
@@ -45,17 +45,28 @@ function turnToward(from: number, to: number, amount: number): number {
 }
 
 export function createFox(pool: Pool, stirPool: () => void): Fox {
-  const white = paint({ color: WHITE, dab: 0.25 });
-  const red = paint({ color: RED, dab: 0.25 });
-  const dark = paint({ color: DARK, dab: 0.1 });
+  // Soft shading and a photographed pile of short fur, so he reads as an animal, not a model.
+  const furMap = new THREE.TextureLoader().load(furUrl);
+  furMap.colorSpace = THREE.SRGBColorSpace;
+  furMap.wrapS = furMap.wrapT = THREE.RepeatWrapping;
+  furMap.repeat.set(7, 5); // small, so it reads as short fur and not as wool
+  const white = new THREE.MeshLambertMaterial({ color: WHITE, map: furMap });
+  const red = new THREE.MeshLambertMaterial({ color: RED, map: furMap });
+  const dark = new THREE.MeshLambertMaterial({ color: DARK });
 
   const ball = (mat: THREE.Material, r: number, x: number, y: number, z: number, sx = 1, sy = 1, sz = 1) => {
-    const m = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), mat);
+    const m = new THREE.Mesh(new THREE.SphereGeometry(r, 24, 18), mat);
     m.position.set(x, y, z);
     m.scale.set(sx, sy, sz);
     return m;
   };
-  const cone = (mat: THREE.Material, r: number, h: number) => new THREE.Mesh(new THREE.ConeGeometry(r, h, 12), mat);
+  const cone = (mat: THREE.Material, r: number, h: number) => new THREE.Mesh(new THREE.ConeGeometry(r, h, 16), mat);
+  /** A rounded limb hanging down from the origin. */
+  const limb = (mat: THREE.Material, r: number, len: number) => {
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 6, 14), mat);
+    m.position.y = -len / 2;
+    return m;
+  };
 
   const group = new THREE.Group();
   group.scale.setScalar(SIZE);
@@ -63,14 +74,27 @@ export function createFox(pool: Pool, stirPool: () => void): Fox {
   const body = new THREE.Group();
   group.add(body);
 
-  // A slim body, deeper at the chest.
-  body.add(ball(white, 0.2, 0, 0, -0.14, 0.85, 0.85, 1.5), ball(white, 0.2, 0, 0.02, 0.16, 0.95, 1, 1.2));
+  // One continuous body: a deep chest, a slim waist and rounded haunches, all blending together.
+  const barrel = new THREE.Mesh(new THREE.CapsuleGeometry(0.155, 0.34, 8, 18), white);
+  barrel.rotation.x = Math.PI / 2;
+  body.add(barrel, ball(white, 0.2, 0, 0.015, 0.17, 0.92, 1, 1.05), ball(white, 0.185, 0, 0.0, -0.2, 0.95, 0.98, 1.1));
+  body.add(ball(white, 0.11, 0.1, -0.02, 0.2, 1, 1.2, 1), ball(white, 0.11, -0.1, -0.02, 0.2, 1, 1.2, 1)); // shoulders
+  body.add(ball(white, 0.12, 0.1, -0.02, -0.24, 1, 1.25, 1.1), ball(white, 0.12, -0.1, -0.02, -0.24, 1, 1.25, 1.1)); // thighs
+
+  // A neck that carries the head, so the head can lead the body into a turn.
+  const neck = new THREE.Group();
+  neck.position.set(0, 0.1, 0.27);
+  body.add(neck);
+  const throat = new THREE.Mesh(new THREE.CapsuleGeometry(0.105, 0.16, 6, 14), white);
+  throat.position.set(0, 0.07, 0.05);
+  throat.rotation.x = 0.7;
+  neck.add(throat, ball(white, 0.13, 0, 0.0, 0.0, 1, 1, 1)); // and a ruff of fur at its base
 
   // Head: a pointed muzzle, tall ears tipped with red, and red marks on the brow and cheeks.
   const head = new THREE.Group();
-  head.position.set(0, 0.16, 0.36);
-  body.add(head);
-  head.add(ball(white, 0.16, 0, 0.06, 0.06, 1.05, 0.95, 1));
+  head.position.set(0, 0.15, 0.13);
+  neck.add(head);
+  head.add(ball(white, 0.16, 0, 0.06, 0.06, 1.05, 0.95, 1), ball(white, 0.1, 0.1, 0.02, 0.06, 1, 0.9, 1), ball(white, 0.1, -0.1, 0.02, 0.06, 1, 0.9, 1));
   const muzzle = cone(white, 0.085, 0.24);
   muzzle.rotation.x = Math.PI / 2;
   muzzle.position.set(0, 0.02, 0.24);
@@ -92,32 +116,40 @@ export function createFox(pool: Pool, stirPool: () => void): Fox {
   }
   head.add(ball(red, 0.026, 0, 0.16, 0.16, 0.7, 1.5, 0.5)); // brow mark
 
-  // Legs, each hinged at the top.
-  const legs: THREE.Group[] = [];
-  for (const [x, z] of [[0.09, 0.2], [-0.09, 0.2], [0.09, -0.24], [-0.09, -0.24]]) {
-    const leg = new THREE.Group();
-    leg.position.set(x, -0.08, z);
-    const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.038, 0.26, 4, 10), white);
-    shin.position.y = -0.17;
-    leg.add(shin, ball(dark, 0.042, 0, -0.33, 0.015, 1, 0.6, 1.3));
-    body.add(leg);
-    legs.push(leg);
+  // Legs with a joint in the middle, so they fold as they lift and reach as they land.
+  const legs: { hip: THREE.Group; knee: THREE.Group; front: boolean }[] = [];
+  for (const [x, z] of [[0.095, 0.2], [-0.095, 0.2], [0.1, -0.25], [-0.1, -0.25]]) {
+    const front = z > 0;
+    const hip = new THREE.Group();
+    hip.position.set(x, -0.06, z);
+    const knee = new THREE.Group();
+    knee.position.y = -0.18;
+    hip.add(limb(white, front ? 0.045 : 0.055, 0.18), knee);
+    knee.add(limb(white, 0.034, 0.17), ball(dark, 0.042, 0, -0.185, 0.02, 1, 0.6, 1.35));
+    body.add(hip);
+    legs.push({ hip, knee, front });
   }
 
-  // Tails: thick brushes with red tips, fanned out behind.
-  const tails: THREE.Group[] = [];
+  // Tails: each a chain of three soft segments, so a movement at the root ripples out to the tip.
+  const tails: { joints: THREE.Group[]; fan: number }[] = [];
   const count = tailsEarned();
   for (let i = 0; i < count; i++) {
-    const tail = new THREE.Group();
-    tail.position.set(0, 0.04, -0.4);
-    const brush = new THREE.Mesh(new THREE.CapsuleGeometry(0.085, 0.36, 6, 12), white);
-    brush.rotation.x = Math.PI / 2;
-    brush.position.z = -0.26;
-    brush.scale.set(1, 1, 1.15);
-    tail.add(brush, ball(red, 0.075, 0, 0, -0.5, 0.9, 0.9, 1.2));
-    tail.userData.fan = count === 1 ? 0 : (i / (count - 1) - 0.5) * Math.min(1.9, 0.45 * count);
-    body.add(tail);
-    tails.push(tail);
+    const joints: THREE.Group[] = [];
+    let parent: THREE.Object3D = body;
+    for (let k = 0; k < 3; k++) {
+      const joint = new THREE.Group();
+      joint.position.set(0, k === 0 ? 0.04 : 0, k === 0 ? -0.36 : -0.17);
+      const r = [0.07, 0.092, 0.08][k];
+      const part = new THREE.Mesh(new THREE.CapsuleGeometry(r, 0.13, 6, 14), white);
+      part.rotation.x = Math.PI / 2;
+      part.position.z = -0.085;
+      joint.add(part);
+      if (k === 2) joint.add(ball(red, 0.078, 0, 0, -0.17, 0.95, 0.95, 1.25));
+      parent.add(joint);
+      joints.push(joint);
+      parent = joint;
+    }
+    tails.push({ joints, fan: count === 1 ? 0 : (i / (count - 1) - 0.5) * Math.min(1.9, 0.45 * count) });
   }
 
   // Where it goes: a spot on the bank to land, then a few places round the pool to investigate.
@@ -145,6 +177,8 @@ export function createFox(pool: Pool, stirPool: () => void): Fox {
     stage = next;
     clock = 0;
   };
+  let pace = 0; // how fast he is actually going
+  let wantPace = 0;
   let turning = 0; // how hard it is turning, for leaning into bends
   /** Trots towards a point along a curving, wandering line, as an animal does; true once it arrives. */
   const trotTo = (target: THREE.Vector2, dt: number, speed = 1.9): boolean => {
@@ -158,9 +192,8 @@ export function createFox(pool: Pool, stirPool: () => void): Fox {
     const before = heading;
     heading = turnToward(heading, Math.atan2(d.x, d.y) + weave, 1 - Math.exp(-dt * lerp(2.4, 9, close)));
     turning = lerp(turning, (heading - before) / Math.max(dt, 0.001), 1 - Math.exp(-dt * 6));
-    at.x += Math.sin(heading) * speed * dt;
-    at.y += Math.cos(heading) * speed * dt;
-    stride += dt * 13;
+    // He eases up to speed and slows as he arrives; the stepping itself happens once, in update.
+    wantPace = speed * Math.min(1, Math.max(0.35, far / 1.2));
     return false;
   };
   /**
@@ -187,6 +220,7 @@ export function createFox(pool: Pool, stirPool: () => void): Fox {
       let moving = false;
       Object.assign(want, { lift: 0, crouch: 0, lie: 0, curl: 0, nose: 0, tilt: 0, prick: 0, bow: 0, roll: 0, pitch: 0 });
       turning *= Math.exp(-dt * 4);
+      wantPace = 0;
 
       switch (stage) {
         case 'away':
@@ -282,6 +316,13 @@ export function createFox(pool: Pool, stirPool: () => void): Fox {
       }
       if (!group.visible) return;
 
+      // Speed builds and fades smoothly, and the feet step in time with the ground covered.
+      pace = lerp(pace, wantPace, 1 - Math.exp(-dt * (wantPace > pace ? 3 : 5)));
+      at.x += Math.sin(heading) * pace * dt;
+      at.y += Math.cos(heading) * pace * dt;
+      stride += pace * dt * 6.4;
+      const walk = moving || pace > 0.08 ? Math.min(1, pace / 1.5) : 0;
+
       // Ease every part of the pose towards where it should be.
       const ease = 1 - Math.exp(-dt * 9);
       for (const k of Object.keys(pose) as (keyof typeof pose)[]) pose[k] = lerp(pose[k], want[k], ease);
@@ -292,38 +333,57 @@ export function createFox(pool: Pool, stirPool: () => void): Fox {
       group.position.set(at.x, ground + pose.lift * SIZE, at.y);
       group.rotation.y = heading;
 
-      const bounce = moving ? Math.abs(Math.sin(stride)) * 0.035 : 0;
+      // A soft rise and fall twice per stride, with no jolt at the bottom.
+      const bounce = (1 - Math.cos(stride * 2)) * 0.5 * 0.028 * walk;
       const breath = Math.sin(life * 1.6) * 0.008 * pose.lie;
       body.position.y = lerp(0.42, 0.16, Math.max(pose.lie, pose.crouch * 0.55)) + bounce + breath;
-      // Pitch: nose down for a bow or a dive, with the rump up.
-      body.rotation.x = pose.pitch + pose.bow * 0.5;
-      // It leans into its turns, like anything running a bend.
-      body.rotation.z = pose.roll - Math.max(-0.35, Math.min(0.35, turning * 0.16)) * (moving ? 1 : 0);
+      // Pitch: nose down for a bow or a dive, with the rump up. A trot rocks the body very slightly.
+      body.rotation.x = pose.pitch + pose.bow * 0.5 + Math.sin(stride * 2) * 0.025 * walk;
+      // He leans into his turns, and his shoulders sway a touch with each step.
+      const lean = Math.max(-0.35, Math.min(0.35, turning * 0.16));
+      body.rotation.z = pose.roll - lean * walk + Math.sin(stride) * 0.03 * walk;
 
-      legs.forEach((l, i) => {
-        const front = i < 2;
-        const swing = moving ? Math.sin(stride + (i === 0 || i === 3 ? 0 : Math.PI)) * 0.75 : 0;
-        const tucked = front ? -1.45 : 1.35; // folded under when lying down
-        const bowed = front ? -1.1 : 0.25; // front legs stretched forward in a bow
-        const airborne = pose.lift > 0.1 ? (front ? -0.9 : 0.9) : 0; // stretched out in mid-leap
-        l.rotation.x = lerp(lerp(swing + airborne, bowed, pose.bow), tucked, pose.lie);
-      });
+      for (const [i, l] of legs.entries()) {
+        const phase = stride + (i === 0 || i === 3 ? 0 : Math.PI);
+        // Trot: the leg swings from the shoulder or hip, and folds at its joint while it is carried forward.
+        const swing = Math.sin(phase) * 0.55 * walk;
+        const fold = Math.max(0, -Math.cos(phase)) * walk;
+        const stand = l.front ? [swing, fold * 0.95] : [swing - 0.3, 0.55 + fold * 0.7];
+        const air = l.front ? [-0.9, 0.25] : [0.75, 0.5];
+        const bowed = l.front ? [-1.1, 0.05] : [-0.3, 0.55];
+        const lying = l.front ? [-1.42, 0.12] : [-1.15, 2.35];
+        const inAir = Math.min(1, pose.lift * 2.2);
+        for (const [k, part] of [l.hip, l.knee].entries()) {
+          let a = lerp(stand[k], air[k], inAir);
+          a = lerp(a, bowed[k], pose.bow);
+          part.rotation.x = lerp(a, lying[k], pose.lie);
+        }
+      }
 
-      head.rotation.x = pose.nose * 0.6 - pose.bow * 0.3 + pose.curl * 0.5 - pose.prick * 0.15;
+      // The head leads: it turns into a bend before the body follows.
+      neck.rotation.y = Math.max(-0.5, Math.min(0.5, turning * 0.3)) * walk + pose.curl * -0.75;
+      neck.rotation.x = pose.nose * 0.45 - pose.bow * 0.25 + pose.curl * 0.35 - pose.prick * 0.2 - Math.sin(stride * 2) * 0.02 * walk;
+      head.rotation.x = pose.nose * 0.25 + pose.curl * 0.2;
       head.rotation.z = pose.tilt;
-      head.rotation.y = pose.curl * -1.1;
+      head.rotation.y = pose.curl * -0.4;
       const twitch = stage === 'nap' && Math.sin(life * 0.9) > 0.96 ? 0.5 : 0;
       ears.forEach((e, i) => {
         e.rotation.x = -pose.prick * 0.25 + pose.lie * 0.5 - (i === 0 ? twitch : 0);
       });
 
-      tails.forEach((t, i) => {
-        const fan = t.userData.fan as number;
-        const wag = Math.sin(life * (pose.bow > 0.5 ? 9 : 2.2) + i) * (pose.bow > 0.5 ? 0.35 : 0.1);
-        // Streaming behind when it runs, held high in a bow, wrapped round to its nose when curled.
-        t.rotation.y = lerp(fan + wag, 2.3 + fan * 0.25, pose.curl);
-        t.rotation.x = lerp(lerp(-0.35, -1.0, pose.bow), 0.1, pose.curl) - Math.abs(fan) * 0.25;
-      });
+      for (const [i, tl] of tails.entries()) {
+        const quick = pose.bow > 0.5;
+        tl.joints.forEach((joint, k) => {
+          // Each segment follows the one before it a moment later, so the tail flows.
+          const wave = Math.sin(life * (quick ? 9 : 2.2) + i - k * 0.8) * (quick ? 0.22 : 0.07) * (1 + k * 0.5);
+          const trail = -lean * walk * 0.5 * (k + 1); // streaming out behind through a turn
+          const run = Math.sin(stride - k * 0.9) * 0.06 * walk;
+          const base = k === 0 ? tl.fan : 0;
+          joint.rotation.y = lerp(base + wave + trail + run, k === 0 ? 0.9 + tl.fan * 0.2 : 0.75, pose.curl);
+          const lift = k === 0 ? lerp(-0.35, -0.95, pose.bow) - Math.abs(tl.fan) * 0.25 + walk * 0.12 : 0.1 + (quick ? -0.1 : 0);
+          joint.rotation.x = lerp(lift, k === 0 ? 0.1 : 0, pose.curl);
+        });
+      }
     },
   };
 }
