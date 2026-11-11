@@ -74,8 +74,8 @@ function makePools(): Pool[] {
         p.scene = 3;
       }
       if (i === 9) {
-        // The fourth doorway, Prussian blue: a world that is being woodblock-printed as you move through it.
-        p.color = 0x2a5cb0;
+        // The fourth doorway, the cream of parchment: a world that is being woodblock-printed as you move through it.
+        p.color = 0xefe6c9;
         p.world = 'print';
         p.scene = 4;
       }

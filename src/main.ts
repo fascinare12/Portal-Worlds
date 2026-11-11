@@ -6,6 +6,7 @@ import { createAtmosphere } from './world/atmosphere';
 import { daylight, updateDaylight } from './world/daylight';
 import { createFox } from './world/creatures/fox';
 import { createJelly } from './world/creatures/jelly';
+import { createPaper } from './world/creatures/paper';
 import { createSphinx } from './world/creatures/sphinx';
 import { createForest } from './world/forest';
 import { pools } from './world/layout';
@@ -42,6 +43,9 @@ scene.add(fox.group);
 const seaIndex = pools.findIndex((p) => p.world === 'sea');
 const jelly = createJelly(pools[seaIndex], () => poolsView.stir(seaIndex));
 scene.add(jelly.group);
+const printIndex = pools.findIndex((p) => p.world === 'print');
+const paper = createPaper(pools[printIndex], () => poolsView.stir(printIndex));
+scene.add(paper.group);
 
 const rig = new CameraRig(canvas, terrain.mesh);
 const finish = new Finish(renderer);
@@ -169,6 +173,7 @@ renderer.setAnimationLoop(() => {
   sphinx.update(dt);
   fox.update(dt);
   jelly.update(dt);
+  paper.update(dt);
   terrain.update(time, poolsView.glow);
   atmosphere.update(time, rig.zoom, window.innerHeight);
   const blur = LEVELS[level].blur ? smoothstep(0.6, 0.95, rig.zoom) : 0;

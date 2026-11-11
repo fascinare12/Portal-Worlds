@@ -32,7 +32,7 @@ in `vite.config.ts`, and set `world: '<name>'` on a pool in
 | Desert | `worlds/desert/` | pale sand; shows a pyramid being built |
 | Shibuya | `worlds/shibuya/` | red; shows 日本 being sprayed on a wall |
 | The deep sea | `worlds/sea/` | ice blue; shows small fish circling in dark water |
-| The Printer's World (not built yet) | `worlds/print/` | Prussian blue; shows a woodblock print being made block by block |
+| The Printer's World (not built yet) | `worlds/print/` | parchment cream; a woodblock print appears on its surface block by block |
 
 ## Visitors
 
@@ -47,6 +47,11 @@ jumps back in.
 
 A jellyfish made of light rises out of the ice-blue pool, drifts among the
 trees as if the air were sea, and sinks back in.
+
+A sheet of printed paper slides up out of the parchment pool, drifts about
+like a leaf, folds itself in half and in half again, and opens out as a paper
+crane. It flies a few circuits among the trees, then folds flat, opens into a
+sheet again and slips back in.
 
 ## Time of day
 
