@@ -1,6 +1,6 @@
 /**
  * The playful side of the Tapestry. Nothing here is examined: the history
- * that is taught and tested lives in acts.ts and vikings.ts. This file holds
+ * that is taught and tested lives in acts.ts and the files beside it. This file holds
  * what makes the cloth fun to poke at:
  *
  *   ODD     one true, strange fact for each finished panel, with who said so
@@ -44,6 +44,15 @@ export const ODD: Record<string, string> = {
   hastings: 'According to the earliest poem about the battle, it began with a Norman minstrel riding out in front of the army, juggling his sword in the air.',
   harold: 'After the battle Harold\'s body could not be recognised. One story says it was found by Edith Swan-neck, who knew him by marks on his body that only she had seen. (The Waltham Chronicle, about a century later.)',
   tapestry: 'There are more than six hundred people in the Bayeux Tapestry, and about two hundred horses. Only three of the people in the main story are women.',
+  castles: 'The Bayeux Tapestry shows the castle at Hastings being built: men shovelling earth into a mound, while two of the workmen hit each other with their spades.',
+  harrying: 'Orderic was sent from England to a monastery in Normandy when he was ten, and never saw his father again. He says he arrived understanding not a word, "like Joseph in Egypt". The monks found his English name too rough and called him Vitalis instead.',
+  lords: 'So many English exiles reached Constantinople that the emperor\'s bodyguard, once mostly Northmen, became known for its Englishmen. Two later writers, one of them Icelandic, say some of them settled on the Black Sea and called the place New England. Historians are cautious about that part.',
+  domesday: 'The main volume of Domesday Book is almost all in one man\'s handwriting. Nobody knows his name. And the survey that counted every pig left out London and Winchester, the two greatest cities in the kingdom.',
+  tongue: 'King Richard the Lionheart reigned for ten years, a century after the Conquest. He spent about six months of them in England, and probably spoke no English at all.',
+  stone: 'When the old cathedral at Worcester was pulled down for a bigger one, Bishop Wulfstan, the last English bishop, stood and wept. He said they were destroying the work of saints in order to win praise for themselves. (William of Malmesbury.)',
+  forest: 'The New Forest was unlucky for the family that made it. Two of William\'s sons died hunting there: Richard, in an accident, and King William Rufus, shot with an arrow in 1100. So did a grandson.',
+  plough: 'A "sheriff" is a "shire-reeve": the king\'s man in the shire. The Normans kept both the office and the English word for it, and both are still in use, nine hundred years later, on both sides of the Atlantic.',
+  reckoning: 'At William\'s funeral in Caen a man named Ascelin stood up and shouted that the church was built on land stolen from his father, and forbade the burial. The mourners had to pay him on the spot before it could go on. (Orderic Vitalis.)',
 };
 
 export interface Poke {
@@ -60,6 +69,72 @@ export interface Poke {
 }
 
 export const POKES: Record<string, Poke[]> = {
+  castles: [
+    { x: 80, h: 204, say: 'I dug my own ditch for nothing. This one I dig for less.' },
+    { x: 560, h: 196, say: 'It is a basket of earth. On my head. For a man I have never met.' },
+    { x: 730, h: 150, kind: 'horse', say: 'Faster. I should like a castle by Tuesday.' },
+    { x: 250, h: 350, w: 300, kind: 'thing', say: 'Two weeks ago I was a field.' },
+    { x: 910, h: 150, w: 130, kind: 'thing', say: 'I am a house. I am apparently in the way.' },
+  ],
+  harrying: [
+    { t: 0, x: 100, h: 150, kind: 'horse', say: 'I only carry him. I should like that written down.' },
+    { t: 0, x: 462, h: 190, say: 'They burned the seed corn too. There is no next year in that.' },
+    { t: 1, x: 80, y: 6, h: 200, say: 'W-A-S-T-A. I have written it four hundred times this week.' },
+    { t: 1, x: 230, h: 196, say: 'There was a village here. I can show you where.' },
+    { t: 1, x: 372, y: 90, h: 70, w: 60, kind: 'thing', say: 'Kraa. Nothing left here even for a raven.' },
+  ],
+  lords: [
+    { x: 132, y: 72, h: 236, say: 'All of it is mine. You may borrow some.' },
+    { x: 290, h: 214, say: 'Forty knights, whenever you call. Could I have Kent?' },
+    { x: 430, h: 206, say: 'I swear! ...Which bit is mine?' },
+    { x: 640, h: 210, say: 'My grandfather held this land. I am told that is no longer interesting.' },
+    { x: 890, y: 44, h: 150, w: 200, kind: 'thing', say: 'Next stop Constantinople. The emperor is hiring.' },
+  ],
+  domesday: [
+    { t: 0, x: 70, y: 6, h: 200, say: 'One ox. One cow. One pig. Hold still.' },
+    { t: 0, x: 220, h: 208, say: 'That one is not mine. Nor that. I have never seen that pig before.' },
+    { t: 0, x: 320, h: 90, w: 110, kind: 'thing', say: 'I have been counted. I feel no different.' },
+    { t: 0, x: 462, h: 50, w: 60, kind: 'thing', say: 'Shameful.' },
+    { t: 1, x: 110, h: 226, say: 'If it is in the book, it is so. If it is not in the book, bring me the book.' },
+    { t: 1, x: 320, y: 120, h: 100, w: 100, kind: 'thing', say: 'I am never wrong. I looked it up, in me.' },
+    { t: 1, x: 420, h: 204, say: 'But my father always said that field was ours.' },
+  ],
+  tongue: [
+    { x: 120, h: 208, say: 'I feed it, I milk it, I call it a cow. He eats it and calls it something else.' },
+    { x: 230, h: 90, w: 110, kind: 'thing', say: 'Moo. That is the same in both.' },
+    { x: 340, h: 60, w: 70, kind: 'thing', say: 'Out here I am a pig. In there I am pork. I prefer it out here.' },
+    { x: 600, y: 40, h: 220, say: 'Encore du boeuf!' },
+    { x: 905, y: 40, h: 210, say: 'The nurse speaks English to the children. They are picking it up.' },
+  ],
+  stone: [
+    { x: 210, h: 236, say: 'Charming. Small. Pull it down.' },
+    { x: 300, h: 190, say: 'It has stood for three hundred years!' },
+    { x: 420, y: 170, h: 76, say: 'Forty more years and we shall have the roof on.' },
+    { x: 660, h: 400, w: 440, kind: 'thing', say: 'I shall still be here in a thousand years. Ask me then.' },
+    { x: 90, h: 190, w: 130, kind: 'thing', say: 'I was thought quite big, once.' },
+  ],
+  forest: [
+    { x: 220, h: 160, kind: 'horse', say: 'Mine. Mine. That one is also mine.' },
+    { x: 590, h: 130, w: 140, kind: 'thing', say: 'He loves me like a father. I have seen what he does to the ones he loves.' },
+    { x: 760, h: 50, w: 50, kind: 'thing', say: 'Hares go free. It is the law. Look it up.' },
+    { x: 850, h: 196, say: 'I am not here. I am a tree.' },
+    { x: 900, h: 60, w: 70, kind: 'thing', say: 'Boars are his too. Nobody asked the boars.' },
+  ],
+  plough: [
+    { t: 0, x: 70, h: 150, kind: 'horse', say: 'More. The word you want is "more".' },
+    { t: 0, x: 224, h: 206, say: 'Same field. Same ox. New man on a horse.' },
+    { t: 0, x: 400, h: 90, w: 110, kind: 'thing', say: 'Nobody has asked what I think of the Conquest.' },
+    { t: 1, x: 70, h: 216, say: 'King Edward\'s laws, as promised. And King William\'s taxes.' },
+    { t: 1, x: 190, h: 204, say: 'It is in English! I can nearly read it.' },
+    { t: 1, x: 320, h: 190, say: 'No chain! ...I still plough his field on Mondays.' },
+  ],
+  reckoning: [
+    { x: 320, y: 66, h: 60, w: 240, kind: 'thing', say: 'Seven feet of ground. That is the lot.' },
+    { x: 530, h: 196, say: 'I am the eldest and I get Normandy. I wanted England.' },
+    { x: 610, h: 214, say: 'I get England!' },
+    { x: 690, h: 190, say: 'I get five thousand pounds of silver and no land. For now.' },
+    { x: 860, y: 6, h: 204, say: 'Both the good and the evil. In that order, to be safe.' },
+  ],
   rome: [
     { x: 350, h: 250, say: 'All roads lead to me. I checked.' },
     { x: 478, h: 216, say: 'Twenty-five years of this, then they give you a farm.' },
