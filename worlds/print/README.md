@@ -6,17 +6,27 @@ There is nothing to read.
 
 ## The idea
 
-Ahead of you the world is still being made, one block at a time: dark blue
-outlines first, then the pale washes, then deep blue, then the warm colours.
-Where you have been, it is a finished print. Turn round and look back to see
-it. Only what you are looking at prints: turn away and it waits, half done;
-turn back and it carries on. Everything in view prints right through to the last colour; near things
-quickly, far things in their own time. The mountain stands still, once far to
-the north and once across the sea to the south.
+Ahead of you the world is still being made, one block at a time, and you
+watch it happen:
 
-Everything is a flat cut-out standing at its own depth and always turned to
-face you, like the flats of a paper theatre, so the world stays a print from
-every angle and gets its depth from layers sliding past each other.
+1. the outlines are drawn across each thing from its top corner, in dark blue;
+2. the pale washes are rubbed on in streaks, and yellow goes down wherever
+   there will be green;
+3. deep blue follows, and where it goes over the yellow the green appears;
+4. the warm colours come last.
+
+Only what you are looking at prints: turn away and it waits, half done; turn
+back and it carries on. Near things finish in about a quarter of a minute,
+far things in their own time. Where you have been, it is a finished print.
+
+Everything is a flat cut-out standing at its own depth and turned to face
+you, like the flats of a paper theatre. The open ground is not drawn as
+ground at all but as flat strips of wash laid one behind another, each
+strongest along its far edge, which is how distance is built in the prints.
+
+The mountain stands still and is seen twice: far to the north beyond the
+pines, white and blue; and to the south across the sea, red in the morning
+with lightning at its foot.
 
 ## Moving
 
@@ -29,15 +39,29 @@ every angle and gets its depth from layers sliding past each other.
 ## What is there
 
 - **The middle:** a crossing of roads, a house, pines.
-- **North:** a pine forest, and the falls at the head of the river.
-- **East:** the river, the drum bridge, and a village of thatched houses.
-- **West:** terraced fields, sheaves drying, packhorses carrying the harvest.
-- **South:** the sea, with rows of waves, fishing boats, reeds, rocks and
-  cranes along the shore.
-- All round: mist in bands, hills, far blue ranges, birds.
+- **North:** a pine forest under a grey sky with snow falling, one enormous
+  cedar, and the falls at the head of the river.
+- **East:** the river, with currents that move downstream, reeds and rocks
+  along both banks; the drum bridge, which is a real hump in the road that
+  you walk up and over; and a village of thatched houses.
+- **West:** terraced fields under a pink evening sky, sheaves drying,
+  packhorses, a cooper building a great tub, and a gust carrying off
+  somebody's papers and hat.
+- **South:** the sea under a sky of small ranked clouds, with waves that
+  break into hooked fingers of foam, fishing boats, a shrine gate at the
+  water's edge, reeds, rocks and cranes.
+- **On the roads:** walkers with staffs, porters, a man with baskets on a
+  pole, riders, and a covered chair carried by two bearers.
+
+Small things move, but never smoothly: walkers swap between two drawings,
+boats and waves tip from one held position to the next, snow and the river's
+current go a step at a time, birds and blown paper cross and begin again.
 
 Eight stone lanterns mark places worth stopping. Reaching one stamps its red
-seal into the cartouche on the left.
+seal into the cartouche on the left. At four of them something stands between
+the lantern and a mountain, so the mountain is seen through it: under the
+arch of the bridge, through the shrine gate, through the cooper's tub, and
+beside the great cedar.
 
 ## The manner
 
