@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { fbm } from '../../src/noise';
+import { BODY_VERT, glow, makeJellyfish } from '../../src/world/creatures/jellyModel';
 
 /**
  * The deep sea. The viewer hangs in the middle of a column of water and sinks
@@ -39,48 +40,6 @@ function waterColour(t: number, out: THREE.Color): THREE.Color {
   return out.copy(shallow).lerp(dusk, step01(0, 0.4, t)).lerp(black, step01(0.4, 0.72, t));
 }
 
-const BODY_VERT = /* glsl */ `
-  uniform float uTime;
-  uniform float uPhase;
-  uniform float uAmp;
-  varying vec3 vN;
-  varying vec3 vV;
-  varying vec3 vP;
-  varying float vFade;
-  void main() {
-    vec3 p = position;
-    // The bell squeezes and opens: the rim moves most.
-    float beat = sin(uTime * 1.6 + uPhase);
-    float rim = smoothstep(0.6, -0.1, p.y);
-    p.xz *= 1.0 + uAmp * beat * rim;
-    p.y *= 1.0 - uAmp * 0.5 * beat;
-    vP = position;
-    vec4 mv = modelViewMatrix * vec4(p, 1.0);
-    vN = normalize(normalMatrix * normal);
-    vV = normalize(-mv.xyz);
-    vFade = exp(-length(mv.xyz) * 0.03);
-    gl_Position = projectionMatrix * mv;
-  }`;
-
-const JELLY_FRAG = /* glsl */ `
-  uniform vec3 uColor;
-  uniform float uFlash;
-  uniform float uTime;
-  uniform float uPhase;
-  varying vec3 vN;
-  varying vec3 vV;
-  varying vec3 vP;
-  varying float vFade;
-  void main() {
-    // Glassy: brightest where the surface turns away from the eye.
-    float edge = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 1.6);
-    float stripes = 0.5 + 0.5 * sin(atan(vP.z, vP.x) * 8.0);
-    float margin = smoothstep(0.25, 0.0, abs(vP.y - 0.05));
-    float beat = 0.6 + 0.4 * sin(uTime * 1.6 + uPhase);
-    vec3 c = uColor * (0.16 + edge * 0.9 + stripes * 0.12 + margin * 0.55 * beat) + vec3(1.0) * uFlash * 0.8;
-    gl_FragColor = vec4(c * vFade, 1.0);
-  }`;
-
 const COMB_FRAG = /* glsl */ `
   uniform float uTime;
   uniform float uPhase;
@@ -98,38 +57,6 @@ const COMB_FRAG = /* glsl */ `
     vec3 c = vec3(0.25, 0.5, 0.7) * edge * 0.45 + rainbow * row * (0.5 + 0.7 * sparkle);
     gl_FragColor = vec4(c * vFade, 1.0);
   }`;
-
-const RIBBON_VERT = /* glsl */ `
-  uniform float uTime;
-  uniform float uPhase;
-  varying float vAlong;
-  varying float vFade;
-  void main() {
-    vec3 p = position;
-    // Tentacles trail and ripple, more the further they hang from the bell.
-    float hang = -p.y;
-    float off = modelMatrix[3].x * 3.0 + modelMatrix[3].z * 2.0;
-    p.x += sin(hang * 2.4 - uTime * 2.2 + uPhase + off) * 0.11 * hang;
-    p.z += cos(hang * 1.9 - uTime * 1.7 + uPhase + off) * 0.09 * hang;
-    vAlong = hang;
-    vec4 mv = modelViewMatrix * vec4(p, 1.0);
-    vFade = exp(-length(mv.xyz) * 0.03);
-    gl_Position = projectionMatrix * mv;
-  }`;
-
-const RIBBON_FRAG = /* glsl */ `
-  uniform vec3 uColor;
-  uniform float uLength;
-  uniform float uFlash;
-  varying float vAlong;
-  varying float vFade;
-  void main() {
-    float fade = 1.0 - vAlong / uLength;
-    gl_FragColor = vec4((uColor * 0.42 + uFlash * 0.4) * fade * vFade, 1.0);
-  }`;
-
-const glow = (params: THREE.ShaderMaterialParameters) =>
-  new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, ...params });
 
 export function buildOcean(): Ocean {
   const scene = new THREE.Scene();
@@ -290,36 +217,11 @@ export function buildOcean(): Ocean {
     flash: { value: number };
   }
   const jellies: Jelly[] = [];
-  const bellProfile: THREE.Vector2[] = [];
-  for (let i = 0; i <= 14; i++) {
-    const a = (i / 14) * (Math.PI / 2);
-    bellProfile.push(new THREE.Vector2(Math.sin(a), Math.cos(a) * 0.65));
-  }
-  bellProfile.push(new THREE.Vector2(0.9, -0.08));
-  const bellGeo = new THREE.LatheGeometry(bellProfile, 28);
   const jellyHues = [0x6fe3ff, 0xff8ad8, 0x9f8cff, 0x8cffd0, 0xffc88a, 0x5ab0ff];
   for (let i = 0; i < 22; i++) {
     const size = 0.6 + rnd() * 1.5;
-    const colour = new THREE.Color(pick(jellyHues));
-    const flash = { value: 0 };
     const phase = rnd() * 6.28;
-    const shared = { uTime, uPhase: { value: phase }, uColor: { value: colour }, uFlash: flash };
-    const group = new THREE.Group();
-    group.add(new THREE.Mesh(bellGeo, glow({ uniforms: { ...shared, uAmp: { value: 0.22 } }, vertexShader: BODY_VERT, fragmentShader: JELLY_FRAG })));
-    // Fine trailing tentacles round the rim, and four frilled arms beneath the middle.
-    const strands = (count: number, ring: number, width: number, length: number) => {
-      const mat = glow({ uniforms: { ...shared, uLength: { value: length } }, vertexShader: RIBBON_VERT, fragmentShader: RIBBON_FRAG });
-      const geo = new THREE.PlaneGeometry(width, length, 1, 18).translate(0, -length / 2, 0);
-      for (let k = 0; k < count; k++) {
-        const a = (k / count) * Math.PI * 2 + rnd() * 0.3;
-        const strand = new THREE.Mesh(geo, mat);
-        strand.position.set(Math.cos(a) * ring, 0, Math.sin(a) * ring);
-        strand.rotation.y = rnd() * 3.14;
-        group.add(strand);
-      }
-    };
-    strands(10, 0.86, 0.035, 2.6 + rnd() * 2);
-    strands(4, 0.22, 0.2, 1.6 + rnd());
+    const { group, flash } = makeJellyfish({ time: uTime, colour: new THREE.Color(pick(jellyHues)), phase, random: rnd });
     group.scale.setScalar(size);
     scene.add(group);
     jellies.push({ group, angle: rnd() * 6.28, radius: 5 + rnd() * 22, home: -4 - rnd() * rnd() * 135 - i * 2, size, phase, kick: 0, flash });
@@ -330,7 +232,7 @@ export function buildOcean(): Ocean {
   const combGeo = new THREE.SphereGeometry(1, 28, 20).scale(0.55, 0.85, 0.55);
   for (let i = 0; i < 14; i++) {
     const phase = rnd() * 6.28;
-    const mesh = new THREE.Mesh(combGeo, glow({ uniforms: { uTime, uPhase: { value: phase }, uAmp: { value: 0.04 } }, vertexShader: BODY_VERT, fragmentShader: COMB_FRAG }));
+    const mesh = new THREE.Mesh(combGeo, glow({ uniforms: { uTime, uPhase: { value: phase }, uAmp: { value: 0.04 }, uFade: { value: 0.03 } }, vertexShader: BODY_VERT, fragmentShader: COMB_FRAG }));
     mesh.scale.setScalar(0.5 + rnd() * 0.9);
     scene.add(mesh);
     combs.push({ mesh, angle: rnd() * 6.28, radius: 4 + rnd() * 16, home: -45 - rnd() * 60, phase });

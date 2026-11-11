@@ -141,7 +141,7 @@ const waterFragment = /* glsl */ `
   }
 
   // What you see when you lean over the ice-blue pool: dark water, drifting sparks,
-  // and one jellyfish beating slowly, its tentacles trailing.
+  // and small silver fish circling. (The jellyfish is kept as a surprise for when it rises.)
   vec3 seaPicture(vec2 p, float t) {
     vec3 c = mix(vec3(0.0, 0.02, 0.08), vec3(0.02, 0.2, 0.36), smoothstep(-1.0, 1.0, p.y));
     for (int i = 0; i < 12; i++) {
@@ -149,19 +149,24 @@ const waterFragment = /* glsl */ `
       vec2 s = vec2(sin(fi * 3.7 + t * 0.1) * 0.8, fract(fi * 0.37 + t * 0.03) * 2.0 - 1.0);
       c += vec3(0.3, 0.9, 1.0) * smoothstep(0.035, 0.0, length(p - s)) * (0.5 + 0.5 * sin(t * 2.0 + fi));
     }
-    float beat = sin(t * 1.8);
-    vec2 j = p - vec2(0.0, 0.12 + beat * 0.03);
-    float w = 0.34 * (1.0 + 0.12 * beat);
-    float dome = length(vec2(j.x / w, max(j.y, 0.0) / 0.26));
-    float bell = smoothstep(1.04, 0.98, dome) * step(-0.02, j.y);
-    c += vec3(0.35, 0.85, 1.0) * bell * (0.25 + 0.75 * smoothstep(0.55, 1.0, dome));
-    for (int k = 0; k < 5; k++) {
-      float fk = float(k) - 2.0;
-      float y = -j.y;
-      if (y > 0.0 && y < 0.75) {
-        float x = fk * 0.12 * (1.0 + 0.12 * beat) + sin(y * 9.0 + t * 2.0 + fk) * 0.1 * y;
-        c += vec3(0.4, 0.8, 1.0) * smoothstep(0.016, 0.0, abs(j.x - x)) * (1.0 - y / 0.75) * 0.8;
-      }
+    // A loose shoal of small silver-blue fish, circling at different depths and speeds.
+    for (int i = 0; i < 9; i++) {
+      float fi = float(i);
+      float way = mod(fi, 3.0) < 0.5 ? -1.0 : 1.0;
+      float a = way * t * (0.32 + fi * 0.035) + fi * 1.7;
+      float ring = 0.22 + 0.075 * fi + 0.04 * sin(t * 0.6 + fi * 2.0);
+      vec2 centre = vec2(cos(a), sin(a) * 0.8) * ring;
+      vec2 ahead = normalize(way * vec2(-sin(a), cos(a) * 0.8));
+      vec2 d = p - centre;
+      vec2 q = vec2(dot(d, ahead), dot(d, vec2(-ahead.y, ahead.x)));
+      q.y += sin(q.x * 30.0 - t * 7.0 + fi) * 0.012 * smoothstep(0.04, -0.1, q.x); // the tail beats
+      float size = 0.75 + 0.35 * fract(fi * 0.61);
+      float body = 1.0 - smoothstep(0.8, 1.0, length(q / (vec2(0.085, 0.028) * size)));
+      float fin = step(q.x, -0.065 * size) * step(-0.14 * size, q.x) * (1.0 - smoothstep(0.0, 0.008, abs(q.y) - (-q.x - 0.065 * size) * 0.6));
+      float fish = max(body, fin);
+      // Pale along the back, with a glint, and dimmer the deeper (further out) it swims.
+      vec3 scales = mix(vec3(0.45, 0.8, 0.95), vec3(0.9, 0.98, 1.0), smoothstep(-0.01, 0.02, q.y)) * (1.0 - 0.3 * fract(fi * 0.37));
+      c = mix(c, scales, fish * 0.92);
     }
     return c;
   }

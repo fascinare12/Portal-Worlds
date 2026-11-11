@@ -31,7 +31,7 @@ in `vite.config.ts`, and set `world: '<name>'` on a pool in
 |---|---|---|
 | Desert | `worlds/desert/` | pale sand; shows a pyramid being built |
 | Shibuya | `worlds/shibuya/` | red; shows 日本 being sprayed on a wall |
-| The deep sea | `worlds/sea/` | ice blue; shows a jellyfish beating in dark water |
+| The deep sea | `worlds/sea/` | ice blue; shows small fish circling in dark water |
 
 ## Visitors
 
