@@ -3,7 +3,7 @@ import type { Panel, Question } from './acts';
 import { BEASTS, BEAST_AT, BIRD_SAYS, GAGS, LION_SAYS, ODD, POKES, SPARE_GAGS, WYRM_SAYS } from './extras';
 import type { Poke } from './extras';
 import runesUrl from './fonts/runes.woff2';
-import { GAG_ART, GROUND, SCENES, braid, chevron, creature, garnish, meander } from './scenes';
+import { GAG_ART, GROUND, SCENES, braid, chevron, creature, garnish, meander, vine } from './scenes';
 import { LINEN, Stitcher } from './stitch';
 import type { Box, Mode, Pt, Stitch } from './stitch';
 import linenUrl from './textures/linen.webp';
@@ -104,7 +104,7 @@ const drawn = new Map<number, Drawn>();
 const beastsOf = (index: number): number[] => {
   const p = PANELS[index];
   const style = ACTS[p.act].style;
-  const kinds = style === 'norman' ? [12, 13, 14, 15, 3] : style === 'roman' ? [8, 9, 10, 11, 4] : style === 'norse' ? [5, 6, 7, 2, 4] : [0, 1, 2, 3, 4];
+  const kinds = style === 'margin' ? [16, 17, 18, 15, 4] : style === 'norman' ? [12, 13, 14, 15, 3] : style === 'roman' ? [8, 9, 10, 11, 4] : style === 'norse' ? [5, 6, 7, 2, 4] : [0, 1, 2, 3, 4];
   return Array.from({ length: BEAST_PLACES }, (_, i) => kept[p.id].border?.[i] ?? kinds[(index * 3 + i * 2) % kinds.length]);
 };
 
@@ -127,9 +127,11 @@ function drawPanel(index: number, mode: Mode, record?: Stitch[]): HTMLCanvasElem
   const norse = style === 'norse';
   const roman = style === 'roman';
   const norman = style === 'norman';
+  const margin = style === 'margin';
   // The top border: the caption, between two ruled lines.
   if (roman) meander(K, 0, PW, top - 8, 4);
   else if (norman) chevron(K, 0, PW, top - 9, 4);
+  else if (margin) vine(K, 0, PW, top - 8, 4);
   else if (norse) braid(K, 0, PW, top - 7, 3.4);
   else K.line([[0, top - 6], [PW, top - 6]], 'terracotta', 2.6, false);
   K.line([[0, 7], [PW, 7]], 'navy', 2.2, false);
@@ -157,6 +159,7 @@ function drawPanel(index: number, mode: Mode, record?: Stitch[]): HTMLCanvasElem
   cg.translate(0, top + PH);
   if (roman) meander(K, 0, PW, 8, 4);
   else if (norman) chevron(K, 0, PW, 6, 4);
+  else if (margin) vine(K, 0, PW, 8, 4);
   else if (norse) braid(K, 0, PW, 7, 3.4);
   else K.line([[0, 6], [PW, 6]], 'terracotta', 2.6, false);
   K.line([[0, top - 7], [PW, top - 7]], 'navy', 2.2, false);
@@ -170,6 +173,12 @@ function drawPanel(index: number, mode: Mode, record?: Stitch[]): HTMLCanvasElem
       // Between the beasts, a little column.
       K.shape([[sx - 5, top - 12], [sx - 4, 16], [sx + 4, 16], [sx + 5, top - 12]], 'buff', 'dark', false);
       K.line([[sx - 9, 15], [sx + 9, 15]], 'ochre', 3, false);
+    } else if (margin) {
+      // Between the beasts, an eight-pointed star: two squares, one turned.
+      const r = top * 0.24;
+      const cy = top * 0.52;
+      K.shape([[sx - r, cy - r], [sx + r, cy - r], [sx + r, cy + r], [sx - r, cy + r]], null, i % 2 ? 'teal' : 'ochre', false);
+      K.shape([[sx, cy - r * 1.42], [sx + r * 1.42, cy], [sx, cy + r * 1.42], [sx - r * 1.42, cy]], null, i % 2 ? 'ochre' : 'teal', false);
     } else if (norman) {
       // Between the beasts, a round-headed arch on two short pillars.
       const arch: Pt[] = [[sx - 9, top - 12]];

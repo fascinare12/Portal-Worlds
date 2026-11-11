@@ -4,8 +4,8 @@ The world behind the gold pool in the wood: a long strip of embroidered linen,
 read from left to right, that teaches medieval history. The player is the
 scribe who finishes it.
 
-Four acts are made so far, thirty-eight panels and 131 questions. The cloth
-opens on the first:
+All five acts of the outline are made: forty-eight panels and 168 questions.
+The cloth opens on the first:
 
 - **I · Rome's Shadow** (nine panels): the empire at its height; whether Rome
   fell or changed; what it left behind; the Church stepping in; the monks who
@@ -22,6 +22,11 @@ opens on the first:
   the North; who owned the land; Domesday Book; French above and English
   below; the new stone churches; the king's forests; the village behind the
   plough; and the reckoning at William's death.
+- **V · The World Beyond** (ten panels): the translators of Baghdad; what
+  the scholars writing in Arabic added; how it reached Europe through Toledo
+  and Pisa; the call to crusade; Jerusalem in 1099; Saladin and the
+  neighbours; the roads from Mali to China; the plague; what the plague
+  changed; and printing, in Mainz and in the East.
 
 The first panel of each act is open from the start, so any can be begun
 first. Within an act the panels unlock in order.
@@ -41,6 +46,9 @@ at its head:
   doors, round-headed arches between the beasts, castles of earth and timber
   and great churches; and its border beasts are the ones Domesday counted and
   the king kept for himself: ox, pig, stag and hare.
+- **The World Beyond** takes its borders from books: a trailing vine, as
+  scribes of every faith drew down their margins, eight-pointed stars between
+  the beasts, and camels, rats and snails.
 - **The Viking Thread** has plaited borders, knots between ravens, wolves and
   ribbon-beasts, ships with chequered sails as on the Gotland picture-stones,
   and rune-stones. There is no tapestry of these events, so every Latin
@@ -101,6 +109,12 @@ that it is the scribe's own.
 | Two tongues | Middle English | Robert of Gloucester, c. 1300 |
 | Stone | Latin | William of Malmesbury |
 | Behind the plough | Old English | King William's writ to London |
+| Baghdad; algebra | Arabic | al-Kindi; the title of al-Khwarizmi's book |
+| The way back | Latin | Fibonacci, 1202 |
+| The call; Jerusalem | Latin | the Gesta Francorum |
+| The roads between | Catalan | the Catalan Atlas, 1375 |
+| Who was then a gentleman? | Middle English | John Ball's rhyme, in Walsingham |
+| The end of the scribe | Latin | the colophon of the Catholicon, 1460 |
 | The rest | Latin | the scribe's own |
 
 How well each is checked. In Act I: Virgil, the Rule of Benedict, the Frankish
@@ -117,6 +131,12 @@ scanned at archive.org); Orderic's figure was read in Forester's translation.
 Malmesbury's Latin and the London writ are as quoted in recent scholarly
 articles found by search. `WASTA EST` and `TERRA REGIS` are Domesday's own
 standing phrases, given from general knowledge.
+In Act V: the two lines of the Gesta Francorum were read in the Latin text,
+the Catholicon's colophon in Pollard's Essay on Colophons, the Catalan line
+on the Cresques Project's transcription of the atlas, and John Ball's rhyme
+and al-Khwarizmi's title as Wikipedia cites them. Al-Kindi's Arabic matched
+only a reader-posted quotation, and Fibonacci's line is as scholars quote it;
+neither was opened in an edition.
 
 ## The look
 
@@ -128,7 +148,7 @@ standing phrases, given from general knowledge.
 - There are no colour gradients, because the real cloth has none.
 - Each scene is scattered with birds, plants and stones.
 
-**Whose account?** Eleven panels are told twice, from sources that disagree:
+**Whose account?** Fourteen panels are told twice, from sources that disagree:
 
 | Panel | One telling | The other |
 | --- | --- | --- |
@@ -143,6 +163,9 @@ standing phrases, given from general knowledge.
 | The Harrying of the North | Orderic Vitalis: a hundred thousand dead | Domesday: one word, "waste", and what it can and cannot prove |
 | Domesday Book | the English chronicler: shameful prying | the king's treasurer, a century on: justice |
 | Behind the plough | what was lost: freedom, and the murdrum fine | what stayed (shires, laws, coin) and what ended (slavery) |
+| Jerusalem, 1099 | a crusader who was there (the Gesta Francorum) | Ibn al-Athir of Mosul, 130 years on; the Cairo letters |
+| The plague | the doctors of 1348: planets and bad air | the bones: DNA from London (2011) and Kyrgyzstan (2022) |
+| Printing | Mainz: Gutenberg, about 1455 | the East: Bi Sheng, about 1040, and the Jikji, 1377 |
 
 Both tellings must be stitched, side by side in the same panel, and then one
 more question asks her to weigh them: what they agree on, what they differ
@@ -201,7 +224,8 @@ are **Unpick only this act** and **Unpick the whole cloth**.
 - `acts.ts`: the acts, and the history of 1066. Every caption, account,
   source note, question and hint. The first answer listed for each question
   is the right one.
-- `rome.ts`, `vikings.ts`, `conquest.ts`: the same for Acts I, II and IV.
+- `rome.ts`, `vikings.ts`, `conquest.ts`, `beyond.ts`: the same for Acts I,
+  II, IV and V.
 - `stitch.ts`: drawing as embroidery, thread by thread, and a record of each
   stitch so that the stitching can be played back.
 - `scenes.ts`: the figures, horses, ships and buildings, the twelve scenes,
@@ -213,5 +237,5 @@ stitched, `?at=6` opens on that panel.
 
 ## Still to make
 
-Act V of the outline: the medieval world beyond England. It will take its
-borders from its own sources, as above.
+Nothing in the outline. No creature climbs out of the gold pool in the wood
+yet.
