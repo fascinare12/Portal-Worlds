@@ -91,7 +91,7 @@ export function buildOcean(): Ocean {
           float t = uDepth;
           vec3 ahead = mix(mix(vec3(0.03, 0.34, 0.5), vec3(0.012, 0.09, 0.24), smoothstep(0.0, 0.4, t)), vec3(0.0, 0.004, 0.014), smoothstep(0.4, 0.72, t));
           vec3 above = mix(mix(vec3(0.2, 0.62, 0.74), vec3(0.025, 0.18, 0.38), smoothstep(0.0, 0.35, t)), vec3(0.0, 0.005, 0.016), smoothstep(0.35, 0.7, t));
-          vec3 col = d.y > 0.0 ? mix(ahead, above, pow(d.y, 0.7)) : mix(ahead, ahead * 0.3, pow(-d.y, 0.6));
+          vec3 col = d.y > 0.0 ? mix(ahead, above, pow(d.y, 0.7)) : mix(ahead, ahead * mix(0.3, 1.0, smoothstep(0.82, 0.95, t)), pow(-d.y, 0.6));
           float shallow = 1.0 - smoothstep(0.0, 0.32, t);
           if (d.y > 0.02) {
             // The underside of the waves, seen from below.
@@ -107,6 +107,8 @@ export function buildOcean(): Ocean {
           float deepness = smoothstep(0.4, 0.75, t);
           float curtain = pow(0.5 + 0.5 * sin(d.y * 5.0 + sin(a * 3.0 + uTime * 0.25) * 2.2 - uTime * 0.35), 7.0);
           float drift = 0.5 + 0.5 * sin(a * 2.0 - uTime * 0.12);
+          // Near the seabed the curtains rise out of darkness, well above where the floor fades away.
+          curtain *= mix(1.0, smoothstep(0.03, 0.3, d.y), smoothstep(0.82, 0.95, t));
           col += mix(vec3(0.05, 0.75, 0.7), vec3(0.4, 0.2, 0.9), 0.5 + 0.5 * sin(a * 1.5 + uTime * 0.07)) * curtain * drift * deepness * 0.11;
           gl_FragColor = vec4(col, 1.0);
         }`,
@@ -480,7 +482,9 @@ export function buildOcean(): Ocean {
             }
             vec3 hue = mix(vec3(0.1, 0.9, 0.8), vec3(0.6, 0.3, 1.0), noise(q * 0.5));
             vec3 c = vec3(0.006, 0.014, 0.028) * (0.5 + vN.y) + hue * vein * run * 1.3;
-            gl_FragColor = vec4(c * exp(-vDist * 0.026), 1.0);
+            // With distance the floor dissolves into exactly the colour of the dark water beyond it,
+            // so there is no edge to see where it ends.
+            gl_FragColor = vec4(mix(vec3(0.0, 0.004, 0.014), c, exp(-vDist * 0.03)), 1.0);
           }`,
       });
   scene.add(new THREE.Mesh(floorGeo, floorMat));
