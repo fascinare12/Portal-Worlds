@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Portal Worlds: The Printer's World</title>
+    <style>
+      /* Not built yet. For now this is the bare sheet: cream paper with only the outline block printed. */
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #efe6c9; -webkit-user-select: none; user-select: none; }
+      body { background-image: repeating-linear-gradient(0deg, rgba(120, 100, 60, 0.05) 0 1px, transparent 1px 4px), repeating-linear-gradient(90deg, rgba(120, 100, 60, 0.03) 0 1px, transparent 1px 7px); }
+      svg { position: fixed; inset: 0; width: 100%; height: 100%; }
+      svg * { fill: none; stroke: #141a2e; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      button { border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+      #home { position: fixed; left: 14px; top: 14px; width: 52px; height: 52px; border-radius: 50%; z-index: 3; background: radial-gradient(circle, #fff 0%, #8fd49a 45%, #4f9a5c 100%); box-shadow: 0 0 16px #8fd49a; }
+      #seal { position: fixed; right: 7%; bottom: 9%; width: 46px; height: 46px; background: #cc3122; border-radius: 4px; box-shadow: inset 0 0 0 7px #cc3122, inset 0 0 0 11px #efe6c9; }
+      #veil { position: fixed; inset: 0; pointer-events: none; background: #2a5cb0; opacity: 1; transition: opacity 1.8s ease; z-index: 9; }
+      #veil.open { opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice">
+      <path d="M0 330 H800" />
+      <path d="M250 330 C330 300 390 210 420 130 H470 C500 210 560 300 650 330" />
+      <path d="M404 170 l14 16 l12 -14 l14 18 l12 -16 l14 14 l14 -18" />
+      <path d="M120 90 h210 a22 22 0 0 1 0 44 h-210 a22 22 0 0 1 0 -44 z" />
+      <path d="M0 370 q25 -18 50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0" />
+      <path d="M0 420 q30 -20 60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0" />
+    </svg>
+    <button id="home" aria-label="Back to the wood"></button>
+    <div id="seal"></div>
+    <div id="veil"></div>
+    <script type="module">
+      const veil = document.getElementById('veil');
+      document.getElementById('home').onclick = () => {
+        veil.style.background = '#4f9a5c';
+        veil.classList.remove('open');
+        setTimeout(() => { window.location.href = '../../index.html#from-print'; }, 1700);
+      };
+      window.addEventListener('pageshow', (e) => { if (e.persisted) window.location.reload(); });
+      requestAnimationFrame(() => veil.classList.add('open'));
+    </script>
+  </body>
+</html>
