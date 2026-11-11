@@ -78,6 +78,7 @@ window.addEventListener('pagehide', keep);
 
 // ---- Walking and looking ----
 
+const clock = new THREE.Clock();
 const ray = new THREE.Raycaster();
 const pointers = new Map<number, { x: number; y: number }>();
 let tap: { x: number; y: number; t: number } | null = null;
@@ -98,6 +99,7 @@ for (const kind of ['pointerdown', 'keydown', 'wheel']) window.addEventListener(
 setTimeout(hasMoved, 7000);
 if (localStorage.getItem(KEY) && !params.has('fresh')) hasMoved();
 function walkTo(x: number, z: number): void {
+  if (goal.distanceTo(at) < 0.5) chord(clock.elapsedTime); // setting off from a standstill
   const r = Math.hypot(x, z);
   const k = r > REACH ? REACH / r : 1;
   goal.set(x * k, EYE, z * k);
@@ -248,20 +250,24 @@ function clap(delay: number): void {
   osc.start(start);
   osc.stop(start + 0.1);
 }
-// The tune wanders up and down the scale by steps, with a leap now and then. It plays only as
-// new ground prints, so the music is the sound of the picture being made.
-let note = 5;
-let owed = 0;
-let sinceNote = 0;
-let rest = 5;
-function nextNote(loud: number): void {
-  const leap = Math.random() < 0.18;
-  note += (Math.random() < 0.5 ? -1 : 1) * (leap ? 3 : 1);
-  if (note < 0) note = 2;
-  if (note > SCALE.length - 1) note = SCALE.length - 3;
-  pluck(note, loud);
-  if (Math.random() < 0.22) pluck(Math.max(0, note - 5), loud * 0.7, 0.03); // the same note an octave down, struck with it
-  sinceNote = 0;
+// The music is sparse: one chord, rolled from the bottom string up as a koto player does, each
+// time she sets off walking. Then it is left to ring. Never more often than every few seconds.
+const CHORDS = [
+  [0, 3, 5],
+  [2, 5, 7],
+  [0, 4, 5, 8],
+  [3, 5, 6],
+  [2, 3, 7],
+  [0, 2, 5, 9],
+];
+let chordAt = 0;
+let lastChord = -100;
+function chord(now: number): void {
+  if (now - lastChord < 4) return;
+  lastChord = now;
+  // Mostly the next chord in the round, now and then a different one, so it does not become a tune.
+  chordAt = (chordAt + (Math.random() < 0.25 ? 2 : 1)) % CHORDS.length;
+  CHORDS[chordAt].forEach((n, k) => pluck(n, 0.13 - k * 0.015, k * 0.11));
 }
 $('sound').onclick = () => {
   startSound();
@@ -300,7 +306,6 @@ requestAnimationFrame(() => veil.classList.add('open'));
 
 // ---- Every frame ----
 
-const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.1);
   const time = clock.elapsedTime;
@@ -336,17 +341,7 @@ renderer.setAnimationLoop(() => {
     keep();
   });
 
-  // Music from the printing itself.
-  sinceNote += dt;
-  owed += fresh;
-  if (rub) rub.gain.value += (Math.min(0.05, fresh * 0.01) - rub.gain.value) * Math.min(1, dt * 6);
-  if (owed > 15 && sinceNote > 0.3) {
-    owed = 0;
-    nextNote(0.16);
-  }
-  if (sinceNote > rest) {
-    rest = 6 + Math.random() * 6;
-    nextNote(0.09); // a single quiet note when all is still
-  }
+  // Under the chords, only the faint rub of the printer's pad while new ground is printing.
+  if (rub) rub.gain.value += (Math.min(0.025, fresh * 0.006) - rub.gain.value) * Math.min(1, dt * 6);
   renderer.render(world.scene, camera);
 });
