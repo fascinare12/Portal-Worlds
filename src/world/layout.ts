@@ -73,6 +73,12 @@ function makePools(): Pool[] {
         p.world = 'sea';
         p.scene = 3;
       }
+      // A pool whose world has not been built yet stays dark, like any other; it is given its
+      // colour on the day it opens.
+      if (!p.world) {
+        p.open = false;
+        p.color = 0;
+      }
     }
   });
   return pools;

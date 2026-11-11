@@ -14,8 +14,11 @@ nothing to read: it is a place to sink through and touch.
 1. **Sunlit shallows.** The rippling surface overhead, shafts of sunlight,
    silver and gold shoals.
 2. **The coral reef**, about thirty units down: brain corals, staghorn
-   thickets, table corals, tube sponges, anemones and seagrass that wave, lacy
-   sea fans, starfish, and reef fish in every colour, all under the moving net
+   thickets, table corals, cauliflower and pillar corals, tube sponges,
+   anemones and seagrass that wave, lacy sea fans and starfish, their surfaces
+   taken from a photograph of pitted coral rock; and nine kinds of reef fish
+   (clownfish, blue tang, butterflyfish, bannerfish, parrotfish, damselfish,
+   sergeant majors, anthias and wrasse), each with its own shape and markings, all under the moving net
    of light the waves throw down. The reef rings a "blue hole"; keep sinking
    and you pass through it.
 3. **Twilight.** Deep blue. Comb jellies with rainbows running down them,
@@ -45,7 +48,8 @@ the browser. The ♪ button turns it off.
 
 ## Files
 
-- `ocean.ts`: the water, every creature, the seafloor and the light.
+- `ocean.ts`: the water, every creature, the reef, the seafloor and the light.
+- `textures/`: two CC0 photographs from Poly Haven (see `CREDITS.md`).
 - `main.ts`: moving, touching and sound.
 
 `?depth=120` starts at that depth, for looking at one zone.

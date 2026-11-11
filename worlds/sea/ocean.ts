@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { fbm } from '../../src/noise';
+import coralUrl from './textures/coral.webp';
+import sandUrl from './textures/sand.webp';
 import { BODY_VERT, glow, makeJellyfish } from '../../src/world/creatures/jellyModel';
 
 /**
@@ -292,24 +294,56 @@ export function buildOcean(): Ocean {
     offsets: Float32Array;
   }
   const shoals: Shoal[] = [];
-  const addShoal = (count: number, y: number, radius: number, speed: number, material: THREE.Material, size: number, colours?: number[]) => {
-    const mesh = new THREE.InstancedMesh(fishGeo, material, count);
+  // `scatter` spreads a shoal right round the reef, as reef fish live, instead of bunching it.
+  const addShoal = (count: number, y: number, radius: number, speed: number, material: THREE.Material, size: number, scatter = false, geo: THREE.BufferGeometry = fishGeo) => {
+    const mesh = new THREE.InstancedMesh(geo, material, count);
     mesh.frustumCulled = false;
     const offsets = new Float32Array(count * 4);
-    const tint = new THREE.Color();
-    for (let i = 0; i < count; i++) {
-      offsets.set([(rnd() - 0.5) * (colours ? 6.28 : 1.5), (rnd() - 0.5) * (colours ? 3 : 5), (rnd() - 0.5) * 4, size * (0.7 + rnd() * 0.6)], i * 4);
-      if (colours) mesh.setColorAt(i, tint.set(pick(colours)));
-    }
+    for (let i = 0; i < count; i++) offsets.set([(rnd() - 0.5) * (scatter ? 6.28 : 1.5), (rnd() - 0.5) * (scatter ? 3.5 : 5), (rnd() - 0.5) * (scatter ? 12 : 4), size * (0.7 + rnd() * 0.6)], i * 4);
     scene.add(mesh);
     shoals.push({ mesh, count, y, radius, speed, offsets });
   };
   addShoal(170, -9, 13, 0.16, new THREE.MeshLambertMaterial({ color: 0xbfd8e6, emissive: 0x1a3a4a }), 1.5);
   addShoal(120, -20, 19, -0.11, new THREE.MeshLambertMaterial({ color: 0xffc070, emissive: 0x402a10 }), 1.2);
-  // Reef fish, in every colour, scattered all round just above the coral.
-  const reefFish = [0xffd23a, 0xff7a3a, 0x39b6ff, 0xff5aa0, 0x8cff6a, 0xffffff, 0xb07cff];
-  addShoal(110, -28.5, 13, 0.07, new THREE.MeshLambertMaterial({ emissive: 0x202020 }), 0.6, reefFish);
-  addShoal(90, -27, 24, -0.05, new THREE.MeshLambertMaterial({ emissive: 0x202020 }), 0.8, reefFish);
+  // Reef fish: nine kinds, each with its own shape and markings, living all round the coral.
+  const tallFish = fishGeo.clone().scale(1, 2.3, 0.85); // disc-shaped, like a butterflyfish
+  const longFish = fishGeo.clone().scale(0.9, 0.75, 1.5); // slender, like a wrasse
+  /** Paints a fish's side: `bands` are [from, to, colour] along the body, nose (0) to tail (1). */
+  const livery = (base: string, bands: [number, number, string][]) => {
+    const c = document.createElement('canvas');
+    c.width = 8;
+    c.height = 128;
+    const g = c.getContext('2d')!;
+    g.fillStyle = base;
+    g.fillRect(0, 0, 8, 128);
+    for (const [from, to, colour] of bands) {
+      g.fillStyle = colour;
+      g.fillRect(0, 128 - to * 128, 8, (to - from) * 128);
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return new THREE.MeshLambertMaterial({ map: t, emissive: 0x262626 });
+  };
+  const K = '#141018';
+  const W = '#ffffff';
+  // Clownfish: orange with three white bars edged in black.
+  addShoal(46, -29.4, 12, 0.05, livery('#ff7a1f', [[0.16, 0.19, K], [0.19, 0.27, W], [0.27, 0.3, K], [0.46, 0.49, K], [0.49, 0.57, W], [0.57, 0.6, K], [0.76, 0.79, K], [0.79, 0.85, W], [0.9, 1, K]]), 0.5, true);
+  // Blue tang: royal blue, a black sweep along the body, and a yellow tail.
+  addShoal(40, -27.5, 17, -0.07, livery('#1f5fe0', [[0.3, 0.62, '#10204a'], [0.8, 1, '#ffd21f']]), 0.85, true);
+  // Butterflyfish: yellow discs with a black bar through the eye.
+  addShoal(44, -28.6, 15, 0.06, livery('#ffd83a', [[0.1, 0.17, K], [0.72, 0.78, W], [0.86, 0.9, K]]), 0.6, true, tallFish);
+  // Bannerfish: tall, in bold bars of black and white, with a yellow tail.
+  addShoal(30, -27, 22, -0.045, livery(W, [[0.0, 0.12, K], [0.3, 0.46, K], [0.62, 0.76, K], [0.84, 1, '#ffd21f']]), 0.75, true, tallFish);
+  // Parrotfish: big, shading from sea green through to rose.
+  addShoal(26, -28, 20, 0.04, livery('#2fc0a8', [[0.0, 0.2, '#3a8ff0'], [0.45, 0.7, '#7ad0a0'], [0.7, 0.88, '#ff8ab0'], [0.88, 1, '#ffd070']]), 1.25, true);
+  // Damselfish: tiny sparks of electric blue, in great numbers.
+  addShoal(120, -28.8, 11, 0.09, livery('#2a9cff', [[0.82, 1, '#ffe14a']]), 0.32, true);
+  // Sergeant majors: silver-yellow with five black bars.
+  addShoal(50, -26.5, 18, -0.06, livery('#f4ec9a', [[0.14, 0.2, K], [0.3, 0.36, K], [0.46, 0.52, K], [0.62, 0.68, K], [0.78, 0.83, K]]), 0.6, true);
+  // Anthias: small, rose and orange, hovering in clouds.
+  addShoal(110, -27.8, 14, 0.075, livery('#ff6a8a', [[0.0, 0.25, '#ff9a3a'], [0.85, 1, '#c84ad0']]), 0.36, true);
+  // Wrasse: long and slim, green with a violet head.
+  addShoal(34, -29.2, 16, -0.08, livery('#3fc070', [[0.0, 0.24, '#8a5ad0'], [0.5, 0.56, '#ffe14a'], [0.9, 1, '#2f7fd0']]), 0.9, true, longFish);
   // Lanternfish: dark bodies that carry their own lights.
   addShoal(150, -72, 15, 0.13, new THREE.MeshBasicMaterial({ color: 0x38d8ff }), 0.7);
   addShoal(110, -112, 12, -0.09, new THREE.MeshBasicMaterial({ color: 0x7affb0 }), 0.6);
@@ -498,12 +532,24 @@ export function buildOcean(): Ocean {
     // 4: plain
     `float pat = 1.0;`,
   ];
-  /** A lit material with one of those surfaces painted on, moving light from the waves, and an optional sway. */
-  const reefMat = (surface: number, opts: THREE.MeshLambertMaterialParameters = {}, sway = 0) => {
+  const photo = (url: string) => {
+    const t = new THREE.TextureLoader().load(url);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  };
+  const coralPhoto = photo(coralUrl);
+  const sandPhoto = photo(sandUrl);
+  /**
+   * A lit material with one of those surfaces painted on, moving light from the waves, and an
+   * optional sway. `detail` lays a photograph over it: pitted coral rock, or real sand.
+   */
+  const reefMat = (surface: number, opts: THREE.MeshLambertMaterialParameters = {}, sway = 0, detail: 'coral' | 'sand' | 'none' = 'coral') => {
     const m = new THREE.MeshLambertMaterial(opts);
-    m.customProgramCacheKey = () => `reef:${surface}:${sway}`;
+    m.customProgramCacheKey = () => `reef:${surface}:${sway}:${detail}`;
     m.onBeforeCompile = (sh) => {
       sh.uniforms.uTime = uTime;
+      sh.uniforms.uDetail = { value: detail === 'sand' ? sandPhoto : coralPhoto };
       sh.vertexShader = sh.vertexShader
         .replace('#include <common>', '#include <common>\nuniform float uTime;\nvarying vec3 vWp;')
         .replace(
@@ -520,8 +566,21 @@ export function buildOcean(): Ocean {
           #endif`,
         );
       sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', `#include <common>\nuniform float uTime;\nvarying vec3 vWp;\n${CAUSTIC}`)
-        .replace('#include <color_fragment>', `#include <color_fragment>\n${SURFACES[surface]}\ndiffuseColor.rgb *= pat * (0.74 + caustic(vWp.xz, uTime) * 0.42);`);
+        .replace('#include <common>', `#include <common>\nuniform float uTime;\nuniform sampler2D uDetail;\nvarying vec3 vWp;\n${CAUSTIC}`)
+        .replace(
+          '#include <color_fragment>',
+          `#include <color_fragment>
+          ${SURFACES[surface]}
+          ${
+            detail === 'sand'
+              ? 'diffuseColor.rgb *= texture2D(uDetail, vWp.xz * 0.11).rgb * 1.25;'
+              : detail === 'coral'
+                ? // The photograph is laid on from the side and from above, so it wraps any shape without seams showing.
+                  'float pits = mix(texture2D(uDetail, vWp.xz * 0.42).r, texture2D(uDetail, vec2(vWp.x + vWp.z, vWp.y) * 0.42).r, 0.5); diffuseColor.rgb *= 0.45 + pits * 0.95;'
+                : ''
+          }
+          diffuseColor.rgb *= pat * (0.74 + caustic(vWp.xz, uTime) * 0.42);`,
+        );
     };
     return m;
   };
@@ -551,7 +610,7 @@ export function buildOcean(): Ocean {
     bed.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     bed.setIndex(idx);
     bed.computeVertexNormals();
-    scene.add(new THREE.Mesh(bed, reefMat(3, { color: 0xc9b98e })));
+    scene.add(new THREE.Mesh(bed, reefMat(3, { color: 0xffffff }, 0, 'sand')));
     // The throat of the hole, and the dark underside of the reef seen from below.
     // A short throat of dark rock: its top meets the sand, and it opens out below.
     const throat = new THREE.Mesh(new THREE.CylinderGeometry(HOLE, HOLE * 1.15, 9, 56, 1, true), reefMat(3, { color: 0x3c4650, side: THREE.BackSide }));
@@ -562,7 +621,8 @@ export function buildOcean(): Ocean {
   }
 
   {
-    const CORAL = [0xff6f91, 0xff9671, 0xffc75f, 0xf9f871, 0x9a6ee0, 0x00c9a7, 0xd65db1, 0x3a8ff0, 0xff8066, 0xf4f0e6];
+    // Real reefs are mostly tans, rusts and olives, with the vivid colours as accents among them.
+    const CORAL = [0xff6f91, 0xff9671, 0xffc75f, 0xf9f871, 0x9a6ee0, 0x00c9a7, 0xd65db1, 0x3a8ff0, 0xff8066, 0xf4f0e6, 0xc9a27a, 0xb8865a, 0x8a9a5a, 0xd88a6a, 0xc9a27a, 0xe0c090];
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const e = new THREE.Euler();
@@ -589,8 +649,8 @@ export function buildOcean(): Ocean {
     };
 
     // Brain corals: great rounded boulders, grooved like a maze.
-    const brains = instanced(new THREE.SphereGeometry(1, 24, 16), reefMat(0), 70);
-    for (let i = 0; i < 70; i++) {
+    const brains = instanced(new THREE.SphereGeometry(1, 24, 16), reefMat(0), 150);
+    for (let i = 0; i < 150; i++) {
       const [x, y, z] = place();
       const k = 0.5 + rnd() * 1.4;
       set(brains, i, x, y + k * 0.2, z, k, k * 0.7, k, 0, rnd() * 6.28, 0, pick(CORAL));
@@ -598,8 +658,8 @@ export function buildOcean(): Ocean {
 
     // Staghorn: thickets of branching fingers.
     const BRANCHES = 9;
-    const stags = instanced(new THREE.ConeGeometry(0.1, 1, 6).translate(0, 0.5, 0), reefMat(1), 110 * BRANCHES);
-    for (let i = 0; i < 110; i++) {
+    const stags = instanced(new THREE.ConeGeometry(0.1, 1, 6).translate(0, 0.5, 0), reefMat(1), 240 * BRANCHES);
+    for (let i = 0; i < 240; i++) {
       const [x, y, z] = place();
       const colour = pick(CORAL);
       const k = 0.7 + rnd() * 0.9;
@@ -607,9 +667,9 @@ export function buildOcean(): Ocean {
     }
 
     // Table corals: wide plates on short stalks, layered like shelves.
-    const plates = instanced(new THREE.CylinderGeometry(1, 0.7, 0.14, 24), reefMat(2), 60);
-    const stalks = instanced(new THREE.CylinderGeometry(0.16, 0.26, 1, 8).translate(0, 0.5, 0), reefMat(4), 60);
-    for (let i = 0; i < 60; i++) {
+    const plates = instanced(new THREE.CylinderGeometry(1, 0.7, 0.14, 24), reefMat(2), 120);
+    const stalks = instanced(new THREE.CylinderGeometry(0.16, 0.26, 1, 8).translate(0, 0.5, 0), reefMat(4), 120);
+    for (let i = 0; i < 120; i++) {
       const [x, y, z] = place();
       const k = 0.7 + rnd() * 1.5;
       const h = 0.35 + rnd() * 0.9;
@@ -618,9 +678,35 @@ export function buildOcean(): Ocean {
       set(plates, i, x, y + h, z, k, 1, k, (rnd() - 0.5) * 0.25, rnd() * 6.28, (rnd() - 0.5) * 0.25, colour);
     }
 
+    // Cauliflower coral: tight heads of small rounded lobes.
+    const LOBES = 7;
+    const heads = instanced(new THREE.SphereGeometry(1, 12, 9), reefMat(1), 130 * LOBES);
+    for (let i = 0; i < 130; i++) {
+      const [x, y, z] = place();
+      const colour = pick(CORAL);
+      const k = 0.25 + rnd() * 0.3;
+      for (let b = 0; b < LOBES; b++) {
+        const a = (b / LOBES) * 6.28;
+        const out = b === 0 ? 0 : k * 1.1;
+        set(heads, i * LOBES + b, x + Math.cos(a) * out, y + k * (b === 0 ? 1.1 : 0.5), z + Math.sin(a) * out, k, k * 0.9, k, 0, 0, 0, colour);
+      }
+    }
+
+    // Pillar coral: stands of tall rounded columns.
+    const COLUMNS = 5;
+    const pillars = instanced(new THREE.CapsuleGeometry(0.2, 1, 5, 10).translate(0, 0.6, 0), reefMat(0), 70 * COLUMNS);
+    for (let i = 0; i < 70; i++) {
+      const [x, y, z] = place();
+      const colour = pick(CORAL);
+      for (let b = 0; b < COLUMNS; b++) {
+        const k = 0.7 + rnd() * 0.8;
+        set(pillars, i * COLUMNS + b, x + (rnd() - 0.5) * 0.9, y - 0.2, z + (rnd() - 0.5) * 0.9, k, 0.8 + rnd() * 2.2, k, (rnd() - 0.5) * 0.2, 0, (rnd() - 0.5) * 0.2, colour);
+      }
+    }
+
     // Tube sponges: clusters of open pipes.
-    const tubes = instanced(new THREE.CylinderGeometry(0.17, 0.12, 1, 12, 1, true).translate(0, 0.5, 0), reefMat(1, { side: THREE.DoubleSide }), 55 * 4);
-    for (let i = 0; i < 55; i++) {
+    const tubes = instanced(new THREE.CylinderGeometry(0.17, 0.12, 1, 12, 1, true).translate(0, 0.5, 0), reefMat(1, { side: THREE.DoubleSide }), 120 * 4);
+    for (let i = 0; i < 120; i++) {
       const [x, y, z] = place();
       const colour = pick([0xffc75f, 0xb07cff, 0xff8066, 0x39c8ff]);
       for (let b = 0; b < 4; b++) {
@@ -631,8 +717,8 @@ export function buildOcean(): Ocean {
 
     // Anemones: rings of soft tentacles, waving in the current.
     const ARMS = 16;
-    const arms = instanced(new THREE.CylinderGeometry(0.03, 0.055, 1, 5).translate(0, 0.5, 0), reefMat(4, { emissive: 0x181018 }, 0.3), 50 * ARMS);
-    for (let i = 0; i < 50; i++) {
+    const arms = instanced(new THREE.CylinderGeometry(0.03, 0.055, 1, 5).translate(0, 0.5, 0), reefMat(4, { emissive: 0x181018 }, 0.3, 'none'), 110 * ARMS);
+    for (let i = 0; i < 110; i++) {
       const [x, y, z] = place();
       const colour = pick([0xff5aa0, 0xffd0e8, 0x8cffd0, 0xffb05a, 0xc9a2ff]);
       for (let b = 0; b < ARMS; b++) {
@@ -663,16 +749,16 @@ export function buildOcean(): Ocean {
     };
     branch(128, 254, 0, 58, 9);
     const laceMap = new THREE.CanvasTexture(lace);
-    const fans = instanced(new THREE.PlaneGeometry(1, 1, 1, 6).translate(0, 0.5, 0), reefMat(4, { map: laceMap, alphaTest: 0.35, side: THREE.DoubleSide, emissive: 0x201018 }, 0.1), 60);
-    for (let i = 0; i < 60; i++) {
+    const fans = instanced(new THREE.PlaneGeometry(1, 1, 1, 6).translate(0, 0.5, 0), reefMat(4, { map: laceMap, alphaTest: 0.35, side: THREE.DoubleSide, emissive: 0x201018 }, 0.1, 'none'), 130);
+    for (let i = 0; i < 130; i++) {
       const [x, y, z] = place();
       const k = 1.2 + rnd() * 2.2;
       set(fans, i, x, y - 0.1, z, k, k, k, 0, rnd() * 6.28, 0, pick([0xff5a7a, 0xb07cff, 0xffa53a, 0xff8ad8]));
     }
 
     // Seagrass in drifts, and starfish on the sand.
-    const grass = instanced(new THREE.PlaneGeometry(0.13, 1, 1, 5).translate(0, 0.5, 0), reefMat(4, { side: THREE.DoubleSide }, 0.55), 900);
-    for (let i = 0; i < 900; i++) {
+    const grass = instanced(new THREE.PlaneGeometry(0.13, 1, 1, 5).translate(0, 0.5, 0), reefMat(4, { side: THREE.DoubleSide }, 0.55, 'none'), 1800);
+    for (let i = 0; i < 1800; i++) {
       const patch = Math.floor(rnd() * 26);
       const pa = patch * 2.4;
       const pr = 9 + ((patch * 13) % 34);
@@ -688,8 +774,8 @@ export function buildOcean(): Ocean {
       if (i) star.lineTo(Math.cos(a) * r, Math.sin(a) * r);
       else star.moveTo(Math.cos(a) * r, Math.sin(a) * r);
     }
-    const stars = instanced(new THREE.ExtrudeGeometry(star, { depth: 0.07, bevelEnabled: false }).rotateX(-Math.PI / 2), reefMat(1), 46);
-    for (let i = 0; i < 46; i++) {
+    const stars = instanced(new THREE.ExtrudeGeometry(star, { depth: 0.07, bevelEnabled: false }).rotateX(-Math.PI / 2), reefMat(1), 90);
+    for (let i = 0; i < 90; i++) {
       const [x, y, z] = place(8.5, 30);
       const k = 0.7 + rnd() * 0.9;
       set(stars, i, x, y + 0.04, z, k, 1, k, 0, rnd() * 6.28, 0, pick([0xff7a3a, 0xff4f6a, 0xb07cff, 0xffc75f]));
