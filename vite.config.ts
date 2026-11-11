@@ -14,6 +14,7 @@ export default defineConfig({
         desert: resolve(__dirname, 'worlds/desert/index.html'),
         shibuya: resolve(__dirname, 'worlds/shibuya/index.html'),
         sea: resolve(__dirname, 'worlds/sea/index.html'),
+        print: resolve(__dirname, 'worlds/print/index.html'),
       },
     },
   },

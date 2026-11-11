@@ -171,6 +171,70 @@ const waterFragment = /* glsl */ `
     return c;
   }
 
+  // What you see when you lean over the Prussian-blue pool: a sheet of cream paper on which a
+  // woodblock print is being made, one block at a time. First the black outlines, then a pale
+  // wash, then deep blue, then the last few colours; it is admired, lifted away, and begun again.
+  vec3 printPicture(vec2 p, float t) {
+    float grain = texture2D(uNoise, p * 1.7).r;
+    vec3 paper = vec3(0.94, 0.90, 0.79) * (0.94 + 0.08 * grain) - 0.03 * step(0.5, fract(p.y * 60.0 + grain * 3.0)) * grain;
+    float stage = mod(t * 0.42, 7.5);
+    // Each block is pressed on from left to right, with a slightly ragged leading edge.
+    float sweep = p.x * 0.55 + 0.5 + (grain - 0.5) * 0.12;
+    float keyOn = smoothstep(0.0, 0.06, stage - sweep);
+    float washOn = smoothstep(0.0, 0.06, stage - 1.2 - sweep);
+    float blueOn = smoothstep(0.0, 0.06, stage - 2.4 - sweep);
+    float lastOn = smoothstep(0.0, 0.06, stage - 3.6 - sweep);
+    float lifted = smoothstep(6.6, 7.4, stage);
+
+    // The mountain: long hollow slopes, a flat top, and snow that comes down in points.
+    float horizon = -0.12;
+    float up = 0.44 - p.y;
+    float slope = abs(p.x - 0.12) - (0.06 + 0.95 * pow(max(up, 0.0), 1.45));
+    float above = step(horizon, p.y);
+    float mountain = step(slope, 0.0) * step(0.0, up) * above;
+    float snow = mountain * step(0.25 + 0.035 * sin(p.x * 46.0) + 0.02 * sin(p.x * 17.0), p.y);
+    float mountainLine = max(smoothstep(0.016, 0.006, abs(slope)) * step(0.0, up), smoothstep(0.012, 0.004, abs(up)) * step(slope, 0.0)) * above;
+    // The sea: rows of small curling waves below the horizon.
+    float sea = 1.0 - above;
+    float row = (horizon - p.y) * 9.0;
+    float crest = abs(fract(row + 0.09 * sin(p.x * 16.0 + floor(row) * 2.4)) - 0.5);
+    float seaLine = max(smoothstep(0.1, 0.03, crest) * sea * 0.8, smoothstep(0.012, 0.004, abs(p.y - horizon)));
+    // A long band of cloud across the sky, with rounded ends.
+    vec2 cq = p - vec2(-0.3, 0.6);
+    float cloud = length(vec2(max(abs(cq.x) - 0.32, 0.0), cq.y)) - 0.055;
+    vec2 cq2 = p - vec2(-0.08, 0.5);
+    cloud = min(cloud, length(vec2(max(abs(cq2.x) - 0.2, 0.0), cq2.y)) - 0.045);
+    float cloudLine = smoothstep(0.016, 0.006, abs(cloud));
+    // A small boat with one square sail.
+    vec2 bq = p - vec2(-0.42, -0.36);
+    float hull = step(length(bq / vec2(0.17, 0.07)), 1.0) * step(bq.y, 0.0);
+    float hullLine = smoothstep(0.014, 0.005, abs(length(bq / vec2(0.17, 0.07)) - 1.0) * 0.07) * step(bq.y, 0.004) + smoothstep(0.01, 0.004, abs(bq.y)) * step(abs(bq.x), 0.17);
+    float sail = step(abs(bq.x - 0.01), 0.055) * step(abs(bq.y - 0.11), 0.075);
+    float sailLine = smoothstep(0.012, 0.004, abs(max(abs(bq.x - 0.01) - 0.055, abs(bq.y - 0.11) - 0.075))) + smoothstep(0.008, 0.003, abs(bq.x - 0.01)) * step(0.0, bq.y) * step(bq.y, 0.2);
+
+    vec3 c = paper;
+    // The pale wash: sky that is strongest at the top and fades to bare paper, and a light sea.
+    vec3 pale = vec3(0.60, 0.76, 0.86);
+    c = mix(c, pale, washOn * above * (1.0 - mountain) * step(0.0, cloud) * smoothstep(0.25, 0.85, p.y) * 0.9);
+    c = mix(c, pale, washOn * sea * (1.0 - hull) * 0.85);
+    // Deep blue: the mountain below its snow, and the far and near water.
+    vec3 deep = vec3(0.09, 0.25, 0.50) * (0.9 + 0.2 * grain);
+    c = mix(c, deep, blueOn * mountain * (1.0 - snow) * 0.95);
+    c = mix(c, deep, blueOn * sea * (1.0 - hull) * (smoothstep(0.1, 0.0, horizon - p.y) + smoothstep(0.45, 0.8, horizon - p.y)) * 0.9);
+    // The last blocks: a blush low in the sky, the boat, and the printer's red seal.
+    c = mix(c, vec3(0.96, 0.68, 0.58), lastOn * above * (1.0 - mountain) * smoothstep(0.34, 0.0, p.y - horizon) * 0.8);
+    c = mix(c, vec3(0.80, 0.62, 0.38), lastOn * hull);
+    c = mix(c, vec3(0.97, 0.80, 0.66), lastOn * sail);
+    vec2 sq = abs(p - vec2(0.56, -0.5));
+    float seal = step(max(sq.x, sq.y), 0.065);
+    float sealMark = step(max(sq.x, sq.y), 0.04) * step(0.014, min(sq.x, sq.y));
+    c = mix(c, vec3(0.80, 0.19, 0.13), lastOn * seal * (1.0 - sealMark * 0.85));
+    // The outlines, which were printed first and sit under everything.
+    float line = clamp(max(max(mountainLine, seaLine), max(cloudLine, max(hullLine, sailLine))), 0.0, 1.0);
+    c = mix(c, vec3(0.07, 0.09, 0.17), line * keyOn * (0.78 + 0.2 * grain));
+    return mix(c, paper, lifted);
+  }
+
   // Three koi, white with red and orange patches, swimming round the pool.
   vec3 koi(vec3 col, vec2 p, float t) {
     for (int i = 0; i < 3; i++) {
@@ -244,7 +308,7 @@ const waterFragment = /* glsl */ `
       vec2 p = vec2(dot(off, across), dot(off, away)) / uRadius;
       p += 0.012 * vec2(sin(p.y * 18.0 + uTime * 1.3), cos(p.x * 16.0 + uTime * 1.1)); // seen through water
       float window = smoothstep(1.0, 0.72, length(p)) * uReveal;
-      col = mix(col, uScene > 2.5 ? seaPicture(p, uTime) : uScene > 1.5 ? kanjiPicture(p, uTime) : desertPicture(p, uTime), window);
+      col = mix(col, uScene > 3.5 ? printPicture(p, uTime) : uScene > 2.5 ? seaPicture(p, uTime) : uScene > 1.5 ? kanjiPicture(p, uTime) : desertPicture(p, uTime), window);
     }
     // The red pool has koi in it, circling just under the surface.
     if (uScene > 1.5 && uScene < 2.5) col = koi(col, vPos / uRadius, uTime);
