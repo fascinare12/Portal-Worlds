@@ -42,8 +42,7 @@ while, then walks back in. Add `?visit=now` to the address to see it at once.
 A white fox with red markings comes through the red pool. It springs out and
 shakes itself dry, trots about with its nose down, freezes with ears pricked,
 pounces nose-first into the grass, curls up for a nap, then stretches and
-jumps back in. It has one tail for every five words found in Shibuya, up to
-nine.
+jumps back in.
 
 A jellyfish made of light rises out of the ice-blue pool, drifts among the
 trees as if the air were sea, and sinks back in.

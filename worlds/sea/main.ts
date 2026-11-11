@@ -107,9 +107,11 @@ const release = (e: PointerEvent) => {
   if (e.type === 'pointercancel' || !t) return;
   if (Math.hypot(e.clientX - t.x, e.clientY - t.y) > 10 || performance.now() - t.t > 450) return;
   const touched = ocean.tap(aim(e.clientX, e.clientY));
-  if (touched === 'jelly') chime(660 + Math.random() * 500);
-  else if (touched === 'angler') chime(150);
-  else chime(330 + Math.random() * 120, 0.05);
+  // Every note comes from one five-note scale and rings for several seconds, so notes played
+  // one after another pile up into a chord. Each jellyfish has its own note: big ones low.
+  if (touched.kind === 'jelly') chime(SCALE[touched.note % SCALE.length] * 2);
+  else if (touched.kind === 'angler') chime(SCALE[0] / 2, 0.12);
+  else chime(SCALE[touched.note % 5], 0.045);
 };
 canvas.addEventListener('pointerup', release);
 canvas.addEventListener('pointercancel', release);
@@ -166,18 +168,25 @@ function startSound(): void {
     audio = null; // no sound on this device; the sea is silent but otherwise the same
   }
 }
-function chime(freq: number, loud = 0.09): void {
+/** C, D, E, G, A: any of these sound well together. Two octaves of them. */
+const SCALE = [130.81, 146.83, 164.81, 196.0, 220.0, 261.63, 293.66, 329.63, 392.0, 440.0];
+const RING = 6.5; // seconds a note takes to die away
+
+function chime(freq: number, loud = 0.075): void {
   if (!audio || !master) return;
   const start = audio.currentTime;
   for (const [mult, vol] of [[1, 1], [2.01, 0.4], [3.02, 0.15]]) {
     const osc = audio.createOscillator();
     const g = audio.createGain();
     osc.frequency.value = freq * mult;
-    g.gain.setValueAtTime(loud * vol, start);
-    g.gain.exponentialRampToValueAtTime(0.0001, start + 1.8);
+    // A soft strike, then a long, slow fade.
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(loud * vol, start + 0.02);
+    g.gain.exponentialRampToValueAtTime(loud * vol * 0.45, start + 0.9);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + RING);
     osc.connect(g).connect(master);
     osc.start(start);
-    osc.stop(start + 1.9);
+    osc.stop(start + RING + 0.1);
   }
 }
 ocean.onWhale = () => {
@@ -240,7 +249,9 @@ renderer.setAnimationLoop(() => {
   // Near the surface she looks up towards the light; at the bottom, down at the glowing floor.
   // Sinking tips the view down a little; rising tips it up.
   const falling = (depth - before) / Math.max(dt, 0.001);
-  const pitch = 0.32 - 0.62 * Math.pow(t, 1.4) - Math.max(-0.25, Math.min(0.25, falling * 0.012));
+  // As she comes down onto the reef she looks down and across it.
+  const overReef = Math.exp(-Math.pow((depth - 28.5) / 7, 2));
+  const pitch = 0.32 - 0.62 * Math.pow(t, 1.4) - 0.36 * overReef - Math.max(-0.25, Math.min(0.25, falling * 0.012));
   camera.position.set(0, -depth + Math.sin(time * 0.5) * 0.15, 0);
   camera.lookAt(Math.sin(yaw) * Math.cos(pitch), camera.position.y + Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch));
 

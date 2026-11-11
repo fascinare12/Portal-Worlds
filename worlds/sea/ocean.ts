@@ -17,7 +17,8 @@ export interface Ocean {
   /** The whale has just come into view: time for its call. */
   onWhale: (() => void) | null;
   /** A tap along this ray. Returns what was touched. */
-  tap(ray: THREE.Ray): 'jelly' | 'angler' | 'water';
+  /** `note` is which note of the scale to ring: each jellyfish has its own, big ones low. */
+  tap(ray: THREE.Ray): { kind: 'jelly' | 'angler' | 'water'; note: number };
   /** Where the finger or cursor is pointing, and whether it is down. */
   point(ray: THREE.Ray, pressed: boolean): void;
   update(time: number, dt: number, eye: THREE.Vector3): void;
@@ -224,7 +225,9 @@ export function buildOcean(): Ocean {
     const { group, flash } = makeJellyfish({ time: uTime, colour: new THREE.Color(pick(jellyHues)), phase, random: rnd });
     group.scale.setScalar(size);
     scene.add(group);
-    jellies.push({ group, angle: rnd() * 6.28, radius: 5 + rnd() * 22, home: -4 - rnd() * rnd() * 135 - i * 2, size, phase, kick: 0, flash });
+    let home = -4 - rnd() * rnd() * 135 - i * 2;
+    if (home < -24 && home > -44) home -= 22; // not inside the reef's rock
+    jellies.push({ group, angle: rnd() * 6.28, radius: 5 + rnd() * 22, home, size, phase, kick: 0, flash });
   }
 
   // ---- Comb jellies in the twilight: clear bodies with rainbows running down them.
@@ -235,7 +238,7 @@ export function buildOcean(): Ocean {
     const mesh = new THREE.Mesh(combGeo, glow({ uniforms: { uTime, uPhase: { value: phase }, uAmp: { value: 0.04 }, uFade: { value: 0.03 } }, vertexShader: BODY_VERT, fragmentShader: COMB_FRAG }));
     mesh.scale.setScalar(0.5 + rnd() * 0.9);
     scene.add(mesh);
-    combs.push({ mesh, angle: rnd() * 6.28, radius: 4 + rnd() * 16, home: -45 - rnd() * 60, phase });
+    combs.push({ mesh, angle: rnd() * 6.28, radius: 4 + rnd() * 16, home: -54 - rnd() * 52, phase });
   }
 
   // ---- Chains of light in the midnight water: long colonies whose glow runs along them in pulses.
@@ -289,16 +292,24 @@ export function buildOcean(): Ocean {
     offsets: Float32Array;
   }
   const shoals: Shoal[] = [];
-  const addShoal = (count: number, y: number, radius: number, speed: number, material: THREE.Material, size: number) => {
+  const addShoal = (count: number, y: number, radius: number, speed: number, material: THREE.Material, size: number, colours?: number[]) => {
     const mesh = new THREE.InstancedMesh(fishGeo, material, count);
     mesh.frustumCulled = false;
     const offsets = new Float32Array(count * 4);
-    for (let i = 0; i < count; i++) offsets.set([(rnd() - 0.5) * 1.5, (rnd() - 0.5) * 5, (rnd() - 0.5) * 4, size * (0.7 + rnd() * 0.6)], i * 4);
+    const tint = new THREE.Color();
+    for (let i = 0; i < count; i++) {
+      offsets.set([(rnd() - 0.5) * (colours ? 6.28 : 1.5), (rnd() - 0.5) * (colours ? 3 : 5), (rnd() - 0.5) * 4, size * (0.7 + rnd() * 0.6)], i * 4);
+      if (colours) mesh.setColorAt(i, tint.set(pick(colours)));
+    }
     scene.add(mesh);
     shoals.push({ mesh, count, y, radius, speed, offsets });
   };
   addShoal(170, -9, 13, 0.16, new THREE.MeshLambertMaterial({ color: 0xbfd8e6, emissive: 0x1a3a4a }), 1.5);
-  addShoal(120, -24, 19, -0.11, new THREE.MeshLambertMaterial({ color: 0xffc070, emissive: 0x402a10 }), 1.2);
+  addShoal(120, -20, 19, -0.11, new THREE.MeshLambertMaterial({ color: 0xffc070, emissive: 0x402a10 }), 1.2);
+  // Reef fish, in every colour, scattered all round just above the coral.
+  const reefFish = [0xffd23a, 0xff7a3a, 0x39b6ff, 0xff5aa0, 0x8cff6a, 0xffffff, 0xb07cff];
+  addShoal(110, -28.5, 13, 0.07, new THREE.MeshLambertMaterial({ emissive: 0x202020 }), 0.6, reefFish);
+  addShoal(90, -27, 24, -0.05, new THREE.MeshLambertMaterial({ emissive: 0x202020 }), 0.8, reefFish);
   // Lanternfish: dark bodies that carry their own lights.
   addShoal(150, -72, 15, 0.13, new THREE.MeshBasicMaterial({ color: 0x38d8ff }), 0.7);
   addShoal(110, -112, 12, -0.09, new THREE.MeshBasicMaterial({ color: 0x7affb0 }), 0.6);
@@ -386,18 +397,22 @@ export function buildOcean(): Ocean {
   }
 
   // ---- The seafloor: dark hills threaded with veins of light, and gardens of glowing stalks.
-  const floorY = (x: number, z: number) => FLOOR + fbm(x * 0.03 + 9, z * 0.03 + 9, 3) * 9;
+  // Level in the middle, where she comes to rest, with hills rising round it.
+  const floorY = (x: number, z: number) => FLOOR + fbm(x * 0.03 + 9, z * 0.03 + 9, 3) * 9 * step01(4, 30, Math.hypot(x, z));
   const floorGeo = new THREE.PlaneGeometry(260, 260, 130, 130).rotateX(-Math.PI / 2);
   const fp = floorGeo.attributes.position;
   for (let i = 0; i < fp.count; i++) fp.setY(i, floorY(fp.getX(i), fp.getZ(i)));
   floorGeo.computeVertexNormals();
   const floorUniforms = { uTime, uPulses: speckUniforms.uPulses };
-  scene.add(
-    new THREE.Mesh(
-      floorGeo,
-      new THREE.ShaderMaterial({
+  const floorMat = new THREE.ShaderMaterial({
         uniforms: floorUniforms,
-        vertexShader: `varying vec3 vW; varying vec3 vN; varying float vDist; void main() { vW = (modelMatrix * vec4(position, 1.0)).xyz; vN = normal; vec4 mv = viewMatrix * vec4(vW, 1.0); vDist = length(mv.xyz); gl_Position = projectionMatrix * mv; }`,
+        vertexShader: `varying vec3 vW; varying vec3 vN; varying float vDist; void main() {
+          #ifdef USE_INSTANCING
+            vW = (modelMatrix * instanceMatrix * vec4(position, 1.0)).xyz;
+          #else
+            vW = (modelMatrix * vec4(position, 1.0)).xyz;
+          #endif
+          vN = normal; vec4 mv = viewMatrix * vec4(vW, 1.0); vDist = length(mv.xyz); gl_Position = projectionMatrix * mv; }`,
         fragmentShader: /* glsl */ `
           uniform float uTime;
           uniform vec4 uPulses[4];
@@ -428,9 +443,8 @@ export function buildOcean(): Ocean {
             vec3 c = vec3(0.006, 0.014, 0.028) * (0.5 + vN.y) + hue * vein * run * 1.3;
             gl_FragColor = vec4(c * exp(-vDist * 0.026), 1.0);
           }`,
-      }),
-    ),
-  );
+      });
+  scene.add(new THREE.Mesh(floorGeo, floorMat));
   {
     const STALKS = 520;
     const stems = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.03, 0.06, 1, 6).translate(0, 0.5, 0), new THREE.MeshLambertMaterial({ color: 0x14202c }), STALKS);
@@ -452,6 +466,359 @@ export function buildOcean(): Ocean {
       tips.setColorAt(i, tint.set(hues[clump % hues.length]).multiplyScalar(0.5 + rnd() * 0.5));
     }
     scene.add(stems, tips);
+  }
+
+
+  // ================= The coral reef: a first floor, about thirty units down =================
+  // It rings a "blue hole": she settles among the coral, then sinks on through the opening.
+  const REEF = -32;
+  const HOLE = 7;
+  const reefY = (x: number, z: number) => REEF + fbm(x * 0.06 + 3, z * 0.06 + 3, 3) * 3.5 + step01(10, 46, Math.hypot(x, z)) * 5;
+  const CAUSTIC = /* glsl */ `
+    // The net of light that the waves throw onto everything beneath them.
+    float caustic(vec2 p, float t) {
+      float c = 0.0;
+      for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        vec2 q = p * (0.35 + fi * 0.22) + vec2(t * 0.25 * (fi + 1.0), -t * 0.2);
+        c += abs(sin(q.x + sin(q.y * 1.3 + t * 0.4)) * sin(q.y + sin(q.x * 1.1 - t * 0.3)));
+      }
+      return pow(1.0 - c / 3.0, 4.0) * 3.0;
+    }`;
+  const SURFACES = [
+    // 0: brain coral, a maze of winding grooves
+    `float g = sin(vWp.x * 15.0 + sin(vWp.z * 11.0 + vWp.y * 8.0) * 2.2) * sin(vWp.z * 15.0 + sin(vWp.y * 11.0 + vWp.x * 8.0) * 2.2);
+     float pat = 0.68 + 0.4 * smoothstep(-0.7, 0.7, g);`,
+    // 1: polyps, a skin of small pale dots
+    `float pat = 0.72 + 0.6 * smoothstep(0.34, 0.1, length(fract(vWp * 5.0) - 0.5));`,
+    // 2: plate coral, fine crossing ridges
+    `float pat = 0.72 + 0.4 * sin((vWp.x + vWp.z) * 17.0) * sin((vWp.x - vWp.z) * 17.0);`,
+    // 3: sand, in ripples, with scattered grains
+    `float pat = 0.86 + 0.14 * sin(vWp.x * 3.0 + sin(vWp.z * 1.3) * 2.0) + 0.1 * step(0.96, fract(sin(dot(floor(vWp.xz * 9.0), vec2(12.9898, 78.233))) * 43758.5453));`,
+    // 4: plain
+    `float pat = 1.0;`,
+  ];
+  /** A lit material with one of those surfaces painted on, moving light from the waves, and an optional sway. */
+  const reefMat = (surface: number, opts: THREE.MeshLambertMaterialParameters = {}, sway = 0) => {
+    const m = new THREE.MeshLambertMaterial(opts);
+    m.customProgramCacheKey = () => `reef:${surface}:${sway}`;
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.uTime = uTime;
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nuniform float uTime;\nvarying vec3 vWp;')
+        .replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
+          #ifdef USE_INSTANCING
+            float swayPhase = instanceMatrix[3].x * 1.3 + instanceMatrix[3].z * 1.7;
+            float bend = position.y * position.y * ${sway.toFixed(3)};
+            transformed.x += sin(uTime * 1.3 + swayPhase) * bend;
+            transformed.z += cos(uTime * 1.1 + swayPhase) * bend * 0.6;
+            vWp = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
+          #else
+            vWp = (modelMatrix * vec4(transformed, 1.0)).xyz;
+          #endif`,
+        );
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', `#include <common>\nuniform float uTime;\nvarying vec3 vWp;\n${CAUSTIC}`)
+        .replace('#include <color_fragment>', `#include <color_fragment>\n${SURFACES[surface]}\ndiffuseColor.rgb *= pat * (0.74 + caustic(vWp.xz, uTime) * 0.42);`);
+    };
+    return m;
+  };
+
+  // The reef bed: a wide ring of rippled sand, with the hole in its middle.
+  {
+    const rings = 56;
+    const around = 96;
+    const pos: number[] = [];
+    const idx: number[] = [];
+    for (let i = 0; i <= rings; i++) {
+      const r = HOLE + Math.pow(i / rings, 1.7) * 150;
+      for (let k = 0; k <= around; k++) {
+        const a = (k / around) * Math.PI * 2;
+        const x = Math.cos(a) * r;
+        const z = Math.sin(a) * r;
+        pos.push(x, reefY(x, z), z);
+      }
+    }
+    for (let i = 0; i < rings; i++) {
+      for (let k = 0; k < around; k++) {
+        const a = i * (around + 1) + k;
+        idx.push(a, a + 1, a + around + 1, a + 1, a + around + 2, a + around + 1);
+      }
+    }
+    const bed = new THREE.BufferGeometry();
+    bed.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    bed.setIndex(idx);
+    bed.computeVertexNormals();
+    scene.add(new THREE.Mesh(bed, reefMat(3, { color: 0xc9b98e })));
+    // The throat of the hole, and the dark underside of the reef seen from below.
+    // A short throat of dark rock: its top meets the sand, and it opens out below.
+    const throat = new THREE.Mesh(new THREE.CylinderGeometry(HOLE, HOLE * 1.15, 9, 56, 1, true), reefMat(3, { color: 0x3c4650, side: THREE.BackSide }));
+    throat.position.y = REEF + 1.2 - 4.5;
+    const under = new THREE.Mesh(new THREE.RingGeometry(HOLE * 1.15, 150, 64, 1).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x04121e }));
+    under.position.y = REEF + 1.2 - 9;
+    scene.add(throat, under);
+  }
+
+  {
+    const CORAL = [0xff6f91, 0xff9671, 0xffc75f, 0xf9f871, 0x9a6ee0, 0x00c9a7, 0xd65db1, 0x3a8ff0, 0xff8066, 0xf4f0e6];
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler();
+    const v = new THREE.Vector3();
+    const sc = new THREE.Vector3();
+    const tint = new THREE.Color();
+    /** A place on the reef, more often near the hole, where she will be looking. */
+    const place = (inner = 8.5, reach = 40): [number, number, number] => {
+      const a = rnd() * Math.PI * 2;
+      const r = inner + Math.pow(rnd(), 1.6) * reach;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      return [x, reefY(x, z), z];
+    };
+    const instanced = (geo: THREE.BufferGeometry, mat: THREE.Material, count: number) => {
+      const mesh = new THREE.InstancedMesh(geo, mat, count);
+      mesh.frustumCulled = false;
+      scene.add(mesh);
+      return mesh;
+    };
+    const set = (mesh: THREE.InstancedMesh, i: number, x: number, y: number, z: number, sx: number, sy: number, sz: number, rx = 0, ry = 0, rz = 0, colour?: number) => {
+      mesh.setMatrixAt(i, m.compose(v.set(x, y, z), q.setFromEuler(e.set(rx, ry, rz)), sc.set(sx, sy, sz)));
+      if (colour !== undefined) mesh.setColorAt(i, tint.set(colour));
+    };
+
+    // Brain corals: great rounded boulders, grooved like a maze.
+    const brains = instanced(new THREE.SphereGeometry(1, 24, 16), reefMat(0), 70);
+    for (let i = 0; i < 70; i++) {
+      const [x, y, z] = place();
+      const k = 0.5 + rnd() * 1.4;
+      set(brains, i, x, y + k * 0.2, z, k, k * 0.7, k, 0, rnd() * 6.28, 0, pick(CORAL));
+    }
+
+    // Staghorn: thickets of branching fingers.
+    const BRANCHES = 9;
+    const stags = instanced(new THREE.ConeGeometry(0.1, 1, 6).translate(0, 0.5, 0), reefMat(1), 110 * BRANCHES);
+    for (let i = 0; i < 110; i++) {
+      const [x, y, z] = place();
+      const colour = pick(CORAL);
+      const k = 0.7 + rnd() * 0.9;
+      for (let b = 0; b < BRANCHES; b++) set(stags, i * BRANCHES + b, x + (rnd() - 0.5) * 0.5 * k, y - 0.05, z + (rnd() - 0.5) * 0.5 * k, k, k * (0.6 + rnd() * 1.1), k, (rnd() - 0.5) * 1.3, rnd() * 6.28, (rnd() - 0.5) * 1.3, colour);
+    }
+
+    // Table corals: wide plates on short stalks, layered like shelves.
+    const plates = instanced(new THREE.CylinderGeometry(1, 0.7, 0.14, 24), reefMat(2), 60);
+    const stalks = instanced(new THREE.CylinderGeometry(0.16, 0.26, 1, 8).translate(0, 0.5, 0), reefMat(4), 60);
+    for (let i = 0; i < 60; i++) {
+      const [x, y, z] = place();
+      const k = 0.7 + rnd() * 1.5;
+      const h = 0.35 + rnd() * 0.9;
+      const colour = pick(CORAL);
+      set(stalks, i, x, y - 0.1, z, k * 0.8, h + 0.1, k * 0.8, 0, 0, 0, colour);
+      set(plates, i, x, y + h, z, k, 1, k, (rnd() - 0.5) * 0.25, rnd() * 6.28, (rnd() - 0.5) * 0.25, colour);
+    }
+
+    // Tube sponges: clusters of open pipes.
+    const tubes = instanced(new THREE.CylinderGeometry(0.17, 0.12, 1, 12, 1, true).translate(0, 0.5, 0), reefMat(1, { side: THREE.DoubleSide }), 55 * 4);
+    for (let i = 0; i < 55; i++) {
+      const [x, y, z] = place();
+      const colour = pick([0xffc75f, 0xb07cff, 0xff8066, 0x39c8ff]);
+      for (let b = 0; b < 4; b++) {
+        const k = 0.7 + rnd() * 0.8;
+        set(tubes, i * 4 + b, x + (rnd() - 0.5) * 0.7, y - 0.05, z + (rnd() - 0.5) * 0.7, k, 0.8 + rnd() * 1.6, k, (rnd() - 0.5) * 0.3, 0, (rnd() - 0.5) * 0.3, colour);
+      }
+    }
+
+    // Anemones: rings of soft tentacles, waving in the current.
+    const ARMS = 16;
+    const arms = instanced(new THREE.CylinderGeometry(0.03, 0.055, 1, 5).translate(0, 0.5, 0), reefMat(4, { emissive: 0x181018 }, 0.3), 50 * ARMS);
+    for (let i = 0; i < 50; i++) {
+      const [x, y, z] = place();
+      const colour = pick([0xff5aa0, 0xffd0e8, 0x8cffd0, 0xffb05a, 0xc9a2ff]);
+      for (let b = 0; b < ARMS; b++) {
+        const a = (b / ARMS) * 6.28;
+        const ring = 0.1 + (b % 2) * 0.12;
+        set(arms, i * ARMS + b, x + Math.cos(a) * ring, y, z + Math.sin(a) * ring, 1, 0.5 + rnd() * 0.5, 1, Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5, colour);
+      }
+    }
+
+    // Sea fans: flat lace, drawn branch by branch, swaying.
+    const lace = document.createElement('canvas');
+    lace.width = lace.height = 256;
+    const lg = lace.getContext('2d')!;
+    lg.strokeStyle = '#ffffff';
+    lg.lineCap = 'round';
+    const branch = (x: number, y: number, angle: number, len: number, width: number) => {
+      if (len < 7) return;
+      const x2 = x + Math.sin(angle) * len;
+      const y2 = y - Math.cos(angle) * len;
+      lg.lineWidth = width;
+      lg.beginPath();
+      lg.moveTo(x, y);
+      lg.lineTo(x2, y2);
+      lg.stroke();
+      branch(x2, y2, angle - 0.42 - rnd() * 0.15, len * 0.76, width * 0.72);
+      branch(x2, y2, angle + 0.42 + rnd() * 0.15, len * 0.76, width * 0.72);
+      if (rnd() < 0.5) branch(x2, y2, angle + (rnd() - 0.5) * 0.3, len * 0.7, width * 0.7);
+    };
+    branch(128, 254, 0, 58, 9);
+    const laceMap = new THREE.CanvasTexture(lace);
+    const fans = instanced(new THREE.PlaneGeometry(1, 1, 1, 6).translate(0, 0.5, 0), reefMat(4, { map: laceMap, alphaTest: 0.35, side: THREE.DoubleSide, emissive: 0x201018 }, 0.1), 60);
+    for (let i = 0; i < 60; i++) {
+      const [x, y, z] = place();
+      const k = 1.2 + rnd() * 2.2;
+      set(fans, i, x, y - 0.1, z, k, k, k, 0, rnd() * 6.28, 0, pick([0xff5a7a, 0xb07cff, 0xffa53a, 0xff8ad8]));
+    }
+
+    // Seagrass in drifts, and starfish on the sand.
+    const grass = instanced(new THREE.PlaneGeometry(0.13, 1, 1, 5).translate(0, 0.5, 0), reefMat(4, { side: THREE.DoubleSide }, 0.55), 900);
+    for (let i = 0; i < 900; i++) {
+      const patch = Math.floor(rnd() * 26);
+      const pa = patch * 2.4;
+      const pr = 9 + ((patch * 13) % 34);
+      const x = Math.cos(pa) * pr + (rnd() - 0.5) * 6;
+      const z = Math.sin(pa) * pr + (rnd() - 0.5) * 6;
+      if (Math.hypot(x, z) < HOLE + 1) continue;
+      set(grass, i, x, reefY(x, z) - 0.05, z, 1, 0.8 + rnd() * 1.7, 1, 0, rnd() * 6.28, 0, pick([0x3fae6a, 0x6fd07a, 0x2f9a6a]));
+    }
+    const star = new THREE.Shape();
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 ? 0.14 : 0.36;
+      const a = (i / 10) * Math.PI * 2;
+      if (i) star.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      else star.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+    }
+    const stars = instanced(new THREE.ExtrudeGeometry(star, { depth: 0.07, bevelEnabled: false }).rotateX(-Math.PI / 2), reefMat(1), 46);
+    for (let i = 0; i < 46; i++) {
+      const [x, y, z] = place(8.5, 30);
+      const k = 0.7 + rnd() * 0.9;
+      set(stars, i, x, y + 0.04, z, k, 1, k, 0, rnd() * 6.28, 0, pick([0xff7a3a, 0xff4f6a, 0xb07cff, 0xffc75f]));
+    }
+  }
+
+  // ================= More on the deep floor =================
+  {
+    const m = new THREE.Matrix4();
+    const v = new THREE.Vector3();
+    const q = new THREE.Quaternion();
+    const sc = new THREE.Vector3();
+    const tint = new THREE.Color();
+    // Spires of rock, veined with the same light as the floor they rise from.
+    const spires = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 7).translate(0, 0.5, 0), floorMat, 54);
+    spires.frustumCulled = false;
+    for (let i = 0; i < 54; i++) {
+      const a = rnd() * 6.28;
+      const r = 13 + rnd() * 80;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      spires.setMatrixAt(i, m.compose(v.set(x, floorY(x, z) - 0.5, z), q.identity(), sc.set(0.8 + rnd() * 2, 3 + rnd() * 10, 0.8 + rnd() * 2)));
+    }
+    scene.add(spires);
+
+    // Vents: chimneys with fire in their throats, breathing out shimmering plumes, ringed with tube worms.
+    const VENTS = 6;
+    const PUFFS = 80;
+    const WORMS = 46;
+    const chimney = new THREE.LatheGeometry([[1.4, 0], [0.95, 1.6], [0.7, 3.2], [0.45, 4.6], [0.55, 5]].map(([r, y]) => new THREE.Vector2(r, y)), 14);
+    const chimneys = new THREE.InstancedMesh(chimney, floorMat, VENTS);
+    const throats = new THREE.InstancedMesh(new THREE.SphereGeometry(0.42, 12, 10), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.6, 0.12) }), VENTS);
+    const wormTubes = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.05, 0.065, 1, 6).translate(0, 0.5, 0), new THREE.MeshBasicMaterial({ color: 0x4a4c48 }), VENTS * WORMS);
+    const wormPlumes = new THREE.InstancedMesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff3a3a }), VENTS * WORMS);
+    const base = new Float32Array(VENTS * PUFFS * 3);
+    const puffSeed = new Float32Array(VENTS * PUFFS);
+    for (let i = 0; i < VENTS; i++) {
+      const a = (i / VENTS) * 6.28 + rnd();
+      const r = 11 + rnd() * 20;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      const y = floorY(x, z) - 0.3;
+      const k = 0.8 + rnd() * 0.7;
+      chimneys.setMatrixAt(i, m.compose(v.set(x, y, z), q.identity(), sc.set(k, k, k)));
+      throats.setMatrixAt(i, m.compose(v.set(x, y + 4.9 * k, z), q.identity(), sc.set(k, k, k)));
+      for (let p = 0; p < PUFFS; p++) {
+        base.set([x, y + 5 * k, z], (i * PUFFS + p) * 3);
+        puffSeed[i * PUFFS + p] = rnd();
+      }
+      for (let w = 0; w < WORMS; w++) {
+        const wa = rnd() * 6.28;
+        const wr = 1.5 * k + rnd() * 2.6;
+        const wx = x + Math.cos(wa) * wr;
+        const wz = z + Math.sin(wa) * wr;
+        const h = 0.5 + rnd() * 1.6;
+        const wy = floorY(wx, wz) - 0.1;
+        wormTubes.setMatrixAt(i * WORMS + w, m.compose(v.set(wx, wy, wz), q.identity(), sc.set(1, h, 1)));
+        wormPlumes.setMatrixAt(i * WORMS + w, m.compose(v.set(wx, wy + h + 0.05, wz), q.identity(), sc.set(1, 1.8, 1)));
+      }
+    }
+    for (const mesh of [chimneys, throats, wormTubes, wormPlumes]) {
+      mesh.frustumCulled = false;
+      scene.add(mesh);
+    }
+    const plumeGeo = new THREE.BufferGeometry();
+    plumeGeo.setAttribute('position', new THREE.BufferAttribute(base, 3));
+    plumeGeo.setAttribute('aSeed', new THREE.BufferAttribute(puffSeed, 1));
+    const plume = new THREE.Points(
+      plumeGeo,
+      glow({
+        uniforms: { uTime, uScale: speckUniforms.uScale },
+        vertexShader: /* glsl */ `
+          attribute float aSeed;
+          uniform float uTime;
+          uniform float uScale;
+          varying vec3 vCol;
+          void main() {
+            float t = fract(uTime * 0.11 + aSeed);
+            vec3 p = position + vec3(sin(aSeed * 40.0 + t * 6.0) * t * 1.8, t * 15.0, cos(aSeed * 31.0 + t * 5.0) * t * 1.8);
+            vec4 mv = modelViewMatrix * vec4(p, 1.0);
+            // Hot and orange at the mouth, cooling to a faint blue haze as it climbs.
+            vCol = mix(vec3(1.0, 0.45, 0.1), vec3(0.2, 0.35, 0.5), smoothstep(0.0, 0.5, t)) * (1.0 - t) * 0.55 * exp(-length(mv.xyz) * 0.03);
+            gl_PointSize = uScale * (0.3 + t * 1.4) / -mv.z;
+            gl_Position = projectionMatrix * mv;
+          }`,
+        fragmentShader: `varying vec3 vCol; void main() { float d = length(gl_PointCoord - 0.5); gl_FragColor = vec4(vCol * smoothstep(0.5, 0.0, d), 1.0); }`,
+      }),
+    );
+    plume.frustumCulled = false;
+    scene.add(plume);
+
+    // Sea pens: tall glowing feathers standing in the mud.
+    const quill = document.createElement('canvas');
+    quill.width = 128;
+    quill.height = 256;
+    const qg = quill.getContext('2d')!;
+    qg.strokeStyle = '#ffffff';
+    qg.lineCap = 'round';
+    qg.lineWidth = 5;
+    qg.beginPath();
+    qg.moveTo(64, 254);
+    qg.lineTo(64, 14);
+    qg.stroke();
+    qg.lineWidth = 3;
+    for (let y = 40; y < 236; y += 9) {
+      const reach = 54 * Math.sin(((y - 30) / 210) * Math.PI);
+      for (const side of [1, -1]) {
+        qg.beginPath();
+        qg.moveTo(64, y);
+        qg.quadraticCurveTo(64 + side * reach * 0.6, y - 6, 64 + side * reach, y - 22);
+        qg.stroke();
+      }
+    }
+    const pens = new THREE.InstancedMesh(
+      new THREE.PlaneGeometry(0.5, 1).translate(0, 0.5, 0),
+      new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(quill), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }),
+      90,
+    );
+    pens.frustumCulled = false;
+    for (let i = 0; i < 90; i++) {
+      const a = rnd() * 6.28;
+      const r = 6 + Math.pow(rnd(), 1.4) * 55;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      const h = 1.6 + rnd() * 3.4;
+      pens.setMatrixAt(i, m.compose(v.set(x, floorY(x, z) - 0.1, z), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rnd() * 6.28), sc.set(h, h, h)));
+      pens.setColorAt(i, tint.set(pick([0x5affe0, 0xff6ad0, 0x8a8cff, 0xffd86a, 0x6ad0ff])).multiplyScalar(0.55));
+    }
+    scene.add(pens);
   }
 
   const pointer = { ray: new THREE.Ray(), pressed: false };
@@ -478,18 +845,18 @@ export function buildOcean(): Ocean {
         best.flash.value = 1;
         best.kick = 1;
         startPulse(best.group.position.x, best.group.position.y, best.group.position.z, uTime.value);
-        return 'jelly';
+        return { kind: 'jelly', note: Math.round((1 - (best.size - 0.6) / 1.5) * 9) };
       }
       for (const a of anglers) {
         if (ray.distanceToPoint(a.group.position) < 2.6) {
           a.flare = 1;
-          return 'angler';
+          return { kind: 'angler', note: 0 };
         }
       }
       // Open water: a wave of light spreads from the spot.
       ray.at(12, hit);
       startPulse(hit.x, hit.y, hit.z, uTime.value);
-      return 'water';
+      return { kind: 'water', note: Math.floor(Math.random() * 5) };
     },
     point(ray, pressed) {
       pointer.ray.copy(ray);
@@ -536,6 +903,7 @@ export function buildOcean(): Ocean {
         j.flash.value = Math.max(0, j.flash.value - dt * 1.2);
         if (j.kick > 0) j.home += dt * 5 * j.kick;
         j.home = Math.min(j.home, -3);
+        if (j.home > -44 && j.home < -24) j.home = -44; // a jellyfish jetting upward stops under the reef
         // Each beat of the bell lifts it a little; between beats it sinks.
         const y = j.home + Math.sin(time * 0.21 + j.phase) * 3 + Math.sin(time * 1.6 + j.phase) * 0.18;
         j.group.position.set(Math.cos(j.angle) * j.radius, y, Math.sin(j.angle) * j.radius);
@@ -562,7 +930,8 @@ export function buildOcean(): Ocean {
             if (gap < 3.5 && gap > 0.001) dummy.position.addScaledVector(off, (-(3.5 - gap) / gap) * (pointer.pressed ? 1 : 0.5));
           }
           const dir = s.speed > 0 ? 1 : -1;
-          dummy.rotation.set(0, -a + (dir > 0 ? Math.PI : 0) + Math.sin(time * 9 + i) * 0.12, 0);
+          // Nose first: a fish circling one way faces along its path, and the other way faces back along it.
+          dummy.rotation.set(0, -a + (dir > 0 ? 0 : Math.PI) + Math.sin(time * 9 + i) * 0.12, 0);
           dummy.scale.setScalar(o[i * 4 + 3]);
           dummy.updateMatrix();
           s.mesh.setMatrixAt(i, dummy.matrix);
