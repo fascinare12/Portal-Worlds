@@ -171,7 +171,7 @@ const waterFragment = /* glsl */ `
     return c;
   }
 
-  // What you see when you lean over the Prussian-blue pool: a sheet of cream paper on which a
+  // What you see when you lean over the parchment pool: its surface is a sheet of cream paper on which a
   // woodblock print is being made, one block at a time. First the black outlines, then a pale
   // wash, then deep blue, then the last few colours; it is admired, lifted away, and begun again.
   vec3 printPicture(vec2 p, float t) {
@@ -308,7 +308,14 @@ const waterFragment = /* glsl */ `
       vec2 p = vec2(dot(off, across), dot(off, away)) / uRadius;
       p += 0.012 * vec2(sin(p.y * 18.0 + uTime * 1.3), cos(p.x * 16.0 + uTime * 1.1)); // seen through water
       float window = smoothstep(1.0, 0.72, length(p)) * uReveal;
-      col = mix(col, uScene > 3.5 ? printPicture(p, uTime) : uScene > 2.5 ? seaPicture(p, uTime) : uScene > 1.5 ? kanjiPicture(p, uTime) : desertPicture(p, uTime), window);
+      if (uScene > 3.5) {
+        // The parchment pool has no window: the pool itself is the sheet, and the print's inks
+        // soak into its surface, right out to the bank, with the water still showing through.
+        vec3 ink = printPicture(p * 0.56, uTime) / vec3(0.94, 0.90, 0.79);
+        col = mix(col, col * ink, smoothstep(1.95, 1.6, length(p)) * uReveal);
+      } else {
+        col = mix(col, uScene > 2.5 ? seaPicture(p, uTime) : uScene > 1.5 ? kanjiPicture(p, uTime) : desertPicture(p, uTime), window);
+      }
     }
     // The red pool has koi in it, circling just under the surface.
     if (uScene > 1.5 && uScene < 2.5) col = koi(col, vPos / uRadius, uTime);

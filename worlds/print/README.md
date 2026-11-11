@@ -1,6 +1,6 @@
 # The Printer's World
 
-The world behind the Prussian-blue pool in the wood. **Not built yet**: for now
+The world behind the parchment-coloured pool in the wood. **Not built yet**: for now
 the pool leads to a bare sheet of cream paper with only the outline block
 printed, and a button home.
 
@@ -15,7 +15,7 @@ small figures caught mid-action, all flat.
 
 ## The pool
 
-Looking into the pool in the wood shows the same idea in small: a sheet of
-paper on which a print of the mountain, the sea and a boat is made block by
+Looking into the pool in the wood shows the same idea in small: the pool's
+own surface is the sheet, and on it a print of the mountain, the sea and a boat is made block by
 block, admired, lifted away and begun again. That picture is drawn in
 `src/world/pools.ts` (`printPicture`).
