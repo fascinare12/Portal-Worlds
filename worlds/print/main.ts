@@ -88,8 +88,15 @@ const keys = new Set<string>();
 function hasMoved(): void {
   if (moved) return;
   moved = true;
-  $('hint').style.opacity = '0';
+  const hint = $('hint');
+  hint.style.opacity = '0';
+  setTimeout(() => hint.remove(), 900);
 }
+// The hint is only for the very start: it goes at the first touch, key or scroll of any kind,
+// or by itself after a few seconds, and is not shown at all on a sheet she has already begun.
+for (const kind of ['pointerdown', 'keydown', 'wheel']) window.addEventListener(kind, hasMoved, { once: true, passive: true });
+setTimeout(hasMoved, 7000);
+if (localStorage.getItem(KEY) && !params.has('fresh')) hasMoved();
 function walkTo(x: number, z: number): void {
   const r = Math.hypot(x, z);
   const k = r > REACH ? REACH / r : 1;
