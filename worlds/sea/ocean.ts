@@ -292,6 +292,7 @@ export function buildOcean(): Ocean {
     radius: number;
     speed: number;
     offsets: Float32Array;
+    state: Float32Array;
   }
   const shoals: Shoal[] = [];
   // `scatter` spreads a shoal right round the reef, as reef fish live, instead of bunching it.
@@ -301,7 +302,11 @@ export function buildOcean(): Ocean {
     const offsets = new Float32Array(count * 4);
     for (let i = 0; i < count; i++) offsets.set([(rnd() - 0.5) * (scatter ? 6.28 : 1.5), (rnd() - 0.5) * (scatter ? 3.5 : 5), (rnd() - 0.5) * (scatter ? 12 : 4), size * (0.7 + rnd() * 0.6)], i * 4);
     scene.add(mesh);
-    shoals.push({ mesh, count, y, radius, speed, offsets });
+    // Each fish keeps its own place on the circle, its own pace, and how long it stays startled,
+    // so one can dart ahead or wheel round while its neighbours swim on.
+    const state = new Float32Array(count * 5); // angle, pace, pace wanted, time left startled, sideways dodge
+    for (let i = 0; i < count; i++) state.set([offsets[i * 4], 1, 1, 0, 0], i * 5);
+    shoals.push({ mesh, count, y, radius, speed, offsets, state });
   };
   addShoal(170, -9, 13, 0.16, new THREE.MeshLambertMaterial({ color: 0xbfd8e6, emissive: 0x1a3a4a }), 1.5);
   addShoal(120, -20, 19, -0.11, new THREE.MeshLambertMaterial({ color: 0xffc070, emissive: 0x402a10 }), 1.2);
@@ -507,6 +512,8 @@ export function buildOcean(): Ocean {
   // It rings a "blue hole": she settles among the coral, then sinks on through the opening.
   const REEF = -32;
   const HOLE = 7;
+  /** The edge of the hole is not a clean circle: it bulges and bites in as it goes round. */
+  const holeR = (a: number) => HOLE * (1 + 0.15 * Math.sin(a * 2 + 0.6) + 0.1 * Math.sin(a * 3 + 2.1) + 0.06 * Math.sin(a * 5 + 4.2) + 0.03 * Math.sin(a * 9 + 1.3));
   const reefY = (x: number, z: number) => REEF + fbm(x * 0.06 + 3, z * 0.06 + 3, 3) * 3.5 + step01(10, 46, Math.hypot(x, z)) * 5;
   const CAUSTIC = /* glsl */ `
     // The net of light that the waves throw onto everything beneath them.
@@ -594,9 +601,9 @@ export function buildOcean(): Ocean {
     const pos: number[] = [];
     const idx: number[] = [];
     for (let i = 0; i <= rings; i++) {
-      const r = HOLE + Math.pow(i / rings, 1.7) * 150;
       for (let k = 0; k <= around; k++) {
         const a = (k / around) * Math.PI * 2;
+        const r = holeR(a) + Math.pow(i / rings, 1.7) * 150;
         const x = Math.cos(a) * r;
         const z = Math.sin(a) * r;
         pos.push(x, reefY(x, z), z);
@@ -617,7 +624,22 @@ export function buildOcean(): Ocean {
     // A short throat of dark rock: its top meets the sand, and it opens out below.
     const throat = new THREE.Mesh(new THREE.CylinderGeometry(HOLE, HOLE * 1.15, 9, 56, 1, true), reefMat(3, { color: 0x3c4650, side: THREE.BackSide }));
     throat.position.y = REEF + 1.2 - 4.5;
+    // Both follow the hole's ragged outline.
+    const ragged = (g: THREE.BufferGeometry, within: number) => {
+      const gp = g.attributes.position;
+      for (let i = 0; i < gp.count; i++) {
+        const x = gp.getX(i);
+        const z = gp.getZ(i);
+        if (Math.hypot(x, z) > within) continue;
+        const f = holeR(Math.atan2(z, x)) / HOLE;
+        gp.setX(i, x * f);
+        gp.setZ(i, z * f);
+      }
+      g.computeVertexNormals();
+    };
+    ragged(throat.geometry, 20);
     const under = new THREE.Mesh(new THREE.RingGeometry(HOLE * 1.15, 150, 64, 1).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x04121e }));
+    ragged(under.geometry, 20);
     under.position.y = REEF + 1.2 - 9;
     scene.add(throat, under);
   }
@@ -634,7 +656,7 @@ export function buildOcean(): Ocean {
     /** A place on the reef, more often near the hole, where she will be looking. */
     const place = (inner = 8.5, reach = 40): [number, number, number] => {
       const a = rnd() * Math.PI * 2;
-      const r = inner + Math.pow(rnd(), 1.6) * reach;
+      const r = holeR(a) + inner - HOLE + Math.pow(rnd(), 1.6) * reach;
       const x = Math.cos(a) * r;
       const z = Math.sin(a) * r;
       return [x, reefY(x, z), z];
@@ -780,7 +802,7 @@ export function buildOcean(): Ocean {
       const pr = 9 + ((patch * 13) % 34);
       const x = Math.cos(pa) * pr + (rnd() - 0.5) * 6;
       const z = Math.sin(pa) * pr + (rnd() - 0.5) * 6;
-      if (Math.hypot(x, z) < HOLE + 1) continue;
+      if (Math.hypot(x, z) < holeR(Math.atan2(z, x)) + 1) continue;
       set(grass, i, x, reefY(x, z) - 0.05, z, 1, 0.8 + rnd() * 1.7, 1, 0, rnd() * 6.28, 0, pick([0x3fae6a, 0x6fd07a, 0x2f9a6a]));
     }
     const star = new THREE.Shape();
@@ -804,9 +826,26 @@ export function buildOcean(): Ocean {
     const v = new THREE.Vector3();
     const q = new THREE.Quaternion();
     const sc = new THREE.Vector3();
+    const v2 = new THREE.Vector3();
     const tint = new THREE.Color();
     // Spires of rock, veined with the same light as the floor they rise from.
-    const spires = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 7).translate(0, 0.5, 0), floorMat, 54);
+    // Rock worn lumpy and blunt: no clean cones, no points.
+    const lumpy = (g: THREE.BufferGeometry, amount: number) => {
+      const gp = g.attributes.position;
+      for (let i = 0; i < gp.count; i++) {
+        const x = gp.getX(i);
+        const y = gp.getY(i);
+        const z = gp.getZ(i);
+        const a = Math.atan2(z, x);
+        const f = 1 + amount * (Math.sin(a * 3 + y * 7) + 0.6 * Math.sin(a * 5 - y * 13 + 2));
+        gp.setX(i, x * f);
+        gp.setZ(i, z * f);
+      }
+      g.computeVertexNormals();
+      return g;
+    };
+    const turned = (profile: number[][], around: number) => new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(r, y)), around);
+    const spires = new THREE.InstancedMesh(lumpy(turned([[1, 0], [0.82, 0.3], [0.7, 0.6], [0.6, 0.82], [0.46, 0.94], [0.25, 1], [0.001, 1.01]], 10), 0.09), floorMat, 54);
     spires.frustumCulled = false;
     for (let i = 0; i < 54; i++) {
       const a = rnd() * 6.28;
@@ -817,17 +856,20 @@ export function buildOcean(): Ocean {
     }
     scene.add(spires);
 
-    // Vents: chimneys with fire in their throats, breathing out shimmering plumes, ringed with tube worms.
-    const VENTS = 6;
+    // Vents: blunt, open-mouthed chimneys ringed with tube worms. A few have fire in their throats;
+    // most only smoke, pouring out slow grey billows.
+    const VENTS = 10;
+    const hot = (i: number) => i % 3 === 0;
     const PUFFS = 80;
     const WORMS = 46;
-    const chimney = new THREE.LatheGeometry([[1.4, 0], [0.95, 1.6], [0.7, 3.2], [0.45, 4.6], [0.55, 5]].map(([r, y]) => new THREE.Vector2(r, y)), 14);
+    const chimney = lumpy(turned([[1.5, 0], [1.1, 1.5], [0.9, 3], [0.78, 4.2], [0.86, 4.75], [0.8, 5], [0.6, 5.02], [0.45, 4.7], [0.4, 4.2]], 16), 0.05);
     const chimneys = new THREE.InstancedMesh(chimney, floorMat, VENTS);
     const throats = new THREE.InstancedMesh(new THREE.SphereGeometry(0.42, 12, 10), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.6, 0.12) }), VENTS);
     const wormTubes = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.05, 0.065, 1, 6).translate(0, 0.5, 0), new THREE.MeshBasicMaterial({ color: 0x4a4c48 }), VENTS * WORMS);
     const wormPlumes = new THREE.InstancedMesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff3a3a }), VENTS * WORMS);
     const base = new Float32Array(VENTS * PUFFS * 3);
     const puffSeed = new Float32Array(VENTS * PUFFS);
+    const puffKind = new Float32Array(VENTS * PUFFS); // 0 = fire-lit, 1 = smoke
     for (let i = 0; i < VENTS; i++) {
       const a = (i / VENTS) * 6.28 + rnd();
       const r = 11 + rnd() * 20;
@@ -835,11 +877,14 @@ export function buildOcean(): Ocean {
       const z = Math.sin(a) * r;
       const y = floorY(x, z) - 0.3;
       const k = 0.8 + rnd() * 0.7;
-      chimneys.setMatrixAt(i, m.compose(v.set(x, y, z), q.identity(), sc.set(k, k, k)));
-      throats.setMatrixAt(i, m.compose(v.set(x, y + 4.9 * k, z), q.identity(), sc.set(k, k, k)));
+      const tall = k * (0.6 + rnd() * 0.7);
+      chimneys.setMatrixAt(i, m.compose(v.set(x, y, z), q.setFromAxisAngle(v2.set(0, 1, 0), rnd() * 6.28), sc.set(k, tall, k)));
+      const fire = hot(i) ? k : 0; // a smoking vent's throat is dark
+      throats.setMatrixAt(i, m.compose(v.set(x, y + 4.6 * tall, z), q.identity(), sc.set(fire, fire, fire)));
       for (let p = 0; p < PUFFS; p++) {
-        base.set([x, y + 5 * k, z], (i * PUFFS + p) * 3);
+        base.set([x, y + 4.9 * tall, z], (i * PUFFS + p) * 3);
         puffSeed[i * PUFFS + p] = rnd();
+        puffKind[i * PUFFS + p] = hot(i) ? 0 : 1;
       }
       for (let w = 0; w < WORMS; w++) {
         const wa = rnd() * 6.28;
@@ -859,22 +904,31 @@ export function buildOcean(): Ocean {
     const plumeGeo = new THREE.BufferGeometry();
     plumeGeo.setAttribute('position', new THREE.BufferAttribute(base, 3));
     plumeGeo.setAttribute('aSeed', new THREE.BufferAttribute(puffSeed, 1));
+    plumeGeo.setAttribute('aKind', new THREE.BufferAttribute(puffKind, 1));
     const plume = new THREE.Points(
       plumeGeo,
       glow({
         uniforms: { uTime, uScale: speckUniforms.uScale },
         vertexShader: /* glsl */ `
           attribute float aSeed;
+          attribute float aKind;
           uniform float uTime;
           uniform float uScale;
           varying vec3 vCol;
           void main() {
-            float t = fract(uTime * 0.11 + aSeed);
-            vec3 p = position + vec3(sin(aSeed * 40.0 + t * 6.0) * t * 1.8, t * 15.0, cos(aSeed * 31.0 + t * 5.0) * t * 1.8);
+            // Smoke climbs more slowly than fire-lit water, and billows wider.
+            float t = fract(uTime * mix(0.11, 0.06, aKind) + aSeed);
+            float wide = mix(1.8, 3.4, aKind);
+            vec3 p = position + vec3(sin(aSeed * 40.0 + t * 6.0) * t * wide, t * mix(15.0, 19.0, aKind), cos(aSeed * 31.0 + t * 5.0) * t * wide);
             vec4 mv = modelViewMatrix * vec4(p, 1.0);
-            // Hot and orange at the mouth, cooling to a faint blue haze as it climbs.
-            vCol = mix(vec3(1.0, 0.45, 0.1), vec3(0.2, 0.35, 0.5), smoothstep(0.0, 0.5, t)) * (1.0 - t) * 0.55 * exp(-length(mv.xyz) * 0.03);
-            gl_PointSize = uScale * (0.3 + t * 1.4) / -mv.z;
+            // Fire: hot and orange at the mouth, cooling to a faint blue haze as it climbs.
+            vec3 fire = mix(vec3(1.0, 0.45, 0.1), vec3(0.2, 0.35, 0.5), smoothstep(0.0, 0.5, t)) * 0.55;
+            // Smoke: grey all the way up, thickest just above the mouth.
+            vec3 smoke = mix(vec3(0.30, 0.31, 0.33), vec3(0.16, 0.2, 0.25), t) * 0.5;
+            // Seen from close by, smoke thins out instead of whiting out the view.
+            float near = mix(1.0, smoothstep(2.0, 16.0, length(mv.xyz)), aKind);
+            vCol = mix(fire, smoke * 0.6, aKind) * (1.0 - t) * near * exp(-length(mv.xyz) * 0.03);
+            gl_PointSize = min(uScale * mix(0.3 + t * 1.4, 0.5 + t * 1.8, aKind) / -mv.z, mix(400.0, 70.0, aKind));
             gl_Position = projectionMatrix * mv;
           }`,
         fragmentShader: `varying vec3 vCol; void main() { float d = length(gl_PointCoord - 0.5); gl_FragColor = vec4(vCol * smoothstep(0.5, 0.0, d), 1.0); }`,
@@ -1021,19 +1075,42 @@ export function buildOcean(): Ocean {
       for (const s of shoals) {
         for (let i = 0; i < s.count; i++) {
           const o = s.offsets;
-          const a = time * s.speed + o[i * 4] + Math.sin(time * 0.6 + i) * 0.03;
-          const r = s.radius + o[i * 4 + 2] + Math.sin(a * 3 + i) * 0.6;
+          const st = s.state;
+          const n = i * 5;
+          const dir = s.speed > 0 ? 1 : -1;
+          // Startled fish settle back to their usual pace; a pace below zero is a fish swimming back the way it came.
+          st[n + 3] = Math.max(0, st[n + 3] - dt);
+          if (st[n + 3] === 0) st[n + 2] = 1;
+          st[n + 1] += (st[n + 2] - st[n + 1]) * Math.min(1, dt * (st[n + 3] > 0 ? 5 : 1.4));
+          st[n] += dt * s.speed * st[n + 1];
+          st[n + 4] *= Math.max(0, 1 - dt * 0.8);
+          const a = st[n] + Math.sin(time * 0.6 + i) * 0.03;
+          const r = s.radius + o[i * 4 + 2] + Math.sin(a * 3 + i) * 0.6 + st[n + 4];
           dummy.position.set(Math.cos(a) * r, s.y + o[i * 4 + 1] + Math.sin(a * 2 + i * 0.3) * 1.2, Math.sin(a) * r);
-          // The shoal opens round a finger held in the water.
+          // A finger in the water startles the fish near it. One that sees it ahead wheels round and
+          // darts back; one that has it alongside or behind bolts forward.
           const along = pointer.ray.direction.dot(hit.copy(dummy.position).sub(pointer.ray.origin));
           if (along > 0) {
             const off = hit.copy(pointer.ray.origin).addScaledVector(pointer.ray.direction, along).sub(dummy.position);
             const gap = off.length();
-            if (gap < 3.5 && gap > 0.001) dummy.position.addScaledVector(off, (-(3.5 - gap) / gap) * (pointer.pressed ? 1 : 0.5));
+            const reach = pointer.pressed ? 4.5 : 3.2;
+            if (gap < reach) {
+              // Edge away from it too, gently, rather than swimming straight through.
+              const outward = (off.x * Math.cos(a) + off.z * Math.sin(a)) / (gap + 0.001);
+              st[n + 4] = Math.max(-2.5, Math.min(2.5, st[n + 4] - outward * dt * 5));
+              if (st[n + 3] < 0.25) {
+                const ahead = (-Math.sin(a) * off.x + Math.cos(a) * off.z) * dir * (st[n + 1] < 0 ? -1 : 1) > 0;
+                const dash = Math.min(9, Math.max(3, 7 / (Math.abs(s.speed) * r)));
+                const facing = st[n + 1] < 0 ? -1 : 1;
+                st[n + 2] = (ahead ? -facing : facing) * dash * (ahead ? 0.75 : 1);
+                st[n + 3] = 0.9 + ((i * 7) % 10) * 0.08;
+              }
+            }
           }
-          const dir = s.speed > 0 ? 1 : -1;
           // Nose first: a fish circling one way faces along its path, and the other way faces back along it.
-          dummy.rotation.set(0, -a + (dir > 0 ? 0 : Math.PI) + Math.sin(time * 9 + i) * 0.12, 0);
+          // As its pace passes through nothing it swings round, alternate fish turning opposite ways.
+          const swing = Math.min(1, Math.max(0, 0.5 - st[n + 1] * 1.2)) * Math.PI * (i % 2 ? 1 : -1);
+          dummy.rotation.set(0, -a + (dir > 0 ? 0 : Math.PI) + swing + Math.sin(time * 9 + i) * (0.12 + Math.min(0.2, Math.abs(st[n + 1] - 1) * 0.04)), 0);
           dummy.scale.setScalar(o[i * 4 + 3]);
           dummy.updateMatrix();
           s.mesh.setMatrixAt(i, dummy.matrix);
