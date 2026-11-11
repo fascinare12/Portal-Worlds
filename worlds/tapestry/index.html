@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Portal Worlds: The Tapestry</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #d9cdb0; -webkit-user-select: none; user-select: none; font-family: Georgia, 'Times New Roman', serif; color: #3b302b; }
+      canvas { display: block; position: fixed; left: 0; top: 0; touch-action: none; cursor: grab; }
+      button { border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; font: inherit; color: inherit; }
+      #veil { position: fixed; inset: 0; pointer-events: none; background: #d98a1e; opacity: 1; transition: opacity 1.8s ease; z-index: 9; }
+      #veil.open { opacity: 0; }
+      /* All the buttons live on the desk, so that nothing sits over the cloth. */
+      .round { width: 40px; height: 40px; border-radius: 50%; flex: none; }
+      #home { background: radial-gradient(circle, #fff 0%, #8fd49a 45%, #4f9a5c 100%); box-shadow: 0 0 10px #8fd49a; }
+      #sound { background: #e6dcc2; box-shadow: inset 0 0 0 2px #3b302b; font-size: 18px; }
+      #fresh { background: #e6dcc2; box-shadow: inset 0 0 0 2px #3b302b; font-size: 11px; letter-spacing: 0.03em; }
+
+      /* The scribe's desk: where the account is read and the questions are answered. */
+      #desk { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; display: flex; flex-direction: column; background: #f1e9d3; box-shadow: 0 -3px 0 #3b302b, 0 -7px 0 #b0502c; }
+      #bar { display: flex; align-items: center; gap: 7px; padding: 8px 10px 6px; border-bottom: 1px solid rgba(59, 48, 43, 0.25); }
+      #bar .nav { width: 40px; height: 40px; border-radius: 50%; background: #e6dcc2; box-shadow: inset 0 0 0 2px #3b302b; font-size: 18px; flex: none; }
+      #bar .nav:disabled { opacity: 0.3; cursor: default; }
+      #where { flex: 1; min-width: 0; text-align: center; line-height: 1.2; }
+      #where b { display: block; font-size: 19px; letter-spacing: 0.02em; }
+      #where span { font-size: 13px; opacity: 0.75; font-style: italic; }
+      #page { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px max(14px, calc(50% - 400px)) 18px; font-size: 17px; line-height: 1.5; -webkit-user-select: text; user-select: text; }
+      #page p { margin: 0 0 9px; }
+      #page .latin { font-variant: small-caps; letter-spacing: 0.06em; color: #2a3a55; margin-bottom: 2px; }
+      #page .means { font-style: italic; opacity: 0.8; margin-bottom: 10px; }
+      #page .source { font-size: 14px; font-style: italic; opacity: 0.75; border-left: 3px solid #c4963a; padding-left: 9px; margin: 10px 0 12px; }
+      #page .ask { font-size: 19px; font-weight: 600; margin: 4px 0 10px; }
+      #page .voice { font-variant: small-caps; letter-spacing: 0.08em; color: #b0502c; font-weight: 600; margin-bottom: 4px; }
+      .go, .pick { display: block; width: 100%; text-align: left; padding: 11px 14px; margin: 7px 0; border-radius: 6px; background: #e6dcc2; box-shadow: inset 0 0 0 2px #3b302b; font-size: 17px; line-height: 1.35; }
+      .go { text-align: center; background: #2a3a55; color: #f1e9d3; box-shadow: none; font-weight: 600; letter-spacing: 0.03em; }
+      .go.quiet { background: #e6dcc2; color: #3b302b; box-shadow: inset 0 0 0 2px #3b302b; }
+      .pick:disabled { opacity: 0.4; text-decoration: line-through; cursor: default; }
+      .pick.done::after { content: ' ✓'; color: #7c8a55; font-weight: 700; }
+      /* The creature from the border, leaning in with a hint. */
+      .hint { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0 2px; padding: 9px 12px; border-radius: 6px; background: #f7e8c2; box-shadow: inset 0 0 0 2px #c4963a; font-style: italic; }
+      .hint i { flex: none; font-style: normal; font-size: 26px; line-height: 1; }
+      .dots { display: flex; gap: 6px; margin: 0 0 8px; }
+      .dots i { width: 22px; height: 6px; border-radius: 3px; background: rgba(59, 48, 43, 0.2); }
+      .dots i.on { background: #b0502c; }
+      .tally { font-size: 14px; opacity: 0.75; margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <canvas id="cloth"></canvas>
+    <div id="desk">
+      <div id="bar">
+        <button id="home" class="round" aria-label="Back to the wood"></button>
+        <button class="nav" id="back" aria-label="The panel before">◀</button>
+        <div id="where"></div>
+        <button class="nav" id="next" aria-label="The panel after">▶</button>
+        <button id="fresh" class="round" aria-label="Start again on bare linen">new</button>
+        <button id="sound" class="round" aria-label="Sound on or off">♪</button>
+      </div>
+      <div id="page"></div>
+    </div>
+    <div id="veil"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
