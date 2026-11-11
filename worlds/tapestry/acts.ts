@@ -17,6 +17,7 @@
  * shuffled before being shown.
  */
 
+import { ROME } from './rome';
 import { NORTHMEN } from './vikings';
 
 export interface Question {
@@ -84,7 +85,7 @@ export interface Act {
   latin: string;
   meaning: string;
   /** Whose art the borders and beasts are taken from. */
-  style: 'norse' | 'bayeux';
+  style: 'roman' | 'norse' | 'bayeux';
   /** Told to the player once, at the head of the act: what the pictures here are modelled on. */
   modelled: string;
   /** Said when the whole act is stitched. */
@@ -580,6 +581,17 @@ const ANNO: PanelData[] = [
 ];
 
 export const ACTS: Act[] = [
+  {
+    numeral: 'I',
+    title: 'Rome\'s Shadow',
+    latin: 'Umbra Romae',
+    meaning: 'The shadow of Rome',
+    style: 'roman',
+    modelled:
+      'There is no tapestry of these events. Where a real line survives, the caption over a panel quotes it in its own language, Latin or Greek: rest the pointer on a caption, or tap it, to see what it says and where it is from. The pictures are stitched like the rest of the cloth, but borrow from Roman and eastern art: the key-pattern borders of Roman floors, temples and aqueducts, the eagles, dolphins and peacocks of mosaics, and the gold haloes and domes of Constantinople.',
+    closing: 'from an empire round a sea to the half of it that carried on. The Northmen come next.',
+    panels: ROME,
+  },
   {
     numeral: 'II',
     title: 'The Viking Thread',

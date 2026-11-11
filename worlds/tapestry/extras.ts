@@ -15,6 +15,15 @@
  */
 
 export const ODD: Record<string, string> = {
+  rome: 'The Romans made concrete that set hard even under water. The dome of the Pantheon in Rome, built of it about the year 126, is still the largest dome of plain concrete in the world.',
+  fall: 'The last emperor in the west was a boy whose name joined the founder of Rome and its first emperor: Romulus Augustus. People called him Augustulus, "little Augustus".',
+  legacy: 'The months of September, October, November and December are named "seventh", "eighth", "ninth" and "tenth" in Latin. They are now the ninth to twelfth, because the Roman year once began in March.',
+  church: 'Bede tells a story of Gregory seeing fair-haired slave boys for sale in Rome and asking who they were. Told they were Angles, he said they had the faces of angels. It is a pun in Latin, and Bede says it is why he sent the mission to England.',
+  monks: 'Monks who copied books sometimes wrote complaints in the margins, which survive: "Oh, my hand." "Thank God, it will soon be dark." "Writing is excessive drudgery."',
+  time: 'Dionysius, who invented counting years from the birth of Jesus, called himself Dionysius Exiguus: "Dennis the Small". Most scholars think he got the year wrong, and that Jesus was born a few years "before Christ".',
+  charlemagne: 'Charlemagne ruled half of Europe and could not write. Einhard says he kept wax tablets under his pillow to practise his letters at night, but had started too late in life and never got far.',
+  byzantium: 'A visitor from Italy in 949 described the emperor\'s throne room in Constantinople: gilded lions that roared, metal birds that sang in a metal tree, and a throne that rose into the air while he was bowing. (Liudprand of Cremona.)',
+  justinian: 'Silk was a Chinese secret. Procopius says two monks smuggled silkworm eggs to Justinian from the east, hidden inside hollow walking canes.',
   northmen: 'Vikings did not wear horned helmets. Not one has ever been found. The horns were invented in the 1800s, for artists and opera costumes.',
   lindisfarne: 'The Northmen were notably clean. An English chronicler (John of Wallingford, writing much later) grumbled that the Danes combed their hair every day and bathed every Saturday, and that English women liked them for it. In the Scandinavian languages Saturday is still "washing day".',
   east: 'Ibn Fadlan also reports how the Rus washed each morning: all from one bowl of water, passed from man to man, each blowing his nose in it before handing it on. He was not impressed.',
@@ -51,6 +60,63 @@ export interface Poke {
 }
 
 export const POKES: Record<string, Poke[]> = {
+  rome: [
+    { x: 350, h: 250, say: 'All roads lead to me. I checked.' },
+    { x: 478, h: 216, say: 'Twenty-five years of this, then they give you a farm.' },
+    { x: 170, h: 340, w: 260, kind: 'thing', say: 'I am a temple. In a few centuries I shall be a church.' },
+    { x: 875, h: 240, w: 220, kind: 'thing', say: 'Fresh water, downhill, for forty miles. You are welcome.' },
+  ],
+  fall: [
+    { t: 0, x: 140, h: 232, say: 'We did ask nicely first. For years.' },
+    { t: 0, x: 220, h: 200, say: 'Eight hundred years without a break-in!' },
+    { t: 0, x: 380, h: 300, w: 240, kind: 'thing', say: 'I was built to keep them out. Nobody is perfect.' },
+    { t: 1, x: 202, y: 72, h: 232, say: 'New king. Same laws. Do carry on.' },
+    { t: 1, x: 340, h: 220, say: 'Same job as before. Different beard on the boss.' },
+  ],
+  legacy: [
+    { x: 290, h: 214, say: 'Who built this road? No idea. Good road, though.' },
+    { x: 430, h: 120, kind: 'horse', say: 'Straight for miles. The Romans did not believe in corners.' },
+    { x: 910, y: 130, h: 110, w: 120, kind: 'thing', say: 'A, B, C. Still in use, I see.' },
+    { x: 720, h: 300, w: 200, kind: 'thing', say: 'Londinium. Lutetia. Eboracum. You know us by other names.' },
+  ],
+  church: [
+    { x: 330, h: 250, say: 'I asked to be a monk. They made me Pope instead.' },
+    { x: 470, h: 200, say: 'The emperor is a thousand miles off. The bishop has bread.' },
+    { x: 850, y: 60, h: 150, say: 'England. They say it rains. We shall see.' },
+  ],
+  monks: [
+    { x: 420, y: 6, h: 214, say: 'Oh, my hand.' },
+    { x: 640, y: 6, h: 214, say: 'Three hundred pages to go. Thank God, it will soon be dark.' },
+    { x: 860, y: 130, h: 80, w: 190, kind: 'thing', say: 'Six books. That is a large library.' },
+    { x: 150, h: 360, w: 240, kind: 'thing', say: 'Stone walls, a full cellar, and no guards. What could go wrong?' },
+  ],
+  time: [
+    { x: 120, h: 214, say: 'A tenth of the barley. Every year. I counted.' },
+    { x: 270, h: 130, say: 'Is it a holy day? Do we get the day off?' },
+    { x: 690, h: 226, say: 'I baptise them, marry them and bury them. In that order, ideally.' },
+    { x: 880, y: 236, h: 130, w: 130, kind: 'thing', say: 'It is the year 525. I have just decided.' },
+  ],
+  charlemagne: [
+    { t: 0, x: 180, h: 250, say: 'Emperor of the Romans. I am a Frank. Nobody mention it.' },
+    { t: 0, x: 270, h: 236, say: 'There. Now remember who gave you that.' },
+    { t: 0, x: 394, h: 200, say: 'Life and victory! (They told us what to shout.)' },
+    { t: 1, x: 300, h: 236, say: 'What? No. I only came in to pray.' },
+    { t: 1, x: 180, h: 236, say: 'Quietly now. He will thank me later.' },
+  ],
+  byzantium: [
+    { x: 820, y: 150, h: 160, say: 'Byzantine? Never heard of them. We are Romans.' },
+    { x: 520, y: 150, h: 150, say: 'Three walls and a moat. Do come and try.' },
+    { x: 660, y: 150, h: 270, w: 280, kind: 'thing', say: 'The largest city in the Christian world. For about eight hundred years.' },
+    { x: 160, y: 44, h: 170, w: 250, kind: 'thing', say: 'Europe on the left, Asia on the right, taxes in the middle.' },
+  ],
+  justinian: [
+    { t: 0, x: 90, h: 250, say: 'All the law there is, in one book. A big book.' },
+    { t: 0, x: 200, h: 236, say: 'Run if you like. I am staying.' },
+    { t: 0, x: 340, h: 350, w: 290, kind: 'thing', say: 'Five years to build. The dome fell in once. We do not talk about it.' },
+    { t: 1, x: 220, h: 250, say: 'Has anyone seen my head?' },
+    { t: 1, x: 330, y: 270, h: 80, w: 60, kind: 'thing', say: 'Up here.' },
+    { t: 1, x: 70, y: 6, h: 196, say: 'I shall publish this later. Much later.' },
+  ],
   northmen: [
     { x: 110, h: 222, say: 'I farm. Mostly. Summers are... different.' },
     { x: 240, h: 205, say: 'Someone has to run the farm while they are off "viking".' },
@@ -216,7 +282,7 @@ export const BEASTS: { name: string; about: string }[] = [
   { name: 'A ribbon-beast', about: 'Tied itself in a knot in about 950 and cannot remember how to get out.' },
 ];
 /** How many panels must be finished before each beast joins the collection. */
-export const BEAST_AT = [1, 3, 5, 7, 10, 13, 16, 20];
+export const BEAST_AT = [1, 3, 6, 9, 13, 17, 22, 29];
 
 export const BIRD_SAYS = [
   'That was my answer too! Which is how I know it is wrong.',

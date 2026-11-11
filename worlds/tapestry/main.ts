@@ -3,7 +3,7 @@ import type { Panel, Question } from './acts';
 import { BEASTS, BEAST_AT, BIRD_SAYS, GAGS, LION_SAYS, ODD, POKES, SPARE_GAGS, WYRM_SAYS } from './extras';
 import type { Poke } from './extras';
 import runesUrl from './fonts/runes.woff2';
-import { GAG_ART, GROUND, SCENES, braid, creature, garnish } from './scenes';
+import { GAG_ART, GROUND, SCENES, braid, creature, garnish, meander } from './scenes';
 import { LINEN, Stitcher } from './stitch';
 import type { Box, Mode, Stitch } from './stitch';
 import linenUrl from './textures/linen.webp';
@@ -51,13 +51,18 @@ function restore(): void {
       kept = saved.kept ?? {};
       const at = PANELS.findIndex((p) => p.id === saved.focusId);
       // A cloth begun when 1066 was the only act remembers its place by number within that act.
-      const old = typeof saved.focus === 'number' ? ACTS[1].panels[Math.min(saved.focus, ACTS[1].panels.length - 1)].id : '';
+      const year = ACTS.find((a) => a.style === 'bayeux')!.panels;
+      const old = typeof saved.focus === 'number' ? year[Math.min(saved.focus, year.length - 1)].id : '';
       focus = at >= 0 ? at : Math.max(0, PANELS.findIndex((p) => p.id === old));
     }
   } catch {
     // nothing kept, or it cannot be read: begin on bare linen
   }
+  // The cloth now begins with Rome. A cloth begun before that act existed is opened there once,
+  // so that she starts at the beginning; after that it opens wherever she left it.
+  const newRome = !kept[PANELS[0].id];
   for (const p of PANELS) if (!kept[p.id] || kept[p.id].parts.length !== p.tellings.length) kept[p.id] = blank(p);
+  if (newRome) focus = 0;
   // For looking at the finished cloth while developing: ?all stitches everything, ?at=4 opens on that panel.
   if (params.has('all')) for (const p of PANELS) kept[p.id] = { parts: p.tellings.map((t) => t.questions.length), weighed: true, done: true, first: 0, asked: 0 };
   if (params.has('at')) focus = Math.min(PANELS.length - 1, Number(params.get('at')) || 0);
@@ -98,7 +103,8 @@ interface Drawn {
 const drawn = new Map<number, Drawn>();
 const beastsOf = (index: number): number[] => {
   const p = PANELS[index];
-  const kinds = ACTS[p.act].style === 'norse' ? [5, 6, 7, 2, 4] : [0, 1, 2, 3, 4];
+  const style = ACTS[p.act].style;
+  const kinds = style === 'roman' ? [8, 9, 10, 11, 4] : style === 'norse' ? [5, 6, 7, 2, 4] : [0, 1, 2, 3, 4];
   return Array.from({ length: BEAST_PLACES }, (_, i) => kept[p.id].border?.[i] ?? kinds[(index * 3 + i * 2) % kinds.length]);
 };
 
@@ -117,9 +123,12 @@ function drawPanel(index: number, mode: Mode, record?: Stitch[]): HTMLCanvasElem
   cg.save();
   cg.scale(scale, scale);
   // Each act borrows its borders and beasts from the people it is about.
-  const norse = ACTS[p.act].style === 'norse';
+  const style = ACTS[p.act].style;
+  const norse = style === 'norse';
+  const roman = style === 'roman';
   // The top border: the caption, between two ruled lines.
-  if (norse) braid(K, 0, PW, top - 7, 3.4);
+  if (roman) meander(K, 0, PW, top - 8, 4);
+  else if (norse) braid(K, 0, PW, top - 7, 3.4);
   else K.line([[0, top - 6], [PW, top - 6]], 'terracotta', 2.6, false);
   K.line([[0, 7], [PW, 7]], 'navy', 2.2, false);
   if (p.script === 'arabic') K.words(p.caption, PW / 2, top * 0.5, Math.min(30, top * 0.5), 'center', PW - 60, 'serif', true);
@@ -144,7 +153,8 @@ function drawPanel(index: number, mode: Mode, record?: Stitch[]): HTMLCanvasElem
   // The bottom border: beasts, with slanting bars or knots between them.
   cg.save();
   cg.translate(0, top + PH);
-  if (norse) braid(K, 0, PW, 7, 3.4);
+  if (roman) meander(K, 0, PW, 8, 4);
+  else if (norse) braid(K, 0, PW, 7, 3.4);
   else K.line([[0, 6], [PW, 6]], 'terracotta', 2.6, false);
   K.line([[0, top - 7], [PW, top - 7]], 'navy', 2.2, false);
   const kinds = beastsOf(index);
@@ -153,7 +163,11 @@ function drawPanel(index: number, mode: Mode, record?: Stitch[]): HTMLCanvasElem
     K.reseed(index * 31 + i);
     creature(K, kinds[i], cx, top * 0.52, top * 0.62);
     const sx = cx + PW / BEAST_PLACES / 2;
-    if (norse) {
+    if (roman) {
+      // Between the beasts, a little column.
+      K.shape([[sx - 5, top - 12], [sx - 4, 16], [sx + 4, 16], [sx + 5, top - 12]], 'buff', 'dark', false);
+      K.line([[sx - 9, 15], [sx + 9, 15]], 'ochre', 3, false);
+    } else if (norse) {
       K.oval(sx - 6, top * 0.52, 9, top * 0.26, null, i % 2 ? 'teal' : 'ochre', 0.5);
       K.oval(sx + 6, top * 0.52, 9, top * 0.26, null, i % 2 ? 'ochre' : 'teal', -0.5);
     } else K.line([[sx - 14, top - 10], [sx + 14, 9]], i % 2 ? 'teal' : 'ochre', 3, false);
