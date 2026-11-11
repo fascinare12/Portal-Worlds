@@ -142,8 +142,14 @@ stitched it, and what it leaves out.
 
 ## What is remembered
 
-In this browser only: which parts of which panels are stitched, and how many
-questions were answered right at the first attempt.
+In this browser only, and saved after every right answer and every move along
+the cloth: which parts of which panels are stitched, how many questions were
+answered right at the first attempt, which beasts she has put in which
+borders, whether the runes are decoded, and which panel she was on.
+
+The chips at the top of the desk jump to any act; the first panel of each is
+always open. To start again, press the lion button: at the foot of that page
+are **Unpick only this act** and **Unpick the whole cloth**.
 
 ## Files
 
