@@ -11,9 +11,7 @@ import furUrl from '../../textures/fur.webp';
  * freezes with its ears pricked when it hears something in the grass, leaps
  * high and dives nose-first at it, then curls up with its tail over its nose
  * for a nap. When it wakes it stretches, trots to the water and jumps in.
- *
- * In the old stories a fox grows more tails as it grows wiser. This one has a
- * tail for every five words learned in the city, up to nine.
+
  */
 
 const SIZE = 2.1;
@@ -26,15 +24,6 @@ type Stage = 'away' | 'emerge' | 'shake' | 'trot' | 'listen' | 'crouch' | 'pounc
 export interface Fox {
   group: THREE.Group;
   update(dt: number): void;
-}
-
-function tailsEarned(): number {
-  try {
-    const saved = JSON.parse(localStorage.getItem('portal-worlds-shibuya-v1') ?? '{}') as { tagged?: string[] };
-    return Math.min(9, 1 + Math.floor((saved.tagged?.length ?? 0) / 5));
-  } catch {
-    return 1;
-  }
 }
 
 function turnToward(from: number, to: number, amount: number): number {
@@ -132,7 +121,7 @@ export function createFox(pool: Pool, stirPool: () => void): Fox {
 
   // Tails: each a chain of three soft segments, so a movement at the root ripples out to the tip.
   const tails: { joints: THREE.Group[]; fan: number }[] = [];
-  const count = tailsEarned();
+  const count = 1;
   for (let i = 0; i < count; i++) {
     const joints: THREE.Group[] = [];
     let parent: THREE.Object3D = body;
