@@ -15,6 +15,7 @@ export default defineConfig({
         shibuya: resolve(__dirname, 'worlds/shibuya/index.html'),
         sea: resolve(__dirname, 'worlds/sea/index.html'),
         print: resolve(__dirname, 'worlds/print/index.html'),
+        tapestry: resolve(__dirname, 'worlds/tapestry/index.html'),
       },
     },
   },

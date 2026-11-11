@@ -235,6 +235,57 @@ const waterFragment = /* glsl */ `
     return mix(c, paper, lifted);
   }
 
+  // What you see when you lean over the golden pool: a strip of linen with a ruled border
+  // above and below, and between them a rank of soldiers behind long shields, being embroidered
+  // one after another in coloured wool as the cloth slides by.
+  vec3 tapestryPicture(vec2 p, float t) {
+    float weave = 0.965 + 0.035 * sin(p.x * 230.0) * sin(p.y * 230.0);
+    vec3 linen = vec3(0.90, 0.86, 0.76) * weave * (0.95 + 0.08 * texture2D(uNoise, p * 1.3).r);
+    vec3 dark = vec3(0.23, 0.19, 0.17);
+    vec3 c = linen;
+    float slide = p.x + t * 0.045;
+    // The borders: two ruled lines each, with slanting bars between them.
+    float edge = abs(p.y);
+    float rule = smoothstep(0.02, 0.008, abs(edge - 0.52)) + smoothstep(0.016, 0.006, abs(edge - 0.8));
+    float bars = smoothstep(0.03, 0.012, abs(fract((slide + p.y * 0.5) * 2.2) - 0.5)) * step(0.54, edge) * step(edge, 0.78);
+    c = mix(c, vec3(0.69, 0.31, 0.17), clamp(rule, 0.0, 1.0) * 0.9);
+    c = mix(c, vec3(0.25, 0.41, 0.40), bars * 0.85);
+    if (edge < 0.5) {
+      // One soldier to each stretch of cloth.
+      float n = floor(slide * 3.0);
+      float u = (fract(slide * 3.0) - 0.5) / 3.0;
+      float v = p.y;
+      // How far the needle has got with this one: it works from the top down, then rests.
+      float done = clamp(fract(t * 0.11 - n * 0.27) * 1.8, 0.0, 1.0);
+      float frontier = 0.5 - done * 1.0;
+      float stitched = step(frontier, v);
+      // A long shield, round at the top and drawn to a point below.
+      float wide = v > 0.08 ? 0.105 * sqrt(max(0.0, 1.0 - pow((v - 0.08) / 0.2, 2.0))) : 0.105 * max(0.0, (v + 0.38) / 0.46);
+      float shield = step(abs(u), wide) * step(-0.38, v) * step(v, 0.28);
+      float rim = smoothstep(0.012, 0.004, abs(abs(u) - wide)) * step(-0.38, v) * step(v, 0.285);
+      float kind = mod(n, 4.0);
+      vec3 wool = kind < 0.5 ? vec3(0.69, 0.31, 0.17) : kind < 1.5 ? vec3(0.25, 0.41, 0.40) : kind < 2.5 ? vec3(0.77, 0.59, 0.23) : vec3(0.16, 0.23, 0.33);
+      wool *= 0.9 + 0.1 * sin((u * 1.7 + v) * 330.0); // the rows of laid thread
+      // His head and pointed helmet above it, and a spear beside.
+      float head = step(length(vec2(u, v - 0.37)), 0.042);
+      float helm = step(abs(u), (0.47 - v) * 0.55) * step(0.39, v) * step(v, 0.47);
+      float spear = smoothstep(0.008, 0.003, abs(u - 0.125)) * step(-0.4, v) * step(v, 0.49);
+      // Before the needle comes, only the under-drawing shows.
+      float sketch = max(rim, max(spear, smoothstep(0.01, 0.004, abs(length(vec2(u, v - 0.37)) - 0.042)))) * 0.28;
+      c = mix(c, dark, sketch * (1.0 - stitched));
+      c = mix(c, vec3(0.85, 0.74, 0.56), head * stitched);
+      c = mix(c, vec3(0.77, 0.59, 0.23), helm * stitched);
+      c = mix(c, wool, shield * stitched);
+      c = mix(c, vec3(0.77, 0.59, 0.23), step(length(vec2(u, v - 0.1)), 0.02) * stitched);
+      c = mix(c, dark, max(rim, spear) * stitched * 0.9);
+      // The needle itself, at work.
+      float working = step(0.02, done) * step(done, 0.98);
+      vec2 nd = vec2(u - 0.02 * sin(t * 9.0 + n), v - frontier);
+      c = mix(c, dark, working * smoothstep(0.012, 0.004, abs(nd.x + nd.y * 0.6)) * step(abs(nd.y - 0.04), 0.07));
+    }
+    return c;
+  }
+
   // Three koi, white with red and orange patches, swimming round the pool.
   vec3 koi(vec3 col, vec2 p, float t) {
     for (int i = 0; i < 3; i++) {
@@ -308,13 +359,13 @@ const waterFragment = /* glsl */ `
       vec2 p = vec2(dot(off, across), dot(off, away)) / uRadius;
       p += 0.012 * vec2(sin(p.y * 18.0 + uTime * 1.3), cos(p.x * 16.0 + uTime * 1.1)); // seen through water
       float window = smoothstep(1.0, 0.72, length(p)) * uReveal;
-      if (uScene > 3.5) {
+      if (uScene > 3.5 && uScene < 4.5) {
         // The parchment pool has no window: the pool itself is the sheet, and the print's inks
         // soak into its surface, right out to the bank, with the water still showing through.
         vec3 ink = printPicture(p * 0.56, uTime) / vec3(0.94, 0.90, 0.79);
         col = mix(col, col * ink, smoothstep(1.95, 1.6, length(p)) * uReveal);
       } else {
-        col = mix(col, uScene > 2.5 ? seaPicture(p, uTime) : uScene > 1.5 ? kanjiPicture(p, uTime) : desertPicture(p, uTime), window);
+        col = mix(col, uScene > 4.5 ? tapestryPicture(p, uTime) : uScene > 2.5 ? seaPicture(p, uTime) : uScene > 1.5 ? kanjiPicture(p, uTime) : desertPicture(p, uTime), window);
       }
     }
     // The red pool has koi in it, circling just under the surface.

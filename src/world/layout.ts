@@ -18,7 +18,7 @@ export interface Pool {
   open: boolean;
   /** The world this pool leads to, once that world exists: the folder name under worlds/. */
   world?: string;
-  /** The picture seen when looking into the pool: 1 = a pyramid being built, 2 = kanji being sprayed on a wall, 3 = fish circling in dark water, 4 = a woodblock print being made. */
+  /** The picture seen when looking into the pool: 1 = a pyramid being built, 2 = kanji being sprayed on a wall, 3 = fish circling in dark water, 4 = a woodblock print being made, 5 = soldiers being embroidered on linen. */
   scene?: number;
 }
 
@@ -78,6 +78,12 @@ function makePools(): Pool[] {
         p.color = 0xefe6c9;
         p.world = 'print';
         p.scene = 4;
+      }
+      if (i === 12) {
+        // The fifth doorway, the gold of dyed wool: a tapestry of the year 1066, to be finished by a scribe.
+        p.color = 0xd98a1e;
+        p.world = 'tapestry';
+        p.scene = 5;
       }
       // A pool whose world has not been built yet stays dark, like any other; it is given its
       // colour on the day it opens.
