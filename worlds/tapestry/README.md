@@ -4,7 +4,13 @@ The world behind the gold pool in the wood: a long strip of embroidered linen,
 read from left to right, that teaches medieval history. The player is the
 scribe who finishes it.
 
-Two acts are made so far, twenty panels and 67 questions:
+Three acts are made so far, twenty-nine panels and 96 questions. The cloth
+opens on the first:
+
+- **I · Rome's Shadow** (nine panels): the empire at its height; whether Rome
+  fell or changed; what it left behind; the Church stepping in; the monks who
+  kept the books; the Church in everyday life; Charlemagne crowned; the
+  eastern half that carried on; and Justinian, told twice by the same writer.
 
 - **II · The Viking Thread** (eight panels): who the Northmen were, the raid
   on Lindisfarne, the road east to Baghdad's silver, settlement from the
@@ -22,6 +28,9 @@ The scribe, the linen and the stitches are the same throughout. But each act
 borrows its borders and its motifs from the people it is about, and says so
 at its head:
 
+- **Rome's Shadow** has the key-pattern border of Roman floors, little columns
+  between eagles, dolphins, peacocks and lambs, temples and aqueducts, and
+  the gold haloes and domes of Constantinople.
 - **1066** follows the Bayeux Tapestry itself: slanting bars in the borders,
   and its birds, lions, dragons, hounds and fish.
 - **The Viking Thread** has plaited borders, knots between ravens, wolves and
@@ -67,6 +76,12 @@ that it is the scribe's own.
 
 | Panel | Language | From |
 | --- | --- | --- |
+| Rome | Latin | Virgil, the Aeneid |
+| Did Rome fall? | Latin | Jerome, Letter 127 |
+| The Church steps in | Latin | Pope Gregory I's own title |
+| The keepers of books | Latin | the Rule of St Benedict |
+| Charlemagne | Latin | the Royal Frankish Annals |
+| Byzantium; Justinian | Greek | the empire's name for itself; Theodora in Procopius |
 | All of 1066 except two | Latin | the Bayeux Tapestry itself |
 | The raid on Lindisfarne | Old English | the Anglo-Saxon Chronicle, 793 |
 | ...and its second telling | Old Norse, in runes | the Yttergärde rune-stone (U 344) |
@@ -75,7 +90,10 @@ that it is the scribe's own.
 | Rollo | Latin | King Charles's charter of 918 |
 | The rest | Latin | the scribe's own |
 
-How well each is checked: the Old English lines and the rune-stone's reading
+How well each is checked. In Act I: Virgil, the Rule of Benedict, the Frankish
+annals and Einhard were read in the Latin texts themselves; Jerome's line was
+confirmed in translation, and its Latin wording and the Greek of Procopius
+are given as commonly cited. In Act II: the Old English lines and the rune-stone's reading
 were confirmed against search results quoting editions. The charter's wording
 is as scholars cite it. The Arabic line matched the text of the standard
 edition in a search, but the edition itself could not be opened from here.
@@ -91,10 +109,13 @@ A second rune-stone that was wanted could not be confirmed and was left out.
 - There are no colour gradients, because the real cloth has none.
 - Each scene is scattered with birds, plants and stones.
 
-**Whose account?** Five panels are told twice, from sources that disagree:
+**Whose account?** Eight panels are told twice, from sources that disagree:
 
 | Panel | One telling | The other |
 | --- | --- | --- |
+| Did Rome fall? | it fell (Jerome; the archaeology) | it changed (the Gothic kingdoms; modern historians) |
+| Charlemagne crowned | his court's annals: a proud public moment | his friend Einhard: a surprise he disliked |
+| Justinian | Procopius in public: lawgiver and builder | Procopius in secret: a demon with no head |
 | The raid on Lindisfarne | the monks (the Chronicle; Alcuin) | what the Northmen left: no words, only things |
 | Rollo's bargain | Dudo's story, written for Rollo's descendants | a dry charter of 918 |
 | Harold's oath | the Normans (William of Poitiers) | the English (the Chronicle's silence; Eadmer) |
@@ -158,7 +179,7 @@ are **Unpick only this act** and **Unpick the whole cloth**.
 - `acts.ts`: the acts, and the history of 1066. Every caption, account,
   source note, question and hint. The first answer listed for each question
   is the right one.
-- `vikings.ts`: the same for the Viking act.
+- `rome.ts`, `vikings.ts`: the same for Acts I and II.
 - `stitch.ts`: drawing as embroidery, thread by thread, and a record of each
   stitch so that the stitching can be played back.
 - `scenes.ts`: the figures, horses, ships and buildings, the twelve scenes,
@@ -170,6 +191,6 @@ stitched, `?at=6` opens on that panel.
 
 ## Still to make
 
-Acts 1, 4 and 5 of the outline: Rome's shadow; what the Conquest changed; the
-medieval world beyond England. Each will take its borders from its own
+Acts IV and V of the outline: what the Conquest changed; the medieval world
+beyond England. Each will take its borders from its own
 sources, as above.

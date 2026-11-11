@@ -31,6 +31,10 @@ interface Man {
   robe?: boolean;
   /** A wound cloth on the head. */
   turban?: boolean;
+  /** A ring of gold behind the head, as saints and eastern emperors are shown. */
+  halo?: boolean;
+  /** A Roman soldier's crest on the helmet. */
+  crest?: boolean;
   seated?: boolean;
   riding?: boolean;
   arm?: 'point' | 'down' | 'up' | 'forward' | 'oath' | 'face';
@@ -147,6 +151,7 @@ function man(K: Stitcher, x: number, gy: number, h: number, o: Man = {}): void {
   }
 
   // The head, in profile.
+  if (o.halo) K.oval(hx, hy - h * 0.01, h * 0.115, h * 0.115, 'ochre');
   if (o.mail) K.shape([[hx - h * 0.075, hy - h * 0.02], [hx + f * h * 0.03, hy - h * 0.08], [hx + f * h * 0.05, hy + h * 0.09], [hx - f * h * 0.09, hy + h * 0.1]], 'teal');
   K.oval(hx, hy, h * 0.058, h * 0.068, 'buff');
   K.line([[hx + f * h * 0.05, hy - h * 0.01], [hx + f * h * 0.078, hy + h * 0.02], [hx + f * h * 0.05, hy + h * 0.028]], 'dark', 1.3, false); // the nose
@@ -168,6 +173,7 @@ function man(K: Stitcher, x: number, gy: number, h: number, o: Man = {}): void {
   if (o.helmet) {
     K.shape([[hx - h * 0.065, hy - h * 0.02], [hx, hy - h * 0.15], [hx + h * 0.065, hy - h * 0.02]], 'ochre', 'dark', false);
     K.line([[hx + f * h * 0.045, hy - h * 0.03], [hx + f * h * 0.06, hy + h * 0.04]], 'dark', 2.2); // the nose guard
+    if (o.crest) K.line([[hx - h * 0.07, hy - h * 0.1], [hx, hy - h * 0.2], [hx + h * 0.07, hy - h * 0.1]], 'terracotta', h * 0.035);
   }
   if (o.crown) {
     const c: Pt[] = [];
@@ -568,7 +574,7 @@ export const SCENES: Record<string, ((K: Stitcher, x: number, w: number) => void
 /** The creatures that live in the border: one drawn here, facing right, about `s` across. */
 export function creature(K: Stitcher, kind: number, x: number, y: number, s: number): void {
   const at = (dx: number, dy: number): Pt => [x + dx * s, y + dy * s];
-  const kinds = 8;
+  const kinds = 12;
   switch (((kind % kinds) + kinds) % kinds) {
     case 0: // a bird
       K.shape([at(-0.42, 0.05), at(-0.1, -0.22), at(0.22, -0.2), at(0.36, -0.34), at(0.48, -0.26), at(0.4, -0.12), at(0.2, 0.16), at(-0.2, 0.2)], 'teal');
@@ -613,6 +619,37 @@ export function creature(K: Stitcher, kind: number, x: number, y: number, s: num
       K.line([at(-0.56, 0.2), at(-0.3, -0.3), at(0, 0.24), at(0.24, -0.3), at(0.44, 0.0), at(0.2, 0.26), at(-0.1, -0.2), at(-0.4, 0.3)], 'terracotta', s * 0.09);
       K.oval(at(-0.58, 0.22)[0], at(-0.58, 0.22)[1], s * 0.07, s * 0.05, 'terracotta');
       K.oval(at(-0.62, 0.2)[0], at(-0.62, 0.2)[1], s * 0.014, s * 0.014, 'dark', null);
+      break;
+    case 8: // an eagle, wings spread
+      K.shape([at(-0.1, 0.2), at(-0.12, -0.14), at(0, -0.3), at(0.12, -0.14), at(0.1, 0.2)], 'rust');
+      K.shape([at(-0.1, -0.1), at(-0.56, -0.3), at(-0.5, 0.04), at(-0.12, 0.1)], 'ochre');
+      K.shape([at(0.1, -0.1), at(0.56, -0.3), at(0.5, 0.04), at(0.12, 0.1)], 'ochre');
+      K.line([at(0.04, -0.28), at(0.16, -0.22)], 'ochre', 3);
+      K.oval(at(0.02, -0.24)[0], at(0.02, -0.24)[1], s * 0.014, s * 0.014, 'dark', null);
+      K.line([at(-0.05, 0.2), at(-0.08, 0.38)], 'ochre', 2.4);
+      K.line([at(0.05, 0.2), at(0.08, 0.38)], 'ochre', 2.4);
+      break;
+    case 9: // a dolphin, leaping
+      K.shape([at(-0.5, 0.16), at(-0.2, -0.2), at(0.2, -0.26), at(0.5, -0.04), at(0.56, 0.08), at(0.3, 0.02), at(0, 0.1), at(-0.3, 0.3)], 'teal');
+      K.shape([at(-0.5, 0.16), at(-0.66, 0.02), at(-0.56, 0.2), at(-0.64, 0.36)], 'navy');
+      K.shape([at(-0.04, -0.24), at(0.04, -0.44), at(0.14, -0.24)], 'navy');
+      K.oval(at(0.38, -0.06)[0], at(0.38, -0.06)[1], s * 0.016, s * 0.016, 'dark', null);
+      break;
+    case 10: // a peacock
+      K.shape([at(-0.1, 0.1), at(-0.56, -0.36), at(-0.3, -0.42), at(-0.02, -0.14)], 'teal');
+      for (const [dx, dy] of [[-0.44, -0.32], [-0.3, -0.34], [-0.2, -0.2]]) K.oval(at(dx, dy)[0], at(dx, dy)[1], s * 0.04, s * 0.04, 'ochre');
+      K.shape([at(-0.14, 0.14), at(0, -0.1), at(0.2, -0.06), at(0.22, 0.12), at(0.04, 0.2)], 'navy');
+      K.line([at(0.18, -0.06), at(0.3, -0.3)], 'navy', 5);
+      K.oval(at(0.32, -0.34)[0], at(0.32, -0.34)[1], s * 0.05, s * 0.05, 'navy');
+      K.line([at(0.34, -0.38), at(0.34, -0.5)], 'ochre', 1.8);
+      K.line([at(0.04, 0.2), at(0.04, 0.4)], 'ochre', 2);
+      break;
+    case 11: // a lamb
+      K.oval(at(-0.04, 0)[0], at(-0.04, 0)[1], s * 0.34, s * 0.2, 'buff');
+      K.oval(at(0.34, -0.16)[0], at(0.34, -0.16)[1], s * 0.12, s * 0.1, 'buff');
+      for (const dx of [-0.26, -0.12, 0.08, 0.2]) K.line([at(dx, 0.14), at(dx, 0.4)], 'dark', 2.6);
+      K.oval(at(0.38, -0.18)[0], at(0.38, -0.18)[1], s * 0.014, s * 0.014, 'dark', null);
+      K.line([at(0.26, -0.24), at(0.2, -0.32)], 'buff', 3);
       break;
     default: // a fish
       K.shape([at(-0.3, 0), at(-0.05, -0.18), at(0.3, -0.12), at(0.48, 0), at(0.3, 0.12), at(-0.05, 0.18)], 'sage');
@@ -965,3 +1002,227 @@ export const GAG_ART: Record<string, (K: Stitcher) => void> = {
     K.g.restore();
   },
 };
+
+// ---- Act 1: Rome and after. The same stitches, with things borrowed from Roman and eastern buildings and mosaics. ----
+
+/** A temple front: columns under a pediment. */
+function temple(K: Stitcher, x: number, gy: number, w: number, h: number): void {
+  K.shape([[x - w / 2 - 10, gy], [x + w / 2 + 10, gy], [x + w / 2 + 10, gy - h * 0.06], [x - w / 2 - 10, gy - h * 0.06]], 'buff', 'dark', false);
+  const n = Math.max(3, Math.round(w / 46));
+  for (let i = 0; i < n; i++) {
+    const cx = x - w / 2 + 10 + (i / (n - 1)) * (w - 20);
+    K.shape([[cx - 9, gy - h * 0.06], [cx - 7, gy - h * 0.7], [cx + 7, gy - h * 0.7], [cx + 9, gy - h * 0.06]], 'buff', 'dark', false);
+    K.line([[cx, gy - h * 0.1], [cx, gy - h * 0.66]], 'dark', 1, false);
+  }
+  K.shape([[x - w / 2 - 8, gy - h * 0.7], [x + w / 2 + 8, gy - h * 0.7], [x + w / 2 + 8, gy - h * 0.78], [x - w / 2 - 8, gy - h * 0.78]], 'ochre', 'dark', false);
+  K.shape([[x - w / 2 - 12, gy - h * 0.78], [x, gy - h], [x + w / 2 + 12, gy - h * 0.78]], 'terracotta', 'dark', false);
+}
+/** A great domed church. */
+function dome(K: Stitcher, x: number, gy: number, w: number, h: number): void {
+  K.shape([[x - w / 2, gy], [x - w / 2, gy - h * 0.5], [x + w / 2, gy - h * 0.5], [x + w / 2, gy]], 'buff', 'dark', false);
+  for (let i = 0; i < 5; i++) {
+    const ax = x - w / 2 + 14 + i * ((w - 28 - w * 0.1) / 4);
+    K.shape([[ax, gy], [ax, gy - h * 0.26], [ax + w * 0.05, gy - h * 0.34], [ax + w * 0.1, gy - h * 0.26], [ax + w * 0.1, gy]], 'navy', 'dark');
+  }
+  for (const side of [-1, 1]) K.shape([[x + side * w * 0.5, gy - h * 0.5], [x + side * w * 0.36, gy - h * 0.66], [x + side * w * 0.2, gy - h * 0.5]], 'teal');
+  const cap: Pt[] = [];
+  for (let i = 0; i <= 12; i++) cap.push([x - w * 0.3 + (i / 12) * w * 0.6, gy - h * 0.5 - Math.sin((i / 12) * Math.PI) * h * 0.44]);
+  K.shape([...cap], 'ochre');
+  for (let i = 1; i < 6; i++) K.line([[x - w * 0.3 + i * w * 0.1, gy - h * 0.52], [x, gy - h * 0.94]], 'dark', 1, false);
+  K.line([[x, gy - h * 0.94], [x, gy - h * 1.06]], 'dark', 2);
+  K.line([[x - 8, gy - h * 1.02], [x + 8, gy - h * 1.02]], 'dark', 2);
+}
+/** A city wall with towers. */
+function wall(K: Stitcher, x0: number, x1: number, gy: number, h: number, ink: Wool = 'buff'): void {
+  K.shape([[x0, gy], [x0, gy - h], [x1, gy - h], [x1, gy]], ink, 'dark', false);
+  for (let x = x0; x < x1 - 8; x += 26) K.shape([[x, gy - h], [x, gy - h - 14], [x + 14, gy - h - 14], [x + 14, gy - h]], ink, 'dark', false);
+  for (let r = 1; r < 4; r++) K.line([[x0, gy - (h * r) / 4], [x1, gy - (h * r) / 4]], 'dark', 1, false);
+  for (const tx of [x0 + 20, x1 - 20]) {
+    K.shape([[tx - 24, gy], [tx - 24, gy - h * 1.5], [tx + 24, gy - h * 1.5], [tx + 24, gy]], ink, 'dark', false);
+    for (let i = 0; i < 3; i++) K.shape([[tx - 24 + i * 18, gy - h * 1.5], [tx - 24 + i * 18, gy - h * 1.5 - 14], [tx - 12 + i * 18, gy - h * 1.5 - 14], [tx - 12 + i * 18, gy - h * 1.5]], ink, 'dark', false);
+    K.shape([[tx - 8, gy - h * 1.2], [tx - 8, gy - h * 0.95], [tx + 8, gy - h * 0.95], [tx + 8, gy - h * 1.2]], 'navy', 'dark');
+  }
+}
+/** A run of arches, as of an aqueduct. */
+function arches(K: Stitcher, x0: number, n: number, gy: number, w: number, h: number): void {
+  K.shape([[x0, gy - h], [x0 + n * w, gy - h], [x0 + n * w, gy - h * 0.82], [x0, gy - h * 0.82]], 'buff', 'dark', false);
+  for (let i = 0; i <= n; i++) K.shape([[x0 + i * w - 7, gy], [x0 + i * w - 7, gy - h * 0.82], [x0 + i * w + 7, gy - h * 0.82], [x0 + i * w + 7, gy]], 'buff', 'dark', false);
+  for (let i = 0; i < n; i++) K.line([[x0 + i * w + 7, gy - h * 0.6], [x0 + (i + 0.5) * w, gy - h * 0.82], [x0 + (i + 1) * w - 7, gy - h * 0.6]], 'dark', 2.2);
+}
+function flames(K: Stitcher, x: number, y: number, s: number): void {
+  for (let i = 0; i < 4; i++) K.shape([[x - s * 0.5 + i * s * 0.3, y], [x - s * 0.4 + i * s * 0.3, y - s * (0.7 + (i % 2) * 0.5)], [x - s * 0.2 + i * s * 0.3, y - s * 0.3], [x - s * 0.1 + i * s * 0.3, y]], i % 2 ? 'ochre' : 'terracotta');
+}
+/** A paved road running along the ground, with a milestone. */
+function road(K: Stitcher, x0: number, x1: number, gy: number): void {
+  K.shape([[x0, gy + 2], [x1, gy + 2], [x1, gy + 20], [x0, gy + 20]], 'buff', 'dark', false);
+  for (let x = x0 + 24; x < x1; x += 34) K.line([[x, gy + 2], [x - 6, gy + 20]], 'dark', 1.2, false);
+}
+function book(K: Stitcher, x: number, y: number, s: number, ink: Wool = 'terracotta'): void {
+  K.shape([[x - s, y - s * 0.6], [x, y - s * 0.5], [x + s, y - s * 0.6], [x + s, y + s * 0.5], [x, y + s * 0.6], [x - s, y + s * 0.5]], 'buff', 'dark', false);
+  K.line([[x, y - s * 0.5], [x, y + s * 0.6]], ink, 2.4, false);
+  for (let i = 0; i < 3; i++) for (const side of [-1, 1]) K.line([[x + side * s * 0.2, y - s * 0.3 + i * s * 0.26], [x + side * s * 0.8, y - s * 0.36 + i * s * 0.26]], 'dark', 1, false);
+}
+const ROMAN: Man = { robe: true };
+
+Object.assign(SCENES, {
+  rome: [
+    (K: Stitcher, x: number) => {
+      road(K, x, x + 1000, GROUND);
+      temple(K, x + 170, GROUND, 250, 330);
+      // The emperor, and the soldiers who keep his peace.
+      man(K, x + 350, GROUND, 250, { ...ROMAN, crown: true, tunic: 'buff', cloak: 'terracotta', arm: 'point', hold: 'sceptre' });
+      for (let i = 0; i < 4; i++) man(K, x + 450 + i * 56, GROUND, 216, { helmet: true, crest: true, mail: true, hold: 'spear', shield: i % 2 ? 'terracotta' : 'ochre' });
+      K.shape([[x + 690, GROUND], [x + 690, GROUND - 76], [x + 716, GROUND - 90], [x + 742, GROUND - 76], [x + 742, GROUND]], 'buff'); // a milestone
+      arches(K, x + 770, 3, GROUND, 70, 230);
+    },
+  ],
+  fall: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 500);
+      wall(K, x + 250, x + 500, GROUND, 190);
+      flames(K, x + 340, GROUND - 204, 60);
+      flames(K, x + 430, GROUND - 204, 50);
+      // The Goths at the gate, and a Roman running.
+      man(K, x + 60, GROUND, 226, { ...ENGLISH, helmet: true, tunic: 'rust', hold: 'spear', shield: 'teal' });
+      man(K, x + 140, GROUND, 232, { ...ENGLISH, crown: true, tunic: 'terracotta', arm: 'point', hold: 'sword' });
+      man(K, x + 220, GROUND, 200, { f: -1, ...ROMAN, tunic: 'buff', arm: 'up' });
+      K.shape([[x + 20, GROUND], [x + 26, GROUND - 60], [x + 50, GROUND - 60], [x + 44, GROUND]], 'buff'); // a broken column
+    },
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 500);
+      hall(K, x + 250, GROUND, 400, 380, 'terracotta');
+      throne(K, x + 200, GROUND, 230, 1);
+      // A Gothic king on a Roman throne, with a Roman clerk reading him the Roman law.
+      man(K, x + 202, GROUND - 72, 232, { ...ENGLISH, seated: true, crown: true, tunic: 'teal', cloak: 'terracotta', arm: 'forward' });
+      man(K, x + 340, GROUND, 220, { f: -1, ...ROMAN, tunic: 'buff', arm: 'forward' });
+      K.shape([[x + 262, GROUND - 180], [x + 312, GROUND - 186], [x + 314, GROUND - 130], [x + 264, GROUND - 124]], 'buff');
+      man(K, x + 420, GROUND, 214, { f: -1, priest: true, tunic: 'navy', arm: 'down', hold: 'staff' });
+    },
+  ],
+  legacy: [
+    (K: Stitcher, x: number) => {
+      road(K, x, x + 1000, GROUND);
+      arches(K, x + 30, 3, GROUND, 66, 210);
+      // The road still in use, long after the men who built it.
+      man(K, x + 290, GROUND, 214, { ...ENGLISH, tunic: 'sage', arm: 'forward', hold: 'staff' });
+      horse(K, x + 430, GROUND, 120, 'rust', 1);
+      K.shape([[x + 520, GROUND], [x + 520, GROUND - 80], [x + 546, GROUND - 94], [x + 572, GROUND - 80], [x + 572, GROUND]], 'buff');
+      // A town on Roman foundations, and the letters and the law that stayed.
+      wall(K, x + 620, x + 820, GROUND, 130);
+      church(K, x + 720, GROUND - 130, 120, 150);
+      book(K, x + 910, GROUND - 190, 56);
+      K.words('A B C', x + 910, GROUND - 90, 34);
+    },
+  ],
+  church: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 700);
+      wall(K, x + 20, x + 230, GROUND, 150);
+      // The bishop of Rome, feeding his city.
+      man(K, x + 330, GROUND, 250, { priest: true, halo: true, tunic: 'buff', cloak: 'terracotta', arm: 'forward', hold: 'staff' });
+      K.oval(x + 396, GROUND - 150, 22, 15, 'ochre'); // bread
+      man(K, x + 470, GROUND, 200, { f: -1, lady: true, tunic: 'sage', arm: 'forward' });
+      man(K, x + 540, GROUND, 190, { ...ENGLISH, f: -1, tunic: 'rust', arm: 'forward' });
+      man(K, x + 600, GROUND, 140, { f: -1, tunic: 'teal', arm: 'forward' });
+      // And a monk setting out for England.
+      waves(K, x + 700, x + 1000, GROUND - 20, 4);
+      ship(K, x + 850, GROUND - 44, 250, 1, ['buff', 'terracotta'], 2);
+      man(K, x + 850, GROUND - 60, 150, { priest: true, tunic: 'navy', arm: 'point', hold: 'staff' });
+    },
+  ],
+  monks: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 1000);
+      church(K, x + 150, GROUND, 240, 320);
+      // The writing-room: two monks at their desks.
+      for (const [mx, f] of [[420, 1], [640, -1]]) {
+        K.shape([[x + mx + f * 60, GROUND], [x + mx + f * 60, GROUND - 120], [x + mx + f * 130, GROUND - 136], [x + mx + f * 130, GROUND]], 'rust', 'dark', false);
+        man(K, x + mx, GROUND - 6, 214, { f, seated: true, priest: true, tunic: f > 0 ? 'navy' : 'rust', arm: 'forward', hold: 'needle' });
+        book(K, x + mx + f * 96, GROUND - 150, 30, 'teal');
+      }
+      // Books on the shelf, and one monk in the garden.
+      K.shape([[x + 770, GROUND - 120], [x + 950, GROUND - 120], [x + 950, GROUND - 130], [x + 770, GROUND - 130]], 'rust', 'dark', false);
+      for (let i = 0; i < 6; i++) K.shape([[x + 780 + i * 27, GROUND - 130], [x + 780 + i * 27, GROUND - 196], [x + 800 + i * 27, GROUND - 196], [x + 800 + i * 27, GROUND - 130]], shields[i % 5], 'dark', false);
+      man(K, x + 860, GROUND, 200, { priest: true, tunic: 'sage', arm: 'down', hold: 'staff' });
+    },
+  ],
+  time: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 1000);
+      church(K, x + 480, GROUND, 250, 340);
+      K.oval(x + 480, GROUND - 290, 14, 18, 'ochre'); // the bell
+      // The village on its way in.
+      man(K, x + 120, GROUND, 214, { ...ENGLISH, tunic: 'sage', arm: 'forward' });
+      man(K, x + 200, GROUND, 200, { lady: true, tunic: 'terracotta', arm: 'forward' });
+      man(K, x + 270, GROUND, 130, { tunic: 'ochre', arm: 'up' });
+      man(K, x + 690, GROUND, 226, { f: -1, priest: true, tunic: 'buff', arm: 'point' });
+      // A wheel of the year, and the tenth sheaf set aside.
+      K.oval(x + 880, GROUND - 300, 62, 62, 'buff');
+      for (let i = 0; i < 12; i++) K.line([[x + 880, GROUND - 300], [x + 880 + Math.cos(i * 0.5236) * 60, GROUND - 300 + Math.sin(i * 0.5236) * 60]], i % 3 ? 'dark' : 'terracotta', 1.6, false);
+      for (let i = 0; i < 10; i++) K.shape([[x + 770 + i * 22, GROUND], [x + 778 + i * 22, GROUND - 44], [x + 786 + i * 22, GROUND]], i === 9 ? 'terracotta' : 'ochre');
+    },
+  ],
+  charlemagne: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 500);
+      hall(K, x + 250, GROUND, 440, 390, 'teal');
+      // The Pope sets the crown on him, and the people shout.
+      man(K, x + 180, GROUND, 250, { ...ENGLISH, crown: true, tunic: 'terracotta', cloak: 'navy', arm: 'forward' });
+      man(K, x + 270, GROUND, 236, { f: -1, priest: true, halo: true, tunic: 'buff', arm: 'up' });
+      for (let i = 0; i < 3; i++) man(K, x + 350 + i * 44, GROUND, 200 - i * 8, { f: -1, ...ROMAN, tunic: shields[i], arm: 'up' });
+      man(K, x + 80, GROUND, 214, { helmet: true, mail: true, hold: 'spear' });
+    },
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 500);
+      hall(K, x + 250, GROUND, 440, 390, 'teal');
+      // The king on his knees at prayer, and the Pope coming up behind him with the crown.
+      man(K, x + 300, GROUND, 236, { ...ENGLISH, tunic: 'terracotta', cloak: 'navy', arm: 'face' });
+      man(K, x + 180, GROUND, 236, { priest: true, tunic: 'buff', arm: 'forward' });
+      K.shape([[x + 222, GROUND - 170], [x + 228, GROUND - 196], [x + 240, GROUND - 180], [x + 250, GROUND - 200], [x + 260, GROUND - 180], [x + 272, GROUND - 196], [x + 278, GROUND - 170]], 'ochre', 'dark', false);
+      man(K, x + 420, GROUND, 210, { f: -1, ...ROMAN, tunic: 'sage', arm: 'point' });
+    },
+  ],
+  byzantium: [
+    (K: Stitcher, x: number) => {
+      waves(K, x, x + 330, GROUND - 20, 4);
+      ship(K, x + 160, GROUND - 44, 250, 1, ['terracotta', 'ochre'], 4);
+      ground(K, x + 330, x + 1000);
+      // The walls, and the city behind them.
+      dome(K, x + 660, GROUND - 150, 280, 250);
+      wall(K, x + 360, x + 980, GROUND, 150);
+      man(K, x + 520, GROUND - 150, 150, { helmet: true, crest: true, mail: true, hold: 'spear' });
+      man(K, x + 820, GROUND - 150, 160, { ...ROMAN, crown: true, halo: true, tunic: 'terracotta', arm: 'point' });
+      K.oval(x + 930, 96, 30, 30, 'ochre');
+    },
+  ],
+  justinian: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 500);
+      dome(K, x + 340, GROUND, 290, 330);
+      // The emperor with his book of laws, and the empress who would not run.
+      man(K, x + 90, GROUND, 250, { ...ROMAN, crown: true, halo: true, tunic: 'terracotta', cloak: 'ochre', arm: 'forward' });
+      book(K, x + 150, GROUND - 160, 28, 'navy');
+      man(K, x + 200, GROUND, 236, { f: -1, lady: true, crown: true, halo: true, tunic: 'navy', arm: 'point' });
+    },
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 500);
+      hall(K, x + 250, GROUND, 440, 380, 'navy');
+      K.oval(x + 420, 110, 30, 30, 'buff'); // the moon
+      // The emperor walking the palace at night, and his head somewhere else.
+      man(K, x + 220, GROUND, 250, { ...ROMAN, tunic: 'terracotta', cloak: 'ochre', arm: 'forward' });
+      K.oval(x + 232, GROUND - 222, 24, 28, 'buff', 'buff'); // nothing where the head should be
+      K.oval(x + 330, GROUND - 300, 20, 23, 'buff');
+      K.shape([[x + 312, GROUND - 318], [x + 318, GROUND - 340], [x + 326, GROUND - 324], [x + 332, GROUND - 344], [x + 338, GROUND - 324], [x + 346, GROUND - 340], [x + 350, GROUND - 318]], 'ochre', 'dark', false);
+      K.oval(x + 336, GROUND - 302, 2.4, 2.4, 'dark', null);
+      man(K, x + 400, GROUND, 196, { f: 1, tunic: 'sage', arm: 'up' });
+      man(K, x + 70, GROUND - 6, 196, { seated: true, priest: false, tunic: 'navy', arm: 'forward', hold: 'needle' });
+    },
+  ],
+});
+
+/** A border of squared spirals, the key pattern of Roman floors. */
+export function meander(K: Stitcher, x0: number, x1: number, y: number, s: number): void {
+  const pts: Pt[] = [];
+  for (let x = x0; x < x1; x += s * 4) pts.push([x, y + s], [x, y - s], [x + s * 3, y - s], [x + s * 3, y + s * 0.2], [x + s * 1.2, y + s * 0.2], [x + s * 1.2, y - s * 0.3], [x + s * 2, y - s * 0.3], [x + s * 2, y + s], [x + s * 4, y + s]);
+  K.line(pts, 'terracotta', 2, false);
+}
