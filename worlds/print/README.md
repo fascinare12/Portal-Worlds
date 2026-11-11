@@ -10,9 +10,9 @@ Ahead of you the world is still being made, one block at a time: dark blue
 outlines first, then the pale washes, then deep blue, then the warm colours.
 Where you have been, it is a finished print. Turn round and look back to see
 it. Only what you are looking at prints: turn away and it waits, half done;
-turn back and it carries on. The mountain is on every horizon. It never moves
-while you can see it; once you have turned it out of sight, it is set down
-again just past the edge you are turning towards.
+turn back and it carries on. Everything in view prints right through to the last colour; near things
+quickly, far things in their own time. The mountain stands still, once far to
+the north and once across the sea to the south.
 
 Everything is a flat cut-out standing at its own depth and always turned to
 face you, like the flats of a paper theatre, so the world stays a print from
