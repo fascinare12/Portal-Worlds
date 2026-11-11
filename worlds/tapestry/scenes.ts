@@ -27,6 +27,10 @@ interface Man {
   priest?: boolean;
   /** A woman: a long gown and a veil. */
   lady?: boolean;
+  /** A long robe to the ankle. */
+  robe?: boolean;
+  /** A wound cloth on the head. */
+  turban?: boolean;
   seated?: boolean;
   riding?: boolean;
   arm?: 'point' | 'down' | 'up' | 'forward' | 'oath' | 'face';
@@ -48,7 +52,7 @@ function man(K: Stitcher, x: number, gy: number, h: number, o: Man = {}): void {
   }
   const sit = o.seated ? 0.14 : 0;
   const hipY = gy - h * (0.46 - sit);
-  const long = o.priest || o.lady || o.crown;
+  const long = o.priest || o.lady || o.crown || o.robe;
   const sx = x + f * h * 0.02;
   const sy = hipY - h * 0.32;
   const hx = x + f * h * 0.045;
@@ -151,6 +155,9 @@ function man(K: Stitcher, x: number, gy: number, h: number, o: Man = {}): void {
     K.shape([[hx + f * h * 0.03, hy - h * 0.085], [hx - f * h * 0.08, hy - h * 0.06], [hx - f * h * 0.1, hy + h * 0.16], [hx - f * h * 0.02, hy + h * 0.1], [hx - f * h * 0.03, hy - h * 0.02]], 'buff');
   } else if (o.priest) {
     K.line([[hx - f * h * 0.055, hy - h * 0.02], [hx - f * h * 0.03, hy - h * 0.06], [hx + f * h * 0.04, hy - h * 0.055]], o.hair ?? 'rust', 3); // a ring of hair round a shaved crown
+  } else if (o.turban) {
+    K.oval(hx - f * h * 0.01, hy - h * 0.055, h * 0.08, h * 0.05, 'buff');
+    K.line([[hx - h * 0.07, hy - h * 0.06], [hx, hy - h * 0.04], [hx + h * 0.07, hy - h * 0.065]], 'terracotta', 2);
   } else if (!o.helmet) {
     const hair = o.hair ?? (o.english ? 'ochre' : 'rust');
     // English hair is worn long over the neck; Normans shave the back of the head.
@@ -203,7 +210,8 @@ function horse(K: Stitcher, x: number, gy: number, h: number, colour: Wool, f: n
 }
 
 /** A long ship: striped sail, a beast's head at the prow, shields along the rail. */
-function ship(K: Stitcher, x: number, wy: number, w: number, f: number, sail: Wool[], crew: number, horses = 0): void {
+/** `chequered` crosses the sail with a lattice, as the Northmen's sails are shown on their own picture-stones. */
+function ship(K: Stitcher, x: number, wy: number, w: number, f: number, sail: Wool[], crew: number, horses = 0, chequered = false): void {
   const at = (dx: number, dy: number): Pt => [x + f * dx * w, wy - dy * w];
   // Mast and sail.
   K.line([at(0, 0.02), at(0, 0.5)], 'rust', 3.4);
@@ -212,6 +220,19 @@ function ship(K: Stitcher, x: number, wy: number, w: number, f: number, sail: Wo
     const a = -0.26 + (i / stripes) * 0.52;
     const b = a + 0.52 / stripes;
     K.shape([at(a, 0.47), at(b, 0.47), at(b + 0.02, 0.16), at(a + 0.02, 0.16)], sail[i % sail.length], 'dark', false);
+  }
+  if (chequered) {
+    // The lattice is kept to the sail itself.
+    const cloth = new Path2D();
+    [at(-0.26, 0.47), at(0.26, 0.47), at(0.28, 0.16), at(-0.24, 0.16)].forEach(([px, py], i) => (i ? cloth.lineTo(px, py) : cloth.moveTo(px, py)));
+    cloth.closePath();
+    K.g.save();
+    K.g.clip(cloth);
+    for (let i = -3; i <= 6; i++) {
+      K.line([at(-0.26 + i * 0.09, 0.47), at(-0.26 + i * 0.09 + 0.3, 0.16)], 'dark', 1.3, false);
+      K.line([at(0.26 - i * 0.09, 0.47), at(0.26 - i * 0.09 - 0.3, 0.16)], 'dark', 1.3, false);
+    }
+    K.g.restore();
   }
   // Crew, and horses if she is carrying them.
   for (let i = 0; i < crew; i++) {
@@ -317,6 +338,7 @@ function hill(K: Stitcher, x0: number, x1: number, gy: number, h: number, ink: W
   K.shape(pts, ink);
 }
 
+// Long hair and a moustache: the fashion of the English, and of the Northmen before them.
 const ENGLISH: Man = { english: true };
 const shields: Wool[] = ['terracotta', 'teal', 'ochre', 'navy', 'sage'];
 
@@ -546,7 +568,7 @@ export const SCENES: Record<string, ((K: Stitcher, x: number, w: number) => void
 /** The creatures that live in the border: one drawn here, facing right, about `s` across. */
 export function creature(K: Stitcher, kind: number, x: number, y: number, s: number): void {
   const at = (dx: number, dy: number): Pt => [x + dx * s, y + dy * s];
-  const kinds = 5;
+  const kinds = 8;
   switch (((kind % kinds) + kinds) % kinds) {
     case 0: // a bird
       K.shape([at(-0.42, 0.05), at(-0.1, -0.22), at(0.22, -0.2), at(0.36, -0.34), at(0.48, -0.26), at(0.4, -0.12), at(0.2, 0.16), at(-0.2, 0.2)], 'teal');
@@ -574,10 +596,222 @@ export function creature(K: Stitcher, kind: number, x: number, y: number, s: num
       K.line([at(0.2, 0.05), at(0.44, 0.3)], 'rust', 4);
       K.line([at(0.36, -0.26), at(0.3, -0.38)], 'rust', 3);
       break;
+    case 5: // a raven
+      K.shape([at(-0.46, 0.1), at(-0.16, -0.2), at(0.2, -0.24), at(0.4, -0.32), at(0.46, -0.2), at(0.3, -0.1), at(0.16, 0.14), at(-0.2, 0.18)], 'dark');
+      K.line([at(0.44, -0.24), at(0.62, -0.14)], 'dark', 3.4);
+      K.shape([at(-0.1, -0.14), at(-0.4, -0.36), at(-0.06, -0.3)], 'navy');
+      K.line([at(-0.02, 0.16), at(-0.04, 0.4)], 'dark', 1.8);
+      K.line([at(0.1, 0.15), at(0.1, 0.4)], 'dark', 1.8);
+      break;
+    case 6: // a wolf
+      K.shape([at(-0.42, -0.04), at(-0.12, -0.16), at(0.22, -0.18), at(0.34, -0.36), at(0.4, -0.22), at(0.58, -0.14), at(0.42, -0.02), at(0.24, 0.08), at(-0.22, 0.1)], 'navy');
+      K.line([at(-0.42, -0.04), at(-0.6, 0.12)], 'navy', 4);
+      for (const dx of [-0.3, -0.18, 0.16, 0.28]) K.line([at(dx, 0.08), at(dx - 0.03, 0.4)], 'navy', 4);
+      K.line([at(0.44, -0.08), at(0.56, -0.1)], 'buff', 1.6);
+      break;
+    case 7: // a ribbon-beast, knotted through itself
+      K.line([at(-0.56, 0.2), at(-0.3, -0.3), at(0, 0.24), at(0.24, -0.3), at(0.44, 0.0), at(0.2, 0.26), at(-0.1, -0.2), at(-0.4, 0.3)], 'terracotta', s * 0.09);
+      K.oval(at(-0.58, 0.22)[0], at(-0.58, 0.22)[1], s * 0.07, s * 0.05, 'terracotta');
+      K.oval(at(-0.62, 0.2)[0], at(-0.62, 0.2)[1], s * 0.014, s * 0.014, 'dark', null);
+      break;
     default: // a fish
       K.shape([at(-0.3, 0), at(-0.05, -0.18), at(0.3, -0.12), at(0.48, 0), at(0.3, 0.12), at(-0.05, 0.18)], 'sage');
       K.shape([at(-0.3, 0), at(-0.52, -0.18), at(-0.46, 0), at(-0.52, 0.18)], 'teal');
       K.oval(at(0.32, -0.03)[0], at(0.32, -0.03)[1], s * 0.02, s * 0.02, 'dark', null);
       for (const dx of [-0.02, 0.1, 0.2]) K.line([at(dx, -0.1), at(dx + 0.04, 0), at(dx, 0.1)], 'dark', 1.2);
+  }
+}
+
+// ---- Act 2: the Northmen. The same stitches, with things borrowed from their own carving and weaving. ----
+
+/** A stone raised in memory of someone, cut with a ribbon-beast and a band of runes. */
+function runestone(K: Stitcher, x: number, gy: number, h: number): void {
+  K.shape([[x - h * 0.2, gy], [x - h * 0.24, gy - h * 0.6], [x - h * 0.12, gy - h * 0.95], [x + h * 0.1, gy - h], [x + h * 0.24, gy - h * 0.7], [x + h * 0.22, gy]], 'buff');
+  // The beast: one long ribbon looping round the edge, biting its own tail.
+  K.line([[x - h * 0.13, gy - h * 0.08], [x - h * 0.17, gy - h * 0.6], [x - h * 0.06, gy - h * 0.86], [x + h * 0.08, gy - h * 0.88], [x + h * 0.16, gy - h * 0.62], [x + h * 0.14, gy - h * 0.1], [x + h * 0.02, gy - h * 0.2]], 'terracotta', h * 0.035);
+  K.oval(x - h * 0.02, gy - h * 0.22, h * 0.03, h * 0.022, 'terracotta');
+  for (let i = 0; i < 9; i++) {
+    const ry = gy - h * (0.16 + i * 0.075);
+    K.line([[x - h * 0.03, ry], [x - h * 0.03, ry - h * 0.045]], 'navy', 1.6, false);
+    if (i % 2) K.line([[x - h * 0.03, ry - h * 0.03], [x + h * 0.01, ry - h * 0.012]], 'navy', 1.6, false);
+    else K.line([[x - h * 0.06, ry - h * 0.012], [x, ry - h * 0.035]], 'navy', 1.6, false);
+  }
+}
+
+/** A written grant, with its lines of writing and the king's seal hanging from it. */
+function charter(K: Stitcher, x: number, y: number, w: number): void {
+  K.shape([[x - w / 2, y], [x + w / 2, y], [x + w / 2, y + w * 1.15], [x - w / 2, y + w * 1.15]], 'buff', 'dark', false);
+  for (let i = 0; i < 8; i++) K.line([[x - w * 0.4, y + w * (0.14 + i * 0.11)], [x + w * (i === 7 ? 0.05 : 0.4), y + w * (0.14 + i * 0.11)]], 'dark', 1.3, false);
+  K.line([[x, y + w * 1.15], [x, y + w * 1.36]], 'terracotta', 2.4);
+  K.oval(x, y + w * 1.46, w * 0.13, w * 0.13, 'terracotta');
+}
+
+function coins(K: Stitcher, x: number, y: number, n: number): void {
+  for (let i = 0; i < n; i++) K.oval(x + (i % 5) * 15 - (Math.floor(i / 5) % 2) * 7, y - Math.floor(i / 5) * 9, 7, 4.5, 'ochre');
+}
+
+Object.assign(SCENES, {
+  northmen: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 470);
+      hall(K, x + 190, GROUND, 290, 250, 'sage');
+      man(K, x + 110, GROUND, 222, { ...ENGLISH, tunic: 'rust', arm: 'forward', hold: 'axe' });
+      man(K, x + 240, GROUND, 205, { f: -1, lady: true, tunic: 'teal', arm: 'forward' });
+      runestone(K, x + 400, GROUND, 190);
+      waves(K, x + 470, x + 1000, GROUND - 24, 4);
+      ship(K, x + 730, GROUND - 48, 420, 1, ['terracotta', 'buff'], 7, 0, true);
+    },
+  ],
+  lindisfarne: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 270);
+      waves(K, x + 270, x + 500, GROUND - 16, 3);
+      church(K, x + 120, GROUND, 190, 250);
+      // Fire in the sky, as the Chronicle has it.
+      creature(K, 2, x + 150, 64, 76);
+      creature(K, 2, x + 350, 96, 60);
+      man(K, x + 40, GROUND, 196, { f: -1, priest: true, tunic: 'rust', arm: 'up' });
+      man(K, x + 232, GROUND, 200, { f: -1, priest: true, tunic: 'navy', arm: 'up' });
+      man(K, x + 300, GROUND, 214, { ...ENGLISH, f: -1, helmet: true, tunic: 'terracotta', arm: 'up', hold: 'axe', shield: 'ochre' });
+      ship(K, x + 410, GROUND - 36, 180, -1, ['navy', 'buff'], 3, 0, true);
+    },
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 500);
+      runestone(K, x + 250, GROUND, 340);
+      man(K, x + 120, GROUND, 214, { ...ENGLISH, tunic: 'sage', arm: 'forward', hold: 'needle' });
+      // A hoard: a pot of silver put in the ground and never come back for.
+      K.shape([[x + 380, GROUND + 6], [x + 366, GROUND - 40], [x + 384, GROUND - 62], [x + 426, GROUND - 62], [x + 444, GROUND - 40], [x + 430, GROUND + 6]], 'rust');
+      coins(K, x + 384, GROUND - 66, 9);
+      coins(K, x + 440, GROUND - 2, 5);
+    },
+  ],
+  east: [
+    (K: Stitcher, x: number) => {
+      waves(K, x, x + 420, GROUND - 22, 4);
+      ship(K, x + 205, GROUND - 46, 320, 1, ['ochre', 'teal'], 5, 0, true);
+      ground(K, x + 420, x + 1000);
+      // The traders, with their furs and a pair of scales.
+      man(K, x + 480, GROUND, 232, { ...ENGLISH, tunic: 'rust', arm: 'forward', hold: 'axe' });
+      for (let i = 0; i < 3; i++) K.oval(x + 548 + i * 16, GROUND - 14 - i * 12, 30, 12, i % 2 ? 'dark' : 'rust');
+      man(K, x + 640, GROUND, 226, { ...ENGLISH, tunic: 'teal', arm: 'forward' });
+      K.line([[x + 668, GROUND - 190], [x + 728, GROUND - 190]], 'dark', 2);
+      for (const sx of [668, 728]) {
+        K.line([[x + sx, GROUND - 190], [x + sx, GROUND - 160]], 'dark', 1.2);
+        K.shape([[x + sx - 14, GROUND - 160], [x + sx + 14, GROUND - 160], [x + sx + 8, GROUND - 150], [x + sx - 8, GROUND - 150]], 'ochre', 'dark', false);
+      }
+      coins(K, x + 690, GROUND - 4, 10);
+      // The envoy from Baghdad, seated before his tent, writing it all down.
+      K.shape([[x + 830, GROUND], [x + 905, GROUND - 240], [x + 985, GROUND]], 'terracotta', 'dark', false);
+      K.shape([[x + 880, GROUND], [x + 905, GROUND - 150], [x + 932, GROUND]], 'navy', 'dark', false);
+      man(K, x + 800, GROUND - 6, 214, { f: -1, seated: true, robe: true, turban: true, tunic: 'teal', arm: 'forward', hold: 'needle' });
+      K.shape([[x + 716, GROUND - 96], [x + 770, GROUND - 104], [x + 772, GROUND - 60], [x + 720, GROUND - 54]], 'buff');
+    },
+  ],
+  settlers: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 700);
+      // The peace: the English king and the Danish one, and the line drawn between their lands.
+      man(K, x + 80, GROUND, 232, { ...ENGLISH, crown: true, tunic: 'navy', cloak: 'terracotta', arm: 'forward' });
+      man(K, x + 190, GROUND, 232, { ...ENGLISH, f: -1, helmet: true, tunic: 'rust', arm: 'forward' });
+      for (let i = 0; i < 9; i++) K.line([[x + 136, GROUND - 250 + i * 18], [x + 136, GROUND - 240 + i * 18]], 'terracotta', 3, false);
+      // Settled: a house, a plough, a field.
+      hall(K, x + 370, GROUND, 190, 190, 'sage');
+      horse(K, x + 580, GROUND, 110, 'rust', 1);
+      K.line([[x + 505, GROUND - 60], [x + 470, GROUND - 6]], 'dark', 3);
+      man(K, x + 462, GROUND, 196, { ...ENGLISH, tunic: 'ochre', arm: 'forward' });
+      // And further still: a ship standing in to a new shore.
+      waves(K, x + 700, x + 1000, GROUND - 20, 4);
+      ship(K, x + 850, GROUND - 44, 260, 1, ['terracotta', 'buff'], 4, 0, true);
+    },
+  ],
+  cnut: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 740);
+      // Silver going down to the ships.
+      for (let i = 0; i < 2; i++) {
+        man(K, x + 70 + i * 90, GROUND, 208, { ...ENGLISH, tunic: i ? 'sage' : 'rust', arm: 'forward' });
+        K.oval(x + 116 + i * 90, GROUND - 150, 24, 30, 'buff');
+      }
+      hall(K, x + 480, GROUND, 420, 400, 'teal');
+      throne(K, x + 420, GROUND, 250, 1);
+      man(K, x + 422, GROUND - 78, 250, { seated: true, crown: true, english: true, tunic: 'navy', cloak: 'terracotta', arm: 'forward', hold: 'sceptre' });
+      man(K, x + 570, GROUND, 236, { f: -1, lady: true, crown: true, tunic: 'terracotta', arm: 'forward' });
+      // Her sons, sent over the sea to her brother's court.
+      waves(K, x + 740, x + 1000, GROUND - 18, 3);
+      ship(K, x + 870, GROUND - 38, 210, 1, ['navy', 'ochre'], 2);
+    },
+  ],
+  rollo: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 500);
+      throne(K, x + 96, GROUND, 200, 1);
+      // The king, going over backwards.
+      man(K, x + 98, GROUND - 64, 205, { seated: true, crown: true, tunic: 'teal', cloak: 'ochre', arm: 'up', tilt: 0.28 });
+      man(K, x + 236, GROUND, 222, { ...ENGLISH, f: -1, helmet: true, tunic: 'terracotta', arm: 'forward' });
+      man(K, x + 340, GROUND, 250, { ...ENGLISH, f: -1, tunic: 'rust', cloak: 'navy', arm: 'down', hold: 'axe' });
+      man(K, x + 440, GROUND, 220, { f: -1, priest: true, tunic: 'buff', arm: 'point', hold: 'staff' });
+    },
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 300);
+      // A clerk at his desk, and the document itself.
+      K.shape([[x + 130, GROUND], [x + 130, GROUND - 110], [x + 210, GROUND - 126], [x + 210, GROUND]], 'rust', 'dark', false);
+      man(K, x + 70, GROUND - 4, 208, { seated: true, priest: true, tunic: 'navy', arm: 'forward', hold: 'needle' });
+      charter(K, x + 250, GROUND - 392, 150);
+      // What it records: Northmen set to guard the river.
+      waves(K, x + 300, x + 500, GROUND - 16, 3);
+      ship(K, x + 420, GROUND - 34, 150, -1, ['terracotta', 'buff'], 2, 0, true);
+      man(K, x + 350, GROUND - 18, 190, { ...ENGLISH, helmet: true, tunic: 'sage', hold: 'spear', shield: 'terracotta' });
+    },
+  ],
+  french: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 1000);
+      // Baptism: the chieftain in the font, the bishop's hand over him.
+      K.shape([[x + 70, GROUND], [x + 60, GROUND - 100], [x + 190, GROUND - 100], [x + 180, GROUND]], 'teal', 'dark', false);
+      K.oval(x + 125, GROUND - 128, 17, 20, 'buff');
+      K.line([[x + 108, GROUND - 138], [x + 122, GROUND - 152], [x + 142, GROUND - 140]], 'ochre', 4);
+      man(K, x + 250, GROUND, 232, { f: -1, priest: true, tunic: 'buff', cloak: 'terracotta', arm: 'up' });
+      // An abbey going up.
+      church(K, x + 500, GROUND, 250, 300);
+      K.line([[x + 660, GROUND], [x + 690, GROUND - 230]], 'rust', 3);
+      K.line([[x + 690, GROUND], [x + 720, GROUND - 230]], 'rust', 3);
+      for (let i = 1; i < 6; i++) K.line([[x + 662 + i * 5, GROUND - i * 38], [x + 692 + i * 5, GROUND - i * 38]], 'rust', 2.4);
+      // And the new way of war: a knight.
+      horse(K, x + 850, GROUND, 150, 'navy', 1, { helmet: true, mail: true, arm: 'forward', hold: 'spear', shield: 'terracotta' });
+      tree(K, x + 380, GROUND, 200, -1);
+    },
+  ],
+  william: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 1000);
+      // The castle at Falaise.
+      K.shape([[x + 30, GROUND], [x + 30, GROUND - 270], [x + 150, GROUND - 270], [x + 150, GROUND]], 'buff', 'dark', false);
+      K.shape([[x + 66, GROUND], [x + 66, GROUND - 110], [x + 90, GROUND - 140], [x + 114, GROUND - 110], [x + 114, GROUND]], 'navy', 'dark');
+      for (let i = 0; i < 4; i++) K.shape([[x + 30 + i * 33, GROUND - 270], [x + 30 + i * 33, GROUND - 296], [x + 48 + i * 33, GROUND - 296], [x + 48 + i * 33, GROUND - 270]], 'buff', 'dark', false);
+      // The boy duke, a guardian at his back, and another cut down in front of him.
+      man(K, x + 230, GROUND, 230, { helmet: true, mail: true, hold: 'spear', shield: 'teal' });
+      man(K, x + 320, GROUND, 150, { tunic: 'terracotta', cloak: 'teal', arm: 'forward', hold: 'sword' });
+      man(K, x + 430, GROUND + 12, 190, { tilt: 1, tunic: 'ochre' });
+      man(K, x + 540, GROUND, 226, { f: -1, tunic: 'navy', arm: 'up', hold: 'sword' });
+      // The line he comes from: six heads on one branch, from the Viking to the duke.
+      K.line([[x + 640, GROUND - 40], [x + 720, GROUND - 120], [x + 800, GROUND - 190], [x + 880, GROUND - 250], [x + 960, GROUND - 300]], 'rust', 5);
+      for (let i = 0; i < 6; i++) {
+        const hx = x + 640 + i * 64;
+        const hy = GROUND - 60 - i * 50;
+        K.oval(hx, hy, 24, 27, 'buff');
+        K.line([[hx + 12, hy - 4], [hx + 20, hy + 4], [hx + 12, hy + 6]], 'dark', 1.3, false);
+        if (i === 0) K.shape([[hx - 24, hy - 12], [hx, hy - 52], [hx + 24, hy - 12]], 'ochre', 'dark', false);
+        else K.line([[hx - 20, hy - 14], [hx, hy - 30], [hx + 20, hy - 16]], i === 5 ? 'terracotta' : 'rust', 6);
+      }
+    },
+  ],
+});
+
+/** Two strands plaited together, for the borders of the Northmen's part of the cloth. */
+export function braid(K: Stitcher, x0: number, x1: number, y: number, amp: number): void {
+  for (const [phase, ink] of [[0, 'terracotta'], [Math.PI, 'teal']] as [number, Wool][]) {
+    const pts: Pt[] = [];
+    for (let x = x0; x <= x1; x += 9) pts.push([x, y + Math.sin((x - x0) * 0.09 + phase) * amp]);
+    K.line(pts, ink, 2.6);
   }
 }
