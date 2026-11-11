@@ -525,8 +525,9 @@ export function buildOcean(): Ocean {
      float pat = 0.68 + 0.4 * smoothstep(-0.7, 0.7, g);`,
     // 1: polyps, a skin of small pale dots
     `float pat = 0.72 + 0.6 * smoothstep(0.34, 0.1, length(fract(vWp * 5.0) - 0.5));`,
-    // 2: plate coral, fine crossing ridges
-    `float pat = 0.72 + 0.4 * sin((vWp.x + vWp.z) * 17.0) * sin((vWp.x - vWp.z) * 17.0);`,
+    // 2: cup coral: fine ridges fanning out from its centre, crossed by growth rings, paler at the rim
+    `float reach = length(vLp.xz);
+     float pat = 0.66 + 0.3 * sin(atan(vLp.z, vLp.x) * 44.0 + sin(reach * 9.0) * 1.5) + 0.1 * sin(reach * 38.0) + 0.3 * smoothstep(0.75, 1.05, reach);`,
     // 3: sand, in ripples, with scattered grains
     `float pat = 0.86 + 0.14 * sin(vWp.x * 3.0 + sin(vWp.z * 1.3) * 2.0) + 0.1 * step(0.96, fract(sin(dot(floor(vWp.xz * 9.0), vec2(12.9898, 78.233))) * 43758.5453));`,
     // 4: plain
@@ -551,10 +552,11 @@ export function buildOcean(): Ocean {
       sh.uniforms.uTime = uTime;
       sh.uniforms.uDetail = { value: detail === 'sand' ? sandPhoto : coralPhoto };
       sh.vertexShader = sh.vertexShader
-        .replace('#include <common>', '#include <common>\nuniform float uTime;\nvarying vec3 vWp;')
+        .replace('#include <common>', '#include <common>\nuniform float uTime;\nvarying vec3 vWp;\nvarying vec3 vLp;')
         .replace(
           '#include <begin_vertex>',
           `#include <begin_vertex>
+          vLp = position; // where on the object itself, so a pattern can be centred on it
           #ifdef USE_INSTANCING
             float swayPhase = instanceMatrix[3].x * 1.3 + instanceMatrix[3].z * 1.7;
             float bend = position.y * position.y * ${sway.toFixed(3)};
@@ -566,7 +568,7 @@ export function buildOcean(): Ocean {
           #endif`,
         );
       sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', `#include <common>\nuniform float uTime;\nuniform sampler2D uDetail;\nvarying vec3 vWp;\n${CAUSTIC}`)
+        .replace('#include <common>', `#include <common>\nuniform float uTime;\nuniform sampler2D uDetail;\nvarying vec3 vWp;\nvarying vec3 vLp;\n${CAUSTIC}`)
         .replace(
           '#include <color_fragment>',
           `#include <color_fragment>
@@ -666,8 +668,22 @@ export function buildOcean(): Ocean {
       for (let b = 0; b < BRANCHES; b++) set(stags, i * BRANCHES + b, x + (rnd() - 0.5) * 0.5 * k, y - 0.05, z + (rnd() - 0.5) * 0.5 * k, k, k * (0.6 + rnd() * 1.1), k, (rnd() - 0.5) * 1.3, rnd() * 6.28, (rnd() - 0.5) * 1.3, colour);
     }
 
-    // Table corals: wide plates on short stalks, layered like shelves.
-    const plates = instanced(new THREE.CylinderGeometry(1, 0.7, 0.14, 24), reefMat(2), 120);
+    // Cup corals: wide, ridged bowls on short stalks.
+    // Each is a shallow cup that opens upward from a narrow foot, its rim rising and falling in waves.
+    const cup = new THREE.LatheGeometry([[0.1, 0], [0.24, 0.16], [0.5, 0.32], [0.8, 0.43], [1.0, 0.5], [1.06, 0.58]].map(([r, y]) => new THREE.Vector2(r, y)), 40);
+    {
+      const cp = cup.attributes.position;
+      for (let i = 0; i < cp.count; i++) {
+        const x = cp.getX(i);
+        const z = cp.getZ(i);
+        const r = Math.hypot(x, z);
+        const a = Math.atan2(z, x);
+        const wave = 1 + 0.09 * Math.sin(a * 3 + 0.7) * r + 0.04 * Math.sin(a * 7) * r;
+        cp.setXYZ(i, x * wave, cp.getY(i) + (Math.sin(a * 5) * 0.07 + Math.sin(a * 2 + 1) * 0.05) * r * r, z * wave);
+      }
+      cup.computeVertexNormals();
+    }
+    const plates = instanced(cup, reefMat(2, { side: THREE.DoubleSide }), 120);
     const stalks = instanced(new THREE.CylinderGeometry(0.16, 0.26, 1, 8).translate(0, 0.5, 0), reefMat(4), 120);
     for (let i = 0; i < 120; i++) {
       const [x, y, z] = place();
@@ -675,7 +691,7 @@ export function buildOcean(): Ocean {
       const h = 0.35 + rnd() * 0.9;
       const colour = pick(CORAL);
       set(stalks, i, x, y - 0.1, z, k * 0.8, h + 0.1, k * 0.8, 0, 0, 0, colour);
-      set(plates, i, x, y + h, z, k, 1, k, (rnd() - 0.5) * 0.25, rnd() * 6.28, (rnd() - 0.5) * 0.25, colour);
+      set(plates, i, x, y + h - 0.05, z, k, k * (0.7 + rnd() * 0.7), k, (rnd() - 0.5) * 0.3, rnd() * 6.28, (rnd() - 0.5) * 0.3, colour);
     }
 
     // Cauliflower coral: tight heads of small rounded lobes.

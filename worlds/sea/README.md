@@ -14,7 +14,7 @@ nothing to read: it is a place to sink through and touch.
 1. **Sunlit shallows.** The rippling surface overhead, shafts of sunlight,
    silver and gold shoals.
 2. **The coral reef**, about thirty units down: brain corals, staghorn
-   thickets, table corals, cauliflower and pillar corals, tube sponges,
+   thickets, ridged cup corals, cauliflower and pillar corals, tube sponges,
    anemones and seagrass that wave, lacy sea fans and starfish, their surfaces
    taken from a photograph of pitted coral rock; and nine kinds of reef fish
    (clownfish, blue tang, butterflyfish, bannerfish, parrotfish, damselfish,
