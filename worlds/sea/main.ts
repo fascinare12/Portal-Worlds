@@ -13,7 +13,7 @@ import { DEEPEST, buildOcean } from './ocean';
  *   drag sideways .............. turn to look around
  *   touch the water ............ a wave of light spreads from the spot
  *   touch a jellyfish .......... it flashes and jets away
- *   hold a finger still ........ plankton flares along it; shoals part round it
+ *   hold a finger still ........ plankton flares along it; fish dart away from it
  */
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -133,6 +133,10 @@ window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
 let audio: AudioContext | null = null;
 let master: GainNode | null = null;
 let muffle: BiquadFilterNode | null = null;
+/** Where notes are sent to be given room: they come back as echoes and a long wash, as in a great space of water. */
+let space: GainNode | null = null;
+let lowDrone: GainNode | null = null;
+let highDrone: GainNode | null = null;
 let soundOn = true;
 function startSound(): void {
   if (audio) return;
@@ -156,14 +160,49 @@ function startSound(): void {
     rushGain.gain.value = 0.5;
     rush.connect(muffle).connect(rushGain).connect(master);
     rush.start();
-    for (const f of [55, 82.6]) {
+    // Two pairs of held notes under everything: an open, lighter pair near the surface, which
+    // gives way to a pair two octaves lower as she sinks.
+    lowDrone = audio.createGain();
+    highDrone = audio.createGain();
+    lowDrone.gain.value = highDrone.gain.value = 0;
+    lowDrone.connect(master);
+    highDrone.connect(master);
+    for (const [f, to] of [[55, lowDrone], [82.6, lowDrone], [130.81, highDrone], [196.4, highDrone]] as [number, GainNode][]) {
       const osc = audio.createOscillator();
-      const g = audio.createGain();
       osc.frequency.value = f;
-      g.gain.value = 0.035;
-      osc.connect(g).connect(master);
+      osc.connect(to);
       osc.start();
     }
+    // Room for the notes. Echoes: each note comes back several times, softer and duller each time.
+    space = audio.createGain();
+    const echo = audio.createDelay(2);
+    echo.delayTime.value = 0.52;
+    const again = audio.createGain();
+    again.gain.value = 0.42;
+    const dull = audio.createBiquadFilter();
+    dull.type = 'lowpass';
+    dull.frequency.value = 1500;
+    const echoes = audio.createGain();
+    echoes.gain.value = 0.5;
+    space.connect(echo);
+    echo.connect(dull).connect(again).connect(echo);
+    echo.connect(echoes).connect(master);
+    // And a wash: the sound of the note spread through a very large space, four seconds long.
+    const length = Math.floor(audio.sampleRate * 4);
+    const room = audio.createBuffer(2, length, audio.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = room.getChannelData(ch);
+      let smooth = 0;
+      for (let i = 0; i < length; i++) {
+        smooth = smooth * 0.6 + (Math.random() * 2 - 1) * 0.4; // a dull room, not a bright one
+        d[i] = smooth * Math.pow(1 - i / length, 2.6);
+      }
+    }
+    const wash = audio.createConvolver();
+    wash.buffer = room;
+    const washGain = audio.createGain();
+    washGain.gain.value = 0.9;
+    space.connect(wash).connect(washGain).connect(master);
   } catch {
     audio = null; // no sound on this device; the sea is silent but otherwise the same
   }
@@ -185,6 +224,7 @@ function chime(freq: number, loud = 0.075): void {
     g.gain.exponentialRampToValueAtTime(loud * vol * 0.45, start + 0.9);
     g.gain.exponentialRampToValueAtTime(0.0001, start + RING);
     osc.connect(g).connect(master);
+    if (space) g.connect(space);
     osc.start(start);
     osc.stop(start + RING + 0.1);
   }
@@ -203,9 +243,16 @@ ocean.onWhale = () => {
     g.gain.exponentialRampToValueAtTime(0.11, start + 0.4);
     g.gain.exponentialRampToValueAtTime(0.0001, start + len);
     osc.connect(g).connect(master);
+    if (space) g.connect(space);
     osc.start(start);
     osc.stop(start + len + 0.1);
   }
+};
+// The sea plays by itself, quietly: a jellyfish that lights up sounds its own note, and a wave
+// of light in the dark sounds a low one. With the long ring, these drift into slow chords.
+ocean.onChime = (note, kind) => {
+  if (kind === 'jelly') chime(SCALE[note % SCALE.length] * 2, 0.028);
+  else chime(SCALE[note % 5], 0.03);
 };
 $('sound').onclick = () => {
   startSound();
@@ -256,6 +303,10 @@ renderer.setAnimationLoop(() => {
   camera.lookAt(Math.sin(yaw) * Math.cos(pitch), camera.position.y + Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch));
 
   ocean.update(time, dt, camera.position);
+  if (lowDrone && highDrone) {
+    lowDrone.gain.value = 0.012 + 0.03 * Math.min(1, t / 0.5);
+    highDrone.gain.value = 0.013 * Math.max(0, 1 - t / 0.45);
+  }
   if (muffle) muffle.frequency.value = 700 - 560 * t; // the water grows quieter and darker-sounding with depth
   mark.style.top = `${t * 100}%`;
   // Glow belongs to the dark. Near the surface, where everything is bright, it is turned well down.

@@ -18,6 +18,8 @@ export interface Ocean {
   scene: THREE.Scene;
   /** The whale has just come into view: time for its call. */
   onWhale: (() => void) | null;
+  /** The sea has rung a note of its own: a jellyfish lighting up, or a wave of light in the dark. */
+  onChime: ((note: number, kind: 'jelly' | 'deep') => void) | null;
   /** A tap along this ray. Returns what was touched. */
   /** `note` is which note of the scale to ring: each jellyfish has its own, big ones low. */
   tap(ray: THREE.Ray): { kind: 'jelly' | 'angler' | 'water'; note: number };
@@ -116,6 +118,44 @@ export function buildOcean(): Ocean {
   );
   scene.add(water);
 
+  // ---- Shafts of sunlight standing in the shallow water, which fish and turtle swim through.
+  const uSun = { value: 1 };
+  {
+    const shaft = new THREE.CylinderGeometry(0.5, 2.6, 44, 16, 1, true).translate(0, -22, 0);
+    const shaftMat = glow({
+      uniforms: { uTime, uSun },
+      vertexShader: /* glsl */ `
+        varying vec3 vN; varying vec3 vV; varying float vDown; varying float vPhase;
+        void main() {
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          vN = normalize(normalMatrix * normal);
+          vV = normalize(-mv.xyz);
+          vDown = -position.y / 44.0;
+          vPhase = modelMatrix[3].x * 0.7 + modelMatrix[3].z * 1.3;
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform float uTime; uniform float uSun;
+        varying vec3 vN; varying vec3 vV; varying float vDown; varying float vPhase;
+        void main() {
+          // Brightest through its middle, nothing at its edges, so it reads as a soft column and not a tube.
+          float core = pow(abs(dot(normalize(vN), normalize(vV))), 5.0);
+          float fade = smoothstep(0.0, 0.08, vDown) * (1.0 - smoothstep(0.35, 1.0, vDown));
+          float breathe = 0.55 + 0.45 * sin(uTime * 0.6 + vPhase) * sin(uTime * 0.37 + vPhase * 1.7);
+          gl_FragColor = vec4(vec3(0.55, 0.85, 0.9) * core * fade * breathe * uSun * 0.1, 1.0);
+        }`,
+    });
+    for (let i = 0; i < 11; i++) {
+      const a = i * 2.4 + rnd();
+      const r = 9 + rnd() * 26;
+      const m = new THREE.Mesh(shaft, shaftMat);
+      m.position.set(Math.cos(a) * r, 4, Math.sin(a) * r);
+      m.rotation.set(0.16, 0, -0.2);
+      m.scale.set(0.7 + rnd() * 1.1, 1, 0.7 + rnd() * 1.1);
+      scene.add(m);
+    }
+  }
+
   // ---- Plankton and drifting specks, everywhere. In the deep they are alive with light: they
   // twinkle, flare under a finger, and carry the waves of light that sweep through the water.
   const SPECKS = 16000;
@@ -131,10 +171,14 @@ export function buildOcean(): Ocean {
   speckGeo.setAttribute('position', new THREE.BufferAttribute(specks, 3));
   speckGeo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
   const pulses = [0, 1, 2, 3].map(() => new THREE.Vector4(0, 0, 0, -100));
+  // Each of the five notes has its own colour, and a wave of light takes the colour of the note it rang with.
+  const NOTE_HUES = [[0.25, 0.9, 1.0], [0.3, 1.0, 0.55], [1.0, 0.78, 0.3], [1.0, 0.42, 0.72], [0.62, 0.45, 1.0]].map(([r, g, b]) => new THREE.Vector3(r, g, b));
+  const pulseHues = pulses.map(() => NOTE_HUES[0].clone());
   const speckUniforms = {
     uTime,
     uScale: { value: 800 },
     uPulses: { value: pulses },
+    uPulseHue: { value: pulseHues },
     uRayO: { value: new THREE.Vector3() },
     uRayD: { value: new THREE.Vector3(0, 0, -1) },
     uTouch: { value: 0 },
@@ -148,6 +192,7 @@ export function buildOcean(): Ocean {
         uniform float uTime;
         uniform float uScale;
         uniform vec4 uPulses[4];
+        uniform vec3 uPulseHue[4];
         uniform vec3 uRayO;
         uniform vec3 uRayD;
         uniform float uTouch;
@@ -160,12 +205,15 @@ export function buildOcean(): Ocean {
           float deep = smoothstep(-22.0, -70.0, p.y);
           float twinkle = pow(0.5 + 0.5 * sin(uTime * (0.5 + aSeed) + aSeed * 100.0), 8.0);
           float lit = 0.07 + twinkle * 0.9 * deep;
+          vec3 wave = vec3(0.0);
           // Waves of light: each is a shell that swells outward from where it began.
           for (int i = 0; i < 4; i++) {
             float age = uTime - uPulses[i].w;
             if (age > 0.0 && age < 7.0) {
               float shell = abs(distance(p, uPulses[i].xyz) - age * 7.0);
-              lit += smoothstep(3.4, 0.0, shell) * (1.0 - age / 7.0) * 6.0;
+              float w = smoothstep(3.4, 0.0, shell) * (1.0 - age / 7.0) * 6.0;
+              lit += w * 0.25;
+              wave += uPulseHue[i] * w * 0.75;
             }
           }
           // And they flare along the line of a finger.
@@ -174,7 +222,8 @@ export function buildOcean(): Ocean {
           lit += smoothstep(2.4, 0.0, length(w - uRayD * along)) * step(0.0, along) * uTouch * 2.2;
           vec3 hue = mix(vec3(0.2, 0.9, 1.0), vec3(0.3, 1.0, 0.5), fract(aSeed * 7.0));
           hue = mix(hue, vec3(0.55, 0.4, 1.0), step(0.8, fract(aSeed * 13.0)));
-          vCol = mix(vec3(0.8, 0.9, 1.0) * 0.5, hue, deep) * lit * exp(-length(mv.xyz) * 0.03);
+          vCol = (mix(vec3(0.8, 0.9, 1.0) * 0.5, hue, deep) * lit + wave) * exp(-length(mv.xyz) * 0.03);
+          lit += dot(wave, vec3(0.4));
           gl_PointSize = uScale * (0.09 + 0.13 * fract(aSeed * 31.0)) * (1.0 + lit * 0.45) / -mv.z;
           gl_Position = projectionMatrix * mv;
         }`,
@@ -189,14 +238,14 @@ export function buildOcean(): Ocean {
   plankton.frustumCulled = false;
   scene.add(plankton);
   // Each wave of light is also seen as a faint, swelling bubble of glow.
-  const shells = pulses.map(() => {
+  const shells = pulses.map((_, slot) => {
     const strength = { value: 0 };
     const mesh = new THREE.Mesh(
       new THREE.SphereGeometry(1, 40, 28),
       glow({
-        uniforms: { uStrength: strength },
+        uniforms: { uStrength: strength, uHue: { value: pulseHues[slot] } },
         vertexShader: `varying vec3 vN; varying vec3 vV; void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
-        fragmentShader: `uniform float uStrength; varying vec3 vN; varying vec3 vV; void main() { float edge = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 3.0); gl_FragColor = vec4(vec3(0.25, 0.9, 1.0) * edge * uStrength, 1.0); }`,
+        fragmentShader: `uniform float uStrength; uniform vec3 uHue; varying vec3 vN; varying vec3 vV; void main() { float edge = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 3.0); gl_FragColor = vec4(uHue * edge * uStrength, 1.0); }`,
       }),
     );
     mesh.visible = false;
@@ -205,8 +254,9 @@ export function buildOcean(): Ocean {
   });
   let nextPulse = 0;
   let pulseSlot = 0;
-  const startPulse = (x: number, y: number, z: number, time: number) => {
+  const startPulse = (x: number, y: number, z: number, time: number, note = 0) => {
     pulses[pulseSlot].set(x, y, z, time);
+    pulseHues[pulseSlot].copy(NOTE_HUES[note % NOTE_HUES.length]);
     pulseSlot = (pulseSlot + 1) % pulses.length;
   };
 
@@ -285,8 +335,57 @@ export function buildOcean(): Ocean {
   }
 
   // ---- Shoals: streams of fish circling the viewer, parting round a finger.
-  const fishShape: THREE.Vector2[] = [[0, 0.5], [0.1, 0.32], [0.14, 0.06], [0.1, -0.24], [0.035, -0.42], [0.13, -0.62]].map(([r, y]) => new THREE.Vector2(r, y));
-  const fishGeo = new THREE.LatheGeometry(fishShape, 10).rotateX(Math.PI / 2).scale(0.45, 1, 1);
+  const fishZ = [0.5, 0.32, 0.06, -0.24, -0.42, -0.5];
+  const fishShape: THREE.Vector2[] = [0.001, 0.1, 0.14, 0.1, 0.035, 0.028].map((r, i) => new THREE.Vector2(r, fishZ[i]));
+  // The body is turned on a lathe; the fins are flat, cut out by hand and joined on.
+  const fishGeo = (() => {
+    const body = new THREE.LatheGeometry(fishShape, 12).rotateX(Math.PI / 2).scale(0.45, 1, 1).toNonIndexed();
+    const pos = [...(body.attributes.position.array as Float32Array)];
+    const nor = [...(body.attributes.normal.array as Float32Array)];
+    const uv = [...(body.attributes.uv.array as Float32Array)];
+    // Where along the painted skin a point this far down the body falls.
+    const along = (z: number) => {
+      for (let i = 0; i < fishZ.length - 1; i++) if (z >= fishZ[i + 1]) return (i + (fishZ[i] - z) / (fishZ[i] - fishZ[i + 1])) / (fishZ.length - 1);
+      return 0.93;
+    };
+    const fin = (pts: number[][], round: number) => {
+      for (const [x, y, z] of pts) {
+        pos.push(x, y, z);
+        nor.push(x === 0 ? 1 : 0, x === 0 ? 0 : 1, 0);
+        uv.push(round, z < -0.42 ? 0.93 : along(z));
+      }
+    };
+    fin([[0, 0.12, 0.2], [0, 0.3, -0.12], [0, 0.09, -0.26]], 0.5); // on its back
+    fin([[0, 0.02, -0.44], [0, 0.26, -0.78], [0, 0, -0.62]], 0.5); // the tail, forked
+    fin([[0, -0.02, -0.44], [0, 0, -0.62], [0, -0.26, -0.78]], 0.5);
+    fin([[0, -0.1, 0.02], [0, -0.09, -0.2], [0, -0.22, -0.16]], 0.02); // underneath
+    for (const side of [1, -1]) fin([[side * 0.05, -0.03, 0.17], [side * 0.2, -0.1, 0.0], [side * 0.05, -0.08, 0.04]], 0.25); // one at each side
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    return g;
+  })();
+  /** Makes a fish's body flex as it swims: a wave runs down it, widest at the tail. */
+  const swims = <T extends THREE.Material>(m: T): T => {
+    m.side = THREE.DoubleSide;
+    m.customProgramCacheKey = () => 'swims';
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.uTime = uTime;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uTime;').replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        #ifdef USE_INSTANCING
+          float beat = instanceMatrix[3].x * 2.1 + instanceMatrix[3].z * 1.7 + instanceMatrix[3].y;
+        #else
+          float beat = 0.0;
+        #endif
+        float tailward = 0.5 - position.z;
+        transformed.x += sin(uTime * 7.0 + beat - position.z * 4.0) * 0.1 * tailward * tailward;`,
+      );
+    };
+    return m;
+  };
   interface Shoal {
     mesh: THREE.InstancedMesh;
     count: number;
@@ -310,29 +409,58 @@ export function buildOcean(): Ocean {
     for (let i = 0; i < count; i++) state.set([offsets[i * 4], 1, 1, 0, 0], i * 5);
     shoals.push({ mesh, count, y, radius, speed, offsets, state });
   };
-  addShoal(170, -9, 13, 0.16, new THREE.MeshLambertMaterial({ color: 0xbfd8e6, emissive: 0x1a3a4a }), 1.5);
-  addShoal(120, -20, 19, -0.11, new THREE.MeshLambertMaterial({ color: 0xffc070, emissive: 0x402a10 }), 1.2);
-  // Reef fish: nine kinds, each with its own shape and markings, living all round the coral.
-  const tallFish = fishGeo.clone().scale(1, 2.3, 0.85); // disc-shaped, like a butterflyfish
-  const longFish = fishGeo.clone().scale(0.9, 0.75, 1.5); // slender, like a wrasse
-  /** Paints a fish's side: `bands` are [from, to, colour] along the body, nose (0) to tail (1). */
-  const livery = (base: string, bands: [number, number, string][]) => {
+  const K = '#141018';
+  const W = '#ffffff';
+  /**
+   * Paints a fish's skin: `bands` are [from, to, colour] along the body, nose (0) to tail (1).
+   * Every fish is darker along its back and paler underneath, as real ones are, and has eyes.
+   * `lights` gives it rows of glowing spots instead, for the fish of the dark.
+   */
+  const skin = (base: string, bands: [number, number, string][], lights = '') => {
     const c = document.createElement('canvas');
-    c.width = 8;
+    c.width = 64;
     c.height = 128;
     const g = c.getContext('2d')!;
     g.fillStyle = base;
-    g.fillRect(0, 0, 8, 128);
+    g.fillRect(0, 0, 64, 128);
     for (const [from, to, colour] of bands) {
       g.fillStyle = colour;
-      g.fillRect(0, 128 - to * 128, 8, (to - from) * 128);
+      g.fillRect(0, 128 - to * 128, 64, (to - from) * 128);
+    }
+    if (lights) {
+      g.fillStyle = lights;
+      for (const x of [9, 55]) for (let y = 20; y < 112; y += 11) g.fillRect(x - 2, y, 4, 4);
+      for (const x of [22, 42]) g.fillRect(x - 3, 106, 6, 5);
+    } else {
+      const shade = g.createLinearGradient(0, 0, 64, 0);
+      shade.addColorStop(0, 'rgba(255,255,255,0.5)');
+      shade.addColorStop(0.2, 'rgba(255,255,255,0)');
+      shade.addColorStop(0.5, 'rgba(0,12,36,0.42)');
+      shade.addColorStop(0.8, 'rgba(255,255,255,0)');
+      shade.addColorStop(1, 'rgba(255,255,255,0.5)');
+      g.fillStyle = shade;
+      g.fillRect(0, 0, 64, 128);
+      for (const x of [20, 44]) {
+        g.fillStyle = W;
+        g.beginPath();
+        g.ellipse(x, 113, 5, 3.4, 0, 0, 6.3);
+        g.fill();
+        g.fillStyle = K;
+        g.beginPath();
+        g.ellipse(x, 113.5, 2.8, 2, 0, 0, 6.3);
+        g.fill();
+      }
     }
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
-    return new THREE.MeshLambertMaterial({ map: t, emissive: 0x262626 });
+    return t;
   };
-  const K = '#141018';
-  const W = '#ffffff';
+  const livery = (base: string, bands: [number, number, string][], emissive = 0x262626) => swims(new THREE.MeshLambertMaterial({ map: skin(base, bands), emissive }));
+  addShoal(170, -9, 13, 0.16, livery('#c4dcea', [[0.9, 1, '#8fb0c4']], 0x1a3a4a), 1.5);
+  addShoal(120, -20, 19, -0.11, livery('#ffc070', [[0.9, 1, '#e08a3a']], 0x402a10), 1.2);
+  // Reef fish: nine kinds, each with its own shape and markings, living all round the coral.
+  const tallFish = fishGeo.clone().scale(1, 2.3, 0.85); // disc-shaped, like a butterflyfish
+  const longFish = fishGeo.clone().scale(0.9, 0.75, 1.5); // slender, like a wrasse
   // Clownfish: orange with three white bars edged in black.
   addShoal(46, -29.4, 12, 0.05, livery('#ff7a1f', [[0.16, 0.19, K], [0.19, 0.27, W], [0.27, 0.3, K], [0.46, 0.49, K], [0.49, 0.57, W], [0.57, 0.6, K], [0.76, 0.79, K], [0.79, 0.85, W], [0.9, 1, K]]), 0.5, true);
   // Blue tang: royal blue, a black sweep along the body, and a yellow tail.
@@ -352,8 +480,8 @@ export function buildOcean(): Ocean {
   // Wrasse: long and slim, green with a violet head.
   addShoal(34, -29.2, 16, -0.08, livery('#3fc070', [[0.0, 0.24, '#8a5ad0'], [0.5, 0.56, '#ffe14a'], [0.9, 1, '#2f7fd0']]), 0.9, true, longFish);
   // Lanternfish: dark bodies that carry their own lights.
-  addShoal(150, -72, 15, 0.13, new THREE.MeshBasicMaterial({ color: 0x38d8ff }), 0.7);
-  addShoal(110, -112, 12, -0.09, new THREE.MeshBasicMaterial({ color: 0x7affb0 }), 0.6);
+  addShoal(150, -72, 15, 0.13, swims(new THREE.MeshBasicMaterial({ map: skin('#0a2632', [], '#7cf0ff') })), 0.8);
+  addShoal(110, -112, 12, -0.09, swims(new THREE.MeshBasicMaterial({ map: skin('#0a2a20', [], '#9affc4') })), 0.7);
 
   // ---- A whale and her calf, passing through the twilight.
   const whaleSkin = new THREE.MeshLambertMaterial({ color: 0x2a4a68 });
@@ -390,6 +518,78 @@ export function buildOcean(): Ocean {
   scene.add(lane);
   let whaleClock = 10;
   let whaleCalled = false;
+
+  // ---- A sea turtle over the reef, and two manta rays in the blue below it.
+  const ball = (mat: THREE.Material, sx: number, sy: number, sz: number, x = 0, y = 0, z = 0) => {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), mat);
+    m.scale.set(sx, sy, sz);
+    m.position.set(x, y, z);
+    return m;
+  };
+  const turtle = (() => {
+    const g = new THREE.Group();
+    // The shell: plates of olive and brown, with pale seams between them.
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const cg = c.getContext('2d')!;
+    cg.fillStyle = '#c9b87a';
+    cg.fillRect(0, 0, 128, 128);
+    for (let row = 0; row < 6; row++) {
+      for (let col = 0; col < 7; col++) {
+        cg.fillStyle = ['#4f5a2c', '#6a5a2a', '#5a6a34', '#7a6232'][(row * 3 + col * 5) % 4];
+        cg.beginPath();
+        cg.ellipse(col * 21 + (row % 2) * 10.5, row * 24 + 8, 9, 10.5, 0, 0, 6.3);
+        cg.fill();
+      }
+    }
+    const plates = new THREE.CanvasTexture(c);
+    plates.colorSpace = THREE.SRGBColorSpace;
+    plates.wrapS = THREE.RepeatWrapping;
+    const shellMat = new THREE.MeshLambertMaterial({ map: plates, emissive: 0x141a10 });
+    const skinMat = new THREE.MeshLambertMaterial({ color: 0x8fa66a, emissive: 0x141a10 });
+    g.add(ball(shellMat, 0.85, 0.36, 1.1), ball(skinMat, 0.8, 0.16, 1.02, 0, -0.14, 0));
+    g.add(ball(skinMat, 0.24, 0.2, 0.3, 0, 0.02, 1.3), ball(skinMat, 0.1, 0.08, 0.3, 0, -0.08, -1.15));
+    const flippers = [1, -1].map((side) => {
+      const pivot = new THREE.Group();
+      pivot.position.set(side * 0.6, -0.05, 0.6);
+      pivot.add(ball(skinMat, 0.75, 0.05, 0.26, side * 0.7, 0, 0.1));
+      pivot.rotation.y = side * -0.5;
+      g.add(pivot, ball(skinMat, 0.3, 0.04, 0.16, side * 0.6, -0.1, -0.95));
+      return pivot;
+    });
+    g.scale.setScalar(1.5);
+    scene.add(g);
+    return { group: g, flippers };
+  })();
+  const mantas = [0, 1].map((n) => {
+    const g = new THREE.Group();
+    const back = new THREE.MeshLambertMaterial({ color: 0x2a3c54, emissive: 0x08101c });
+    const pale = new THREE.MeshLambertMaterial({ color: 0xd8e4ee, emissive: 0x101820 });
+    g.add(ball(back, 1.0, 0.24, 1.3), ball(pale, 0.92, 0.14, 1.2, 0, -0.14, 0));
+    // The horns either side of its mouth, and a whip of a tail.
+    for (const side of [1, -1]) g.add(ball(back, 0.12, 0.1, 0.4, side * 0.45, -0.02, 1.35));
+    const whip = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.008, 3.4, 6).rotateX(Math.PI / 2), back);
+    whip.position.z = -2.8;
+    g.add(whip);
+    // Each wing is a flat triangle with a swept-back tip, hinged where it meets the body.
+    const wings = [1, -1].map((side) => {
+      const shape = new THREE.Shape();
+      shape.moveTo(0, 1.15);
+      shape.quadraticCurveTo(1.6, 0.9, 3.1, -0.5);
+      shape.quadraticCurveTo(1.5, -0.55, 0, -1.1);
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.1, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 2, curveSegments: 10 }).rotateX(Math.PI / 2).translate(0, 0.05, 0);
+      if (side < 0) geo.scale(-1, 1, 1);
+      const wing = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x2a3c54, emissive: 0x08101c, side: THREE.DoubleSide }));
+      const pivot = new THREE.Group();
+      pivot.position.x = side * 0.7;
+      pivot.add(wing);
+      g.add(pivot);
+      return pivot;
+    });
+    g.scale.setScalar(n ? 1.1 : 1.5);
+    scene.add(g);
+    return { group: g, wings, lag: n * 0.5 };
+  });
 
   // ---- Anglerfish in the black: all you see at first is the lure.
   interface Angler {
@@ -444,7 +644,9 @@ export function buildOcean(): Ocean {
   const fp = floorGeo.attributes.position;
   for (let i = 0; i < fp.count; i++) fp.setY(i, floorY(fp.getX(i), fp.getZ(i)));
   floorGeo.computeVertexNormals();
-  const floorUniforms = { uTime, uPulses: speckUniforms.uPulses };
+  // Where the fire vents stand, so the rock round them can crack and glow.
+  const hotSpots = [0, 1, 2, 3].map(() => new THREE.Vector3(0, -9999, 0));
+  const floorUniforms = { uTime, uPulses: speckUniforms.uPulses, uPulseHue: speckUniforms.uPulseHue, uHot: { value: hotSpots } };
   const floorMat = new THREE.ShaderMaterial({
         uniforms: floorUniforms,
         vertexShader: `varying vec3 vW; varying vec3 vN; varying float vDist; void main() {
@@ -457,6 +659,8 @@ export function buildOcean(): Ocean {
         fragmentShader: /* glsl */ `
           uniform float uTime;
           uniform vec4 uPulses[4];
+          uniform vec3 uPulseHue[4];
+          uniform vec3 uHot[4];
           varying vec3 vW;
           varying vec3 vN;
           varying float vDist;
@@ -476,12 +680,25 @@ export function buildOcean(): Ocean {
             // Light travels along them, outward from the middle, in slow beats.
             float run = 0.3 + 0.7 * pow(0.5 + 0.5 * sin(f * 40.0 - uTime * 1.4 + length(vW.xz) * 0.08), 2.0);
             // And every wave of light in the water sets them blazing as it passes.
+            vec3 hue = mix(vec3(0.1, 0.9, 0.8), vec3(0.6, 0.3, 1.0), noise(q * 0.5));
+            vec3 lightUp = hue * run;
             for (int i = 0; i < 4; i++) {
               float age = uTime - uPulses[i].w;
-              if (age > 0.0 && age < 7.0) run += smoothstep(4.0, 0.0, abs(distance(vW, uPulses[i].xyz) - age * 7.0)) * (1.0 - age / 7.0) * 2.0;
+              if (age > 0.0 && age < 7.0) lightUp += uPulseHue[i] * smoothstep(4.0, 0.0, abs(distance(vW, uPulses[i].xyz) - age * 7.0)) * (1.0 - age / 7.0) * 2.0;
             }
-            vec3 hue = mix(vec3(0.1, 0.9, 0.8), vec3(0.6, 0.3, 1.0), noise(q * 0.5));
-            vec3 c = vec3(0.006, 0.014, 0.028) * (0.5 + vN.y) + hue * vein * run * 1.3;
+            // The stone itself: mottled, pitted and finely cracked. It shows only by the faint light
+            // she carries with her, so the ground close by has grain and the distance stays dark.
+            float grain = cloud(vW.xz * 1.1 + vW.y * 0.8);
+            float pits = noise(vW.xz * 7.0 + vW.y * 4.0);
+            float crack = pow(1.0 - abs(sin(cloud(vW.xz * 0.7 + vW.y * 0.6 + 3.0) * 24.0)), 9.0);
+            vec3 stone = mix(vec3(0.05, 0.065, 0.09), vec3(0.2, 0.19, 0.2), grain) * (0.7 + 0.35 * pits) * (1.0 - crack * 0.7);
+            float lamp = exp(-distance(vW, cameraPosition) * 0.075) * 1.05;
+            vec3 c = vec3(0.006, 0.014, 0.028) * (0.5 + vN.y) + stone * lamp * (0.45 + 0.55 * clamp(vN.y, 0.0, 1.0)) + lightUp * vein * 1.3;
+            // Round the fire vents the rock is split by seams of slow, breathing heat.
+            float heat = 0.0;
+            for (int i = 0; i < 4; i++) heat += smoothstep(11.0, 1.5, distance(vW.xz, uHot[i].xz)) * smoothstep(9.0, 0.0, abs(vW.y - uHot[i].y));
+            float seam = pow(1.0 - abs(sin(cloud(vW.xz * 0.5 + vW.y * 0.4 + 7.0) * 15.0)), 7.0);
+            c += vec3(1.5, 0.4, 0.05) * seam * heat * (0.55 + 0.45 * sin(uTime * 1.3 + f * 30.0));
             // With distance the floor dissolves into exactly the colour of the dark water beyond it,
             // so there is no edge to see where it ends.
             gl_FragColor = vec4(mix(vec3(0.0, 0.004, 0.014), c, exp(-vDist * 0.03)), 1.0);
@@ -540,7 +757,11 @@ export function buildOcean(): Ocean {
     `float reach = length(vLp.xz);
      float pat = 0.66 + 0.3 * sin(atan(vLp.z, vLp.x) * 44.0 + sin(reach * 9.0) * 1.5) + 0.1 * sin(reach * 38.0) + 0.3 * smoothstep(0.75, 1.05, reach);`,
     // 3: sand, in ripples, with scattered grains
-    `float pat = 0.86 + 0.14 * sin(vWp.x * 3.0 + sin(vWp.z * 1.3) * 2.0) + 0.1 * step(0.96, fract(sin(dot(floor(vWp.xz * 9.0), vec2(12.9898, 78.233))) * 43758.5453));`,
+    `float ripple = sin(vWp.x * 3.0 + sin(vWp.z * 1.3) * 2.0 + sin(vWp.z * 0.31 + vWp.x * 0.17) * 3.0);
+     // Each ripple has a lit side and a shaded side, and finer ripples ride on its back.
+     float pat = 0.84 + 0.15 * ripple + 0.07 * smoothstep(0.2, 1.0, ripple) * sin(vWp.x * 13.0 + vWp.z * 6.0 + sin(vWp.z * 4.0) * 2.0)
+       + 0.14 * step(0.965, fract(sin(dot(floor(vWp.xz * 9.0), vec2(12.9898, 78.233))) * 43758.5453))
+       - 0.12 * step(0.985, fract(sin(dot(floor(vWp.xz * 5.0), vec2(39.3, 11.1))) * 24634.63));`,
     // 4: plain
     `float pat = 1.0;`,
   ];
@@ -592,7 +813,8 @@ export function buildOcean(): Ocean {
                   'float pits = mix(texture2D(uDetail, vWp.xz * 0.42).r, texture2D(uDetail, vec2(vWp.x + vWp.z, vWp.y) * 0.42).r, 0.5); diffuseColor.rgb *= 0.45 + pits * 0.95;'
                 : ''
           }
-          diffuseColor.rgb *= pat * (0.74 + caustic(vWp.xz, uTime) * 0.42);`,
+          diffuseColor.rgb *= pat * (0.74 + caustic(vWp.xz, uTime) * 0.42);
+          ${surface < 3 ? '// Living coral lets light into its skin: its edges glow a little against the water.\n          diffuseColor.rgb *= 1.0 + pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 2.5) * 0.6;' : ''}`,
         );
     };
     return m;
@@ -798,6 +1020,14 @@ export function buildOcean(): Ocean {
       set(fans, i, x, y - 0.1, z, k, k, k, 0, rnd() * 6.28, 0, pick([0xff5a7a, 0xb07cff, 0xffa53a, 0xff8ad8]));
     }
 
+    // Rubble: worn pebbles and bits of broken coral lying on the sand between the heads.
+    const pebbles = instanced(new THREE.IcosahedronGeometry(1, 1), reefMat(4, { flatShading: false }), 420);
+    for (let i = 0; i < 420; i++) {
+      const [x, y, z] = place(7.6, 46);
+      const k = 0.07 + rnd() * rnd() * 0.42;
+      set(pebbles, i, x, y + k * 0.2, z, k * (0.8 + rnd() * 0.8), k * (0.4 + rnd() * 0.4), k * (0.8 + rnd() * 0.8), rnd(), rnd() * 6.28, rnd(), pick([0xcfc4ae, 0x9a948a, 0xe8dcc4, 0x7f7a74, 0xd8b8a0, 0xf2ece0]));
+    }
+
     // Seagrass in drifts, and starfish on the sand.
     const grass = instanced(new THREE.PlaneGeometry(0.13, 1, 1, 5).translate(0, 0.5, 0), reefMat(4, { side: THREE.DoubleSide }, 0.55, 'none'), 1800);
     for (let i = 0; i < 1800; i++) {
@@ -884,6 +1114,7 @@ export function buildOcean(): Ocean {
       const tall = k * (0.6 + rnd() * 0.7);
       chimneys.setMatrixAt(i, m.compose(v.set(x, y, z), q.setFromAxisAngle(v2.set(0, 1, 0), rnd() * 6.28), sc.set(k, tall, k)));
       const fire = hot(i) ? k : 0; // a smoking vent's throat is dark
+      if (hot(i)) hotSpots[i / 3].set(x, y, z);
       throats.setMatrixAt(i, m.compose(v.set(x, y + 4.6 * tall, z), q.identity(), sc.set(fire, fire, fire)));
       for (let p = 0; p < PUFFS; p++) {
         base.set([x, y + 4.9 * tall, z], (i * PUFFS + p) * 3);
@@ -981,6 +1212,8 @@ export function buildOcean(): Ocean {
     scene.add(pens);
   }
 
+  /** Each jellyfish has its own note: big ones low. */
+  const noteOf = (j: Jelly) => Math.round((1 - (j.size - 0.6) / 1.5) * 9);
   const pointer = { ray: new THREE.Ray(), pressed: false };
   const hit = new THREE.Vector3();
   const tintNow = new THREE.Color();
@@ -989,6 +1222,7 @@ export function buildOcean(): Ocean {
   const ocean: Ocean = {
     scene,
     onWhale: null,
+    onChime: null,
     tap(ray) {
       // A jellyfish: it flashes and jets away upward.
       let best: Jelly | null = null;
@@ -1004,8 +1238,9 @@ export function buildOcean(): Ocean {
       if (best) {
         best.flash.value = 1;
         best.kick = 1;
-        startPulse(best.group.position.x, best.group.position.y, best.group.position.z, uTime.value);
-        return { kind: 'jelly', note: Math.round((1 - (best.size - 0.6) / 1.5) * 9) };
+        const note = noteOf(best);
+        startPulse(best.group.position.x, best.group.position.y, best.group.position.z, uTime.value, note);
+        return { kind: 'jelly', note };
       }
       for (const a of anglers) {
         if (ray.distanceToPoint(a.group.position) < 2.6) {
@@ -1015,8 +1250,9 @@ export function buildOcean(): Ocean {
       }
       // Open water: a wave of light spreads from the spot.
       ray.at(12, hit);
-      startPulse(hit.x, hit.y, hit.z, uTime.value);
-      return { kind: 'water', note: Math.floor(Math.random() * 5) };
+      const note = Math.floor(Math.random() * 5);
+      startPulse(hit.x, hit.y, hit.z, uTime.value, note);
+      return { kind: 'water', note };
     },
     point(ray, pressed) {
       pointer.ray.copy(ray);
@@ -1032,6 +1268,7 @@ export function buildOcean(): Ocean {
       fog.density = mix(0.016, 0.03, t);
       sky.intensity = mix(1.7, 0.03, step01(0, 0.6, t));
       sun.intensity = mix(1.6, 0, step01(0, 0.5, t));
+      uSun.value = 1 - step01(0.12, 0.34, t);
       speckUniforms.uScale.value = window.innerHeight;
       speckUniforms.uRayO.value.copy(pointer.ray.origin);
       speckUniforms.uRayD.value.copy(pointer.ray.direction);
@@ -1048,13 +1285,25 @@ export function buildOcean(): Ocean {
         }
       });
 
-      // Now and then a wave of light sets off somewhere in the dark, unbidden.
+      // Now and then the sea rings a note of its own. A jellyfish near her lights up and sounds;
+      // or, in the dark with none about, a wave of light sets off somewhere by itself.
       nextPulse -= dt;
       if (nextPulse <= 0) {
-        nextPulse = 5 + Math.random() * 5;
-        const a = Math.random() * 6.28;
-        const r = 6 + Math.random() * 22;
-        startPulse(Math.cos(a) * r, Math.min(-35, eye.y + (Math.random() - 0.5) * 30), Math.sin(a) * r, time);
+        nextPulse = 4 + Math.random() * 5;
+        const near = jellies.filter((j) => Math.abs(j.group.position.y - eye.y) < 24);
+        if (near.length && Math.random() < 0.75) {
+          const j = near[Math.floor(Math.random() * near.length)];
+          const note = noteOf(j);
+          j.flash.value = 0.8;
+          startPulse(j.group.position.x, j.group.position.y, j.group.position.z, time, note);
+          ocean.onChime?.(note, 'jelly');
+        } else if (eye.y < -34) {
+          const a = Math.random() * 6.28;
+          const r = 6 + Math.random() * 22;
+          const note = Math.floor(Math.random() * 5);
+          startPulse(Math.cos(a) * r, Math.min(-35, eye.y + (Math.random() - 0.5) * 30), Math.sin(a) * r, time, note);
+          ocean.onChime?.(note, 'deep');
+        }
       }
 
       for (const j of jellies) {
@@ -1120,6 +1369,26 @@ export function buildOcean(): Ocean {
           s.mesh.setMatrixAt(i, dummy.matrix);
         }
         s.mesh.instanceMatrix.needsUpdate = true;
+      }
+
+      // The turtle paddles a wide circle over the coral, with long slow strokes and a glide between.
+      {
+        const a = time * 0.045;
+        turtle.group.position.set(Math.cos(a) * 15, -23.5 + Math.sin(time * 0.23) * 1.6, Math.sin(a) * 15);
+        turtle.group.rotation.set(Math.cos(time * 0.23) * -0.12, -a, Math.sin(time * 0.4) * 0.08);
+        const stroke = Math.sin(time * 1.5);
+        turtle.flippers[0].rotation.z = stroke * 0.35 - 0.1;
+        turtle.flippers[1].rotation.z = -stroke * 0.35 + 0.1;
+      }
+      // The mantas wheel the other way, lower down, one a little behind the other.
+      for (const mr of mantas) {
+        const a = -time * 0.05 - mr.lag;
+        const r = 21 - mr.lag * 6;
+        mr.group.position.set(Math.cos(a) * r, -46 - mr.lag * 5 + Math.sin(time * 0.19 + mr.lag * 4) * 2.5, Math.sin(a) * r);
+        mr.group.rotation.set(Math.cos(time * 0.19 + mr.lag * 4) * 0.1, -a + Math.PI, -0.22);
+        const flap = Math.sin(time * 1.15 + mr.lag * 3);
+        mr.wings[0].rotation.z = flap * 0.42;
+        mr.wings[1].rotation.z = -flap * 0.42;
       }
 
       // The whales cross once every minute or so, each time from a new direction.
