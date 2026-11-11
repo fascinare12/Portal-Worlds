@@ -17,6 +17,8 @@
  * shuffled before being shown.
  */
 
+import { NORTHMEN } from './vikings';
+
 export interface Question {
   ask: string;
   /** The first is correct. */
@@ -37,6 +39,8 @@ export interface Telling {
 }
 
 export interface Panel {
+  /** Which act it belongs to: its place in ACTS. */
+  act: number;
   id: string;
   /** The Latin stitched along the top. */
   caption: string;
@@ -52,10 +56,29 @@ export interface Panel {
   mattered: string;
 }
 
-export const ACT_TITLE = 'Anno Domini MLXVI';
-export const ACT_MEANING = 'The year of our Lord 1066';
+/** A panel as it is written down, before it is given its place in an act. */
+export type PanelData = Omit<Panel, 'act'>;
 
-export const PANELS: Panel[] = [
+/**
+ * One act of the cloth. The scribe and the stitching are the same throughout, but each act
+ * borrows its borders and its motifs from the people it is about.
+ */
+export interface Act {
+  numeral: string;
+  title: string;
+  /** Its name in Latin, and what that means. */
+  latin: string;
+  meaning: string;
+  /** Whose art the borders and beasts are taken from. */
+  style: 'norse' | 'bayeux';
+  /** Told to the player once, at the head of the act: what the pictures here are modelled on. */
+  modelled: string;
+  /** Said when the whole act is stitched. */
+  closing: string;
+  panels: PanelData[];
+}
+
+const ANNO: PanelData[] = [
   {
     id: 'edward',
     caption: 'EDWARD REX',
@@ -541,3 +564,31 @@ export const PANELS: Panel[] = [
     mattered: 'On Christmas Day 1066 William was crowned King of England. What that changed, in language, in law and in who owned the land, is the next part of the cloth.',
   },
 ];
+
+export const ACTS: Act[] = [
+  {
+    numeral: 'II',
+    title: 'The Viking Thread',
+    latin: 'Filum Northmannorum',
+    meaning: 'The thread of the Northmen',
+    style: 'norse',
+    modelled:
+      'There is no tapestry of these events, so every caption in this part is the scribe\'s own. The pictures are stitched like the rest of the cloth, but they borrow from the Northmen\'s own art: the ships with chequered sails cut on the picture-stones of Gotland, the ribbon-beasts they carved on wood and stone, and the woven hangings found in the ship burial at Oseberg in Norway.',
+    closing: 'from the first raid to a boy duke in Normandy. The year 1066 comes next.',
+    panels: NORTHMEN,
+  },
+  {
+    numeral: 'III',
+    title: 'The Year 1066',
+    latin: 'Anno Domini MLXVI',
+    meaning: 'The year of our Lord 1066',
+    style: 'bayeux',
+    modelled:
+      'This part follows the Bayeux Tapestry itself, made in the 1070s: its captions, its scenes, and its manner of drawing. Where a panel shows something the tapestry leaves out, the desk says so.',
+    closing: 'from an empty throne to a new king.',
+    panels: ANNO,
+  },
+];
+
+/** Every panel of the cloth in order, each knowing which act it is in. */
+export const PANELS: Panel[] = ACTS.flatMap((act, i) => act.panels.map((p) => ({ ...p, act: i })));

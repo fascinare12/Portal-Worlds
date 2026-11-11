@@ -1,6 +1,6 @@
-import { ACT_MEANING, ACT_TITLE, PANELS } from './acts';
+import { ACTS, PANELS } from './acts';
 import type { Panel, Question } from './acts';
-import { GROUND, SCENES, creature } from './scenes';
+import { GROUND, SCENES, braid, creature } from './scenes';
 import { LINEN, Stitcher } from './stitch';
 import type { Mode } from './stitch';
 
@@ -40,7 +40,10 @@ function restore(): void {
     const saved = JSON.parse((!params.has('fresh') && localStorage.getItem(KEY)) || 'null');
     if (saved) {
       kept = saved.kept ?? {};
-      focus = Math.min(PANELS.length - 1, saved.focus ?? 0);
+      const at = PANELS.findIndex((p) => p.id === saved.focusId);
+      // A cloth begun when 1066 was the only act remembers its place by number within that act.
+      const old = typeof saved.focus === 'number' ? ACTS[1].panels[Math.min(saved.focus, ACTS[1].panels.length - 1)].id : '';
+      focus = at >= 0 ? at : Math.max(0, PANELS.findIndex((p) => p.id === old));
     }
   } catch {
     // nothing kept, or it cannot be read: begin on bare linen
@@ -52,14 +55,14 @@ function restore(): void {
 }
 function keep(): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ kept, focus }));
+    localStorage.setItem(KEY, JSON.stringify({ kept, focusId: PANELS[focus].id }));
   } catch {
     // not allowed, or no room: the cloth is simply not remembered
   }
 }
 restore();
-/** A panel can be worked on once the one before it is finished. */
-const unlocked = (i: number) => i === 0 || kept[PANELS[i - 1].id].done;
+/** A panel can be worked on once the one before it is finished. The first panel of every act is open from the start. */
+const unlocked = (i: number) => i === 0 || PANELS[i - 1].act !== PANELS[i].act || kept[PANELS[i - 1].id].done;
 
 // ---- The cloth: measurements, and each panel drawn once and kept ----
 
@@ -93,8 +96,11 @@ function drawPanel(index: number, mode: Mode): HTMLCanvasElement {
   const top = band / scale; // the borders, measured in scene units
   cg.save();
   cg.scale(scale, scale);
+  // Each act borrows its borders and beasts from the people it is about.
+  const norse = ACTS[p.act].style === 'norse';
   // The top border: the Latin, between two ruled lines.
-  K.line([[0, top - 6], [PW, top - 6]], 'terracotta', 2.6, false);
+  if (norse) braid(K, 0, PW, top - 7, 3.4);
+  else K.line([[0, top - 6], [PW, top - 6]], 'terracotta', 2.6, false);
   K.line([[0, 7], [PW, 7]], 'navy', 2.2, false);
   K.words(p.caption, PW / 2, top * 0.52, Math.min(27, top * 0.42), 'center', PW - 60);
   // The scene itself, and over a panel told twice, who is speaking in each half.
@@ -114,14 +120,21 @@ function drawPanel(index: number, mode: Mode): HTMLCanvasElement {
   // The bottom border: beasts between slanting bars.
   cg.save();
   cg.translate(0, top + PH);
-  K.line([[0, 6], [PW, 6]], 'terracotta', 2.6, false);
+  if (norse) braid(K, 0, PW, 7, 3.4);
+  else K.line([[0, 6], [PW, 6]], 'terracotta', 2.6, false);
   K.line([[0, top - 7], [PW, top - 7]], 'navy', 2.2, false);
+  const kinds = norse ? [5, 6, 7, 2, 4] : [0, 1, 2, 3, 4];
   const beasts = 5;
   for (let i = 0; i < beasts; i++) {
     const cx = ((i + 0.5) / beasts) * PW;
     K.reseed(index * 31 + i);
-    creature(K, index * 3 + i * 2, cx, top * 0.52, top * 0.62);
-    K.line([[cx + PW / beasts / 2 - 14, top - 10], [cx + PW / beasts / 2 + 14, 9]], i % 2 ? 'teal' : 'ochre', 3, false);
+    creature(K, kinds[(index * 3 + i * 2) % kinds.length], cx, top * 0.52, top * 0.62);
+    const sx = cx + PW / beasts / 2;
+    if (norse) {
+      // Between the beasts, a knot of two loops.
+      K.oval(sx - 6, top * 0.52, 9, top * 0.26, null, i % 2 ? 'teal' : 'ochre', 0.5);
+      K.oval(sx + 6, top * 0.52, 9, top * 0.26, null, i % 2 ? 'ochre' : 'teal', -0.5);
+    } else K.line([[sx - 14, top - 10], [sx + 14, 9]], i % 2 ? 'teal' : 'ochre', 3, false);
   }
   cg.restore();
   cg.restore();
@@ -318,11 +331,16 @@ function settle(): void {
 function render(): void {
   const p = PANELS[focus];
   const k = kept[p.id];
-  $('where').innerHTML = `<b>${esc(p.title)}</b><span>${esc(p.date)}</span>`;
+  const act = ACTS[p.act];
+  $('where').innerHTML = `<i>${act.numeral} · ${esc(act.title)}</i><b>${esc(p.title)}</b><span>${esc(p.date)}</span>`;
   $<HTMLButtonElement>('back').disabled = focus === 0;
   $<HTMLButtonElement>('next').disabled = focus === PANELS.length - 1;
   const t = p.tellings[telling];
+  // The acts of the cloth, to jump between.
+  const chips = `<div class="acts">${ACTS.map((a, i) => `<button class="${i === p.act ? 'here' : ''}" data-act="${i}">${a.numeral} · ${esc(a.title)}</button>`).join('')}</div>`;
   const head = `<p class="latin">${esc(p.caption)}</p><p class="means">${esc(p.meaning)}</p>`;
+  // At the head of each act, once: what its pictures are modelled on.
+  const opening = focus === 0 || PANELS[focus - 1].act !== p.act ? `<p class="source">${esc(act.modelled)}</p>` : '';
   const hintBox = hint ? `<div class="hint"><i>🐦</i><span>${esc(hint)}</span></div>` : '';
   const options = (q: Question) =>
     shuffled(q)
@@ -334,13 +352,13 @@ function render(): void {
   } else if (view === 'choose') {
     html =
       head +
-      `<p>This scene was told in more than one way, by people who did not agree. A scribe sets down each account as it was given. Stitch both, then weigh them.</p>` +
+      `<p>This scene comes down to us in more than one way, from sources that do not agree. A scribe sets down each as it was given. Stitch both, then weigh them.</p>` +
       p.tellings
         .map((tt, j) => `<button class="pick ${k.parts[j] >= tt.questions.length ? 'done' : ''}" data-telling="${j}">${esc(tt.voice ?? '')}</button>`)
         .join('');
   } else if (view === 'read') {
     html =
-      (t.voice ? `<p class="voice">${esc(t.voice)}</p>` : head) +
+      (t.voice ? `<p class="voice">${esc(t.voice)}</p>` : opening + head) +
       t.account.map((line) => `<p>${esc(line)}</p>`).join('') +
       `<p class="source">${esc(t.source)}</p><button class="go" data-do="begin">Take up the needle</button>`;
   } else if (view === 'ask') {
@@ -352,22 +370,22 @@ function render(): void {
   } else if (view === 'weigh') {
     html = `<p class="voice">Weighing the two</p><p class="ask">${esc(p.weigh!.ask)}</p>${options(p.weigh!)}${hintBox}`;
   } else {
-    const all = PANELS.every((x) => kept[x.id].done);
     const first = PANELS.reduce((n, x) => n + kept[x.id].first, 0);
     const asked = PANELS.reduce((n, x) => n + kept[x.id].asked, 0);
+    const lastOfAct = focus === PANELS.length - 1 || PANELS[focus + 1].act !== p.act;
+    const actDone = PANELS.filter((x) => x.act === p.act).every((x) => kept[x.id].done);
     html =
       head +
       `<p>${esc(p.mattered)}</p>` +
+      (lastOfAct && actDone ? `<p><b>${esc(act.latin)}</b> is stitched: ${esc(act.meaning.charAt(0).toLowerCase() + act.meaning.slice(1))}, ${esc(act.closing)}</p>` : '') +
       (focus < PANELS.length - 1
-        ? `<button class="go" data-do="next">On to the next panel ▶</button>`
-        : all
-          ? `<p><b>${esc(ACT_TITLE)}</b> is stitched: ${esc(ACT_MEANING.charAt(0).toLowerCase() + ACT_MEANING.slice(1))}, from an empty throne to a new king. The linen to either side of it, before 1066 and after, is still bare.</p>`
-          : '') +
+        ? `<button class="go" data-do="next">${lastOfAct ? `On to ${ACTS[p.act + 1].numeral} · ${esc(ACTS[p.act + 1].title)}` : 'On to the next panel'} ▶</button>`
+        : `<p>The linen beyond this is still bare.</p>`) +
       (asked ? `<p class="tally">Right at the first attempt: ${first} of ${asked} questions so far.</p>` : '') +
       p.tellings.map((tt, j) => `<button class="go quiet" data-reread="${j}">Read ${tt.voice ? esc(tt.voice.charAt(0).toLowerCase() + tt.voice.slice(1)) : 'the account'} again</button>`).join('');
   }
   const page = $('page');
-  page.innerHTML = html;
+  page.innerHTML = chips + html;
   page.scrollTop = 0;
 }
 function answer(text: string): void {
@@ -405,6 +423,11 @@ $('page').addEventListener('click', (e) => {
   if (!b) return;
   const d = b.dataset;
   if (d.answer !== undefined) answer(d.answer);
+  else if (d.act !== undefined) {
+    // To an act: its first unfinished panel, or its first if it is all done.
+    const mine = PANELS.map((x, i) => ({ x, i })).filter(({ x }) => x.act === Number(d.act));
+    go((mine.find(({ x }) => !kept[x.id].done) ?? mine[0]).i);
+  }
   else if (d.telling !== undefined) {
     telling = Number(d.telling);
     const k = kept[PANELS[focus].id];
