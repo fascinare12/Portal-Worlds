@@ -574,7 +574,7 @@ export const SCENES: Record<string, ((K: Stitcher, x: number, w: number) => void
 /** The creatures that live in the border: one drawn here, facing right, about `s` across. */
 export function creature(K: Stitcher, kind: number, x: number, y: number, s: number): void {
   const at = (dx: number, dy: number): Pt => [x + dx * s, y + dy * s];
-  const kinds = 12;
+  const kinds = 16;
   switch (((kind % kinds) + kinds) % kinds) {
     case 0: // a bird
       K.shape([at(-0.42, 0.05), at(-0.1, -0.22), at(0.22, -0.2), at(0.36, -0.34), at(0.48, -0.26), at(0.4, -0.12), at(0.2, 0.16), at(-0.2, 0.2)], 'teal');
@@ -650,6 +650,40 @@ export function creature(K: Stitcher, kind: number, x: number, y: number, s: num
       for (const dx of [-0.26, -0.12, 0.08, 0.2]) K.line([at(dx, 0.14), at(dx, 0.4)], 'dark', 2.6);
       K.oval(at(0.38, -0.18)[0], at(0.38, -0.18)[1], s * 0.014, s * 0.014, 'dark', null);
       K.line([at(0.26, -0.24), at(0.2, -0.32)], 'buff', 3);
+      break;
+    case 12: // an ox
+      K.shape([at(-0.46, -0.16), at(0.2, -0.2), at(0.34, -0.3), at(0.54, -0.22), at(0.56, -0.06), at(0.4, -0.02), at(0.3, 0.14), at(-0.4, 0.14)], 'rust');
+      K.line([at(0.4, -0.3), at(0.36, -0.46), at(0.48, -0.5)], 'buff', 3);
+      K.line([at(-0.46, -0.14), at(-0.56, 0.1)], 'rust', 2.6);
+      for (const dx of [-0.34, -0.2, 0.14, 0.26]) K.line([at(dx, 0.12), at(dx, 0.4)], 'rust', 4.4);
+      K.oval(at(0.46, -0.18)[0], at(0.46, -0.18)[1], s * 0.016, s * 0.016, 'dark', null);
+      break;
+    case 13: // a pig
+      K.oval(at(-0.04, 0.02)[0], at(-0.04, 0.02)[1], s * 0.36, s * 0.2, 'buff');
+      K.shape([at(0.26, -0.12), at(0.5, -0.06), at(0.52, 0.06), at(0.28, 0.12)], 'buff');
+      K.shape([at(0.22, -0.14), at(0.26, -0.3), at(0.34, -0.14)], 'terracotta');
+      for (const dx of [-0.26, -0.14, 0.1, 0.2]) K.line([at(dx, 0.18), at(dx, 0.4)], 'buff', 4);
+      K.line([at(-0.4, -0.02), at(-0.5, -0.12), at(-0.44, -0.18), at(-0.5, -0.24)], 'terracotta', 1.8);
+      K.oval(at(0.36, -0.04)[0], at(0.36, -0.04)[1], s * 0.014, s * 0.014, 'dark', null);
+      for (let i = 0; i < 5; i++) K.line([at(-0.26 + i * 0.1, -0.18), at(-0.3 + i * 0.1, -0.28)], 'dark', 1.4);
+      break;
+    case 14: // a stag
+      K.shape([at(-0.4, -0.1), at(0.1, -0.14), at(0.24, -0.36), at(0.36, -0.42), at(0.5, -0.32), at(0.4, -0.26), at(0.3, -0.04), at(0.2, 0.08), at(-0.36, 0.08)], 'ochre');
+      for (const side of [0, 0.08]) {
+        K.line([at(0.3 + side, -0.42), at(0.24 + side, -0.6), at(0.14 + side, -0.7)], 'rust', 2);
+        K.line([at(0.25 + side, -0.56), at(0.36 + side, -0.66)], 'rust', 2);
+      }
+      for (const dx of [-0.3, -0.2, 0.1, 0.2]) K.line([at(dx, 0.06), at(dx + 0.02, 0.4)], 'ochre', 3);
+      K.shape([at(-0.4, -0.1), at(-0.48, -0.16), at(-0.44, -0.02)], 'buff');
+      K.oval(at(0.4, -0.34)[0], at(0.4, -0.34)[1], s * 0.014, s * 0.014, 'dark', null);
+      break;
+    case 15: // a hare
+      K.shape([at(-0.3, 0.2), at(-0.26, -0.06), at(0, -0.16), at(0.22, -0.1), at(0.36, -0.2), at(0.46, -0.1), at(0.36, 0.02), at(0.24, 0.22)], 'buff');
+      K.shape([at(0.32, -0.18), at(0.22, -0.5), at(0.3, -0.52), at(0.4, -0.2)], 'buff');
+      K.shape([at(-0.3, 0.2), at(-0.1, 0.1), at(0.06, 0.24), at(0.0, 0.4), at(-0.3, 0.4)], 'rust');
+      K.line([at(0.2, 0.2), at(0.24, 0.4)], 'buff', 3.4);
+      K.oval(at(-0.32, 0.08)[0], at(-0.32, 0.08)[1], s * 0.06, s * 0.06, 'buff');
+      K.oval(at(0.38, -0.1)[0], at(0.38, -0.1)[1], s * 0.014, s * 0.014, 'dark', null);
       break;
     default: // a fish
       K.shape([at(-0.3, 0), at(-0.05, -0.18), at(0.3, -0.12), at(0.48, 0), at(0.3, 0.12), at(-0.05, 0.18)], 'sage');
@@ -1225,4 +1259,252 @@ export function meander(K: Stitcher, x0: number, x1: number, y: number, s: numbe
   const pts: Pt[] = [];
   for (let x = x0; x < x1; x += s * 4) pts.push([x, y + s], [x, y - s], [x + s * 3, y - s], [x + s * 3, y + s * 0.2], [x + s * 1.2, y + s * 0.2], [x + s * 1.2, y - s * 0.3], [x + s * 2, y - s * 0.3], [x + s * 2, y + s], [x + s * 4, y + s]);
   K.line(pts, 'terracotta', 2, false);
+}
+
+// ---- Act 4: after the Conquest. The same stitches, with the Normans' own buildings: earth castles, stone keeps, and round arches cut with zigzag. ----
+
+/** A castle of earth and timber: a mound with a tower on it, and a fence round the yard below. */
+function motte(K: Stitcher, x: number, gy: number, w: number, h: number): void {
+  hill(K, x - w / 2, x + w / 2, gy, h * 0.55, 'sage');
+  const ty = gy - h * 0.53;
+  for (let i = -3; i <= 3; i++) K.shape([[x + i * 14 - 6, ty + 6], [x + i * 14 - 6, ty - 26], [x + i * 14, ty - 34], [x + i * 14 + 6, ty - 26], [x + i * 14 + 6, ty + 6]], 'rust', 'dark', false);
+  K.shape([[x - 30, ty - 20], [x - 30, gy - h * 0.92], [x + 30, gy - h * 0.92], [x + 30, ty - 20]], 'ochre', 'dark', false);
+  for (let i = 1; i < 4; i++) K.line([[x - 30 + i * 15, ty - 20], [x - 30 + i * 15, gy - h * 0.92]], 'dark', 1, false);
+  K.shape([[x - 38, gy - h * 0.92], [x, gy - h * 1.06], [x + 38, gy - h * 0.92]], 'terracotta', 'dark', false);
+  K.shape([[x - 7, gy - h * 0.8], [x - 7, gy - h * 0.7], [x + 7, gy - h * 0.7], [x + 7, gy - h * 0.8]], 'navy', 'dark');
+}
+/** A fence of sharpened stakes. */
+function stakes(K: Stitcher, x0: number, x1: number, gy: number, h: number): void {
+  for (let x = x0; x < x1; x += 13) K.shape([[x, gy], [x, gy - h], [x + 5, gy - h - 9], [x + 10, gy - h], [x + 10, gy]], 'rust', 'dark', false);
+}
+/** A great church in the Norman manner: two towers, and rows of round-headed arches. */
+function minster(K: Stitcher, x: number, gy: number, w: number, h: number): void {
+  K.shape([[x - w / 2, gy], [x - w / 2, gy - h * 0.6], [x + w / 2, gy - h * 0.6], [x + w / 2, gy]], 'buff', 'dark', false);
+  const n = Math.max(3, Math.round(w / 60));
+  for (let row = 0; row < 2; row++) {
+    for (let i = 0; i < n; i++) {
+      const aw = (w - 30) / n;
+      const ax = x - w / 2 + 15 + i * aw + aw * 0.2;
+      const base = gy - row * h * 0.31;
+      const top = h * (row ? 0.16 : 0.2);
+      const arch: Pt[] = [[ax, base - (row ? h * 0.04 : 0)], [ax, base - top]];
+      for (let k = 1; k < 6; k++) arch.push([ax + (aw * 0.6 * k) / 6, base - top - Math.sin((k / 6) * Math.PI) * aw * 0.3]);
+      arch.push([ax + aw * 0.6, base - top], [ax + aw * 0.6, base - (row ? h * 0.04 : 0)]);
+      K.shape(arch, row ? 'teal' : 'navy', 'dark', false);
+    }
+  }
+  // The zigzag the Normans cut round their arches, run along the wall.
+  const zig: Pt[] = [];
+  for (let zx = x - w / 2 + 6; zx <= x + w / 2 - 6; zx += 10) zig.push([zx, gy - h * 0.3 - (zig.length % 2) * 8]);
+  K.line(zig, 'terracotta', 2, false);
+  K.shape([[x - w / 2 - 8, gy - h * 0.6], [x - w / 2 + 14, gy - h * 0.72], [x + w / 2 - 14, gy - h * 0.72], [x + w / 2 + 8, gy - h * 0.6]], 'terracotta', 'dark', false);
+  for (const side of [-1, 1]) {
+    const tx = x + side * (w / 2 - 34);
+    K.shape([[tx - 30, gy - h * 0.6], [tx - 30, gy - h * 0.98], [tx + 30, gy - h * 0.98], [tx + 30, gy - h * 0.6]], 'buff', 'dark', false);
+    for (const dy of [0.7, 0.86]) K.shape([[tx - 8, gy - h * dy + 14], [tx - 8, gy - h * dy - 8], [tx, gy - h * dy - 18], [tx + 8, gy - h * dy - 8], [tx + 8, gy - h * dy + 14]], 'navy', 'dark');
+    K.shape([[tx - 34, gy - h * 0.98], [tx, gy - h * 1.12], [tx + 34, gy - h * 0.98]], 'teal', 'dark', false);
+  }
+}
+/** A plough drawn by an ox, with the ploughman behind. Faces right. */
+function ploughTeam(K: Stitcher, x: number, gy: number, who: Man): void {
+  creature(K, 12, x + 150, gy - 52, 130);
+  K.line([[x + 90, gy - 62], [x + 40, gy - 50], [x + 20, gy - 6]], 'rust', 4);
+  K.shape([[x + 8, gy], [x + 26, gy - 22], [x + 40, gy]], 'dark');
+  K.line([[x + 36, gy - 50], [x + 6, gy - 96]], 'rust', 4);
+  man(K, x - 26, gy, 206, { ...who, arm: 'forward' });
+  for (let i = 0; i < 4; i++) K.line([[x - 200 + i * 44, gy + 10], [x - 170 + i * 44, gy + 5], [x - 140 + i * 44, gy + 10]], 'rust', 1.8);
+}
+/** The chequered cloth the king's treasurers counted on, which gave the Exchequer its name. */
+function chequers(K: Stitcher, x: number, y: number, w: number): void {
+  const c = w / 6;
+  K.shape([[x - w / 2, y], [x + w / 2, y], [x + w / 2, y + c * 2], [x - w / 2, y + c * 2]], 'buff', 'dark', false);
+  for (let i = 0; i < 6; i++) for (let j = 0; j < 2; j++) if ((i + j) % 2) K.shape([[x - w / 2 + i * c, y + j * c], [x - w / 2 + (i + 1) * c, y + j * c], [x - w / 2 + (i + 1) * c, y + (j + 1) * c], [x - w / 2 + i * c, y + (j + 1) * c]], 'navy', null, false);
+  for (const side of [-1, 1]) K.line([[x + side * w * 0.42, y + c * 2], [x + side * w * 0.42, y + c * 2 + 70]], 'rust', 5);
+}
+const NORMAN: Man = { hair: 'rust' };
+
+Object.assign(SCENES, {
+  castles: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 1000);
+      motte(K, x + 250, GROUND, 360, 330);
+      stakes(K, x + 430, x + 640, GROUND, 54);
+      // The English, digging; and the man who is making them.
+      man(K, x + 80, GROUND, 204, { ...ENGLISH, tunic: 'sage', arm: 'forward', hold: 'staff' });
+      man(K, x + 470, GROUND, 200, { ...ENGLISH, f: -1, tunic: 'rust', arm: 'forward', hold: 'staff' });
+      K.oval(x + 420, GROUND - 6, 26, 12, 'rust'); // a heap of earth
+      man(K, x + 560, GROUND, 196, { ...ENGLISH, f: -1, tunic: 'teal', arm: 'up' });
+      K.oval(x + 548, GROUND - 204, 22, 14, 'rust'); // a basket of it, on his head
+      horse(K, x + 730, GROUND, 150, 'navy', -1, { ...NORMAN, helmet: true, mail: true, arm: 'point', hold: 'spear' });
+      // A house in the way.
+      hall(K, x + 910, GROUND, 130, 150, 'sage');
+      K.line([[x + 850, GROUND - 150], [x + 970, GROUND - 40]], 'dark', 2.4, false);
+    },
+  ],
+  harrying: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 500);
+      hall(K, x + 350, GROUND, 190, 210, 'sage');
+      flames(K, x + 330, GROUND - 204, 70);
+      flames(K, x + 400, GROUND - 190, 50);
+      // The barn, the plough and the ox: what a village needs to eat next year.
+      K.line([[x + 196, GROUND], [x + 216, GROUND - 40], [x + 250, GROUND - 46]], 'rust', 4);
+      flames(K, x + 226, GROUND - 44, 44);
+      horse(K, x + 100, GROUND, 150, 'terracotta', 1, { ...NORMAN, helmet: true, mail: true, arm: 'up', hold: 'sword' }, true);
+      man(K, x + 462, GROUND, 190, { lady: true, tunic: 'teal', arm: 'up' });
+    },
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 500);
+      // Sixteen years on: posts where a house was, and a clerk writing one word.
+      for (const px of [300, 340, 392, 430]) K.line([[x + px, GROUND], [x + px + 4, GROUND - 60 - (px % 3) * 22]], 'dark', 5, false);
+      K.line([[x + 286, GROUND - 4], [x + 450, GROUND - 4]], 'rust', 2, false);
+      man(K, x + 80, GROUND - 6, 200, { ...NORMAN, seated: true, priest: true, tunic: 'navy', arm: 'forward', hold: 'needle' });
+      book(K, x + 160, GROUND - 120, 34, 'navy');
+      man(K, x + 230, GROUND, 196, { ...ENGLISH, f: -1, tunic: 'rust', arm: 'down' });
+      K.words('WASTA', x + 370, GROUND - 190, 30);
+      creature(K, 5, x + 372, GROUND - 124, 60); // a raven on the tallest post
+    },
+  ],
+  lords: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 1000);
+      throne(K, x + 130, GROUND, 230, 1);
+      man(K, x + 132, GROUND - 72, 236, { ...NORMAN, seated: true, crown: true, tunic: 'terracotta', cloak: 'navy', arm: 'forward', hold: 'sceptre' });
+      // His barons, swearing; and what they get for it.
+      for (let i = 0; i < 3; i++) man(K, x + 290 + i * 70, GROUND, 214 - i * 4, { ...NORMAN, f: -1, mail: true, tunic: shields[i], arm: 'oath' });
+      charter(K, x + 250, GROUND - 330, 64);
+      // The men who held it before, going.
+      man(K, x + 640, GROUND, 210, { ...ENGLISH, tunic: 'sage', arm: 'down', hold: 'staff' });
+      man(K, x + 710, GROUND, 196, { lady: true, tunic: 'ochre', arm: 'down' });
+      waves(K, x + 780, x + 1000, GROUND - 20, 4);
+      ship(K, x + 890, GROUND - 44, 200, 1, ['teal', 'buff'], 2);
+    },
+  ],
+  domesday: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 500);
+      man(K, x + 70, GROUND - 6, 200, { ...NORMAN, seated: true, priest: true, tunic: 'navy', arm: 'forward', hold: 'needle' });
+      book(K, x + 150, GROUND - 120, 34);
+      man(K, x + 220, GROUND, 208, { ...ENGLISH, tunic: 'rust', arm: 'point' });
+      // Every one of them written down.
+      creature(K, 12, x + 320, GROUND - 46, 116);
+      creature(K, 12, x + 406, GROUND - 40, 100);
+      creature(K, 13, x + 462, GROUND - 26, 66);
+    },
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 500);
+      hall(K, x + 250, GROUND, 440, 380, 'navy');
+      // The treasurer at his chequered cloth, with the book that settles everything.
+      chequers(K, x + 260, GROUND - 126, 200);
+      coins(K, x + 200, GROUND - 132, 9);
+      man(K, x + 110, GROUND, 226, { ...NORMAN, priest: true, tunic: 'terracotta', cloak: 'teal', arm: 'point' });
+      book(K, x + 320, GROUND - 170, 50, 'terracotta');
+      man(K, x + 420, GROUND, 204, { ...NORMAN, f: -1, tunic: 'sage', arm: 'forward' });
+    },
+  ],
+  tongue: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 1000);
+      // In the field, in English.
+      tree(K, x + 40, GROUND, 230);
+      man(K, x + 120, GROUND, 208, { ...ENGLISH, tunic: 'sage', arm: 'point', hold: 'staff' });
+      creature(K, 12, x + 230, GROUND - 46, 116);
+      creature(K, 13, x + 340, GROUND - 30, 76);
+      creature(K, 11, x + 430, GROUND - 30, 76);
+      K.words('COW', x + 230, GROUND - 130, 22);
+      K.words('PIG', x + 340, GROUND - 96, 22);
+      K.words('SHEEP', x + 432, GROUND - 96, 22);
+      K.line([[x + 500, 60], [x + 500, GROUND + 20]], 'rust', 2, false);
+      // At the table, in French.
+      hall(K, x + 750, GROUND, 460, 380, 'terracotta');
+      K.shape([[x + 580, GROUND - 120], [x + 920, GROUND - 120], [x + 920, GROUND - 104], [x + 580, GROUND - 104]], 'buff', 'dark', false);
+      for (const lx of [600, 900]) K.line([[x + lx, GROUND - 104], [x + lx, GROUND]], 'rust', 5);
+      man(K, x + 600, GROUND - 40, 220, { ...NORMAN, seated: true, tunic: 'navy', cloak: 'terracotta', arm: 'forward' });
+      man(K, x + 905, GROUND - 40, 210, { f: -1, lady: true, seated: true, tunic: 'teal', arm: 'forward' });
+      for (const [dx, word] of [[672, 'BEEF'], [752, 'PORK'], [838, 'MUTTON']] as [number, string][]) {
+        K.oval(x + dx, GROUND - 128, 28, 9, 'ochre');
+        K.oval(x + dx, GROUND - 138, 17, 9, 'rust');
+        K.words(word, x + dx, GROUND - 176, 18);
+      }
+    },
+  ],
+  stone: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 1000);
+      // The old church, small and about to go.
+      church(K, x + 90, GROUND, 130, 170);
+      man(K, x + 210, GROUND, 236, { ...NORMAN, priest: true, tunic: 'buff', cloak: 'terracotta', arm: 'point', hold: 'staff' });
+      man(K, x + 300, GROUND, 190, { ...ENGLISH, priest: true, tunic: 'navy', arm: 'face' });
+      // The new one, going up.
+      minster(K, x + 660, GROUND, 460, 370);
+      for (const sx of [400, 440]) K.line([[x + sx, GROUND], [x + sx, GROUND - 250]], 'rust', 3, false);
+      for (const sy of [90, 170, 250]) K.line([[x + 396, GROUND - sy], [x + 446, GROUND - sy]], 'rust', 3, false);
+      man(K, x + 420, GROUND - 170, 76, { ...ENGLISH, tunic: 'sage', arm: 'up', hold: 'axe' });
+      for (let i = 0; i < 3; i++) K.shape([[x + 330 + i * 22, GROUND], [x + 330 + i * 22, GROUND - 18], [x + 350 + i * 22, GROUND - 18], [x + 350 + i * 22, GROUND]], 'buff', 'dark', false);
+      K.shape([[x + 342, GROUND - 18], [x + 342, GROUND - 36], [x + 362, GROUND - 36], [x + 362, GROUND - 18]], 'buff', 'dark', false);
+    },
+  ],
+  forest: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 1000);
+      tree(K, x + 50, GROUND, 250);
+      tree(K, x + 470, GROUND, 290, -1);
+      tree(K, x + 800, GROUND, 260);
+      tree(K, x + 950, GROUND, 220, -1);
+      horse(K, x + 220, GROUND, 160, 'rust', 1, { ...NORMAN, crown: true, tunic: 'terracotta', arm: 'forward', hold: 'bow' }, true);
+      creature(K, 3, x + 400, GROUND - 36, 90);
+      creature(K, 14, x + 590, GROUND - 60, 150);
+      creature(K, 14, x + 700, GROUND - 48, 120);
+      creature(K, 15, x + 760, GROUND - 22, 54);
+      creature(K, 13, x + 900, GROUND - 28, 70);
+      // A villager who would like his barley back, keeping very still.
+      man(K, x + 850, GROUND, 196, { ...ENGLISH, f: -1, tunic: 'sage', arm: 'face' });
+    },
+  ],
+  plough: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 500);
+      horse(K, x + 70, GROUND, 150, 'navy', 1, { ...NORMAN, tunic: 'terracotta', cloak: 'ochre', arm: 'point' });
+      ploughTeam(K, x + 250, GROUND, { ...ENGLISH, tunic: 'rust' });
+    },
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 500);
+      church(K, x + 410, GROUND, 150, 200);
+      // The sheriff with the king's writ, in English; and a man with his chain off.
+      man(K, x + 70, GROUND, 216, { ...NORMAN, tunic: 'navy', cloak: 'terracotta', arm: 'forward' });
+      charter(K, x + 120, GROUND - 200, 44);
+      man(K, x + 190, GROUND, 204, { ...ENGLISH, f: -1, tunic: 'sage', arm: 'forward' });
+      man(K, x + 320, GROUND, 190, { ...ENGLISH, tunic: 'ochre', arm: 'up' });
+      for (let i = 0; i < 4; i++) K.oval(x + 292 + i * 12, GROUND - 6 - (i % 2) * 3, 7, 4.4, null, 'dark');
+    },
+  ],
+  reckoning: [
+    (K: Stitcher, x: number) => {
+      ground(K, x, x + 1000);
+      // The king on his bier, with seven feet of ground.
+      K.shape([[x + 150, GROUND - 40], [x + 450, GROUND - 40], [x + 450, GROUND - 62], [x + 150, GROUND - 62]], 'navy', 'dark', false);
+      for (const lx of [170, 430]) K.line([[x + lx, GROUND], [x + lx, GROUND - 40]], 'rust', 5);
+      man(K, x + 440, GROUND - 66, 236, { ...NORMAN, f: 1, tilt: 1, crown: true, tunic: 'terracotta', cloak: 'ochre' });
+      man(K, x + 90, GROUND, 214, { priest: true, tunic: 'buff', arm: 'up', hold: 'staff' });
+      // Three sons, and what each of them got.
+      man(K, x + 530, GROUND, 196, { ...NORMAN, f: -1, tunic: 'sage', arm: 'down', hold: 'sword' });
+      man(K, x + 610, GROUND, 214, { ...NORMAN, f: -1, tunic: 'terracotta', arm: 'up' });
+      K.shape([[x + 572, GROUND - 228], [x + 576, GROUND - 250], [x + 584, GROUND - 236], [x + 590, GROUND - 254], [x + 596, GROUND - 236], [x + 604, GROUND - 250], [x + 608, GROUND - 228]], 'ochre', 'dark', false);
+      man(K, x + 690, GROUND, 190, { ...NORMAN, f: -1, tunic: 'navy', arm: 'forward' });
+      coins(K, x + 716, GROUND - 6, 12);
+      // The one who is writing it all down, good and evil.
+      man(K, x + 860, GROUND - 6, 204, { ...ENGLISH, f: -1, seated: true, priest: true, tunic: 'navy', arm: 'forward', hold: 'needle' });
+      book(K, x + 780, GROUND - 120, 36, 'terracotta');
+      church(K, x + 950, GROUND, 90, 190);
+    },
+  ],
+});
+
+/** A border of zigzag, as the Normans cut it round their doors and arches. */
+export function chevron(K: Stitcher, x0: number, x1: number, y: number, s: number): void {
+  for (const [dy, ink] of [[0, 'terracotta'], [s * 0.9, 'navy']] as [number, Wool][]) {
+    const pts: Pt[] = [];
+    for (let x = x0, i = 0; x <= x1; x += s * 2, i++) pts.push([x, y + dy + (i % 2 ? -s : s) * 0.8]);
+    K.line(pts, ink, 2, false);
+  }
 }

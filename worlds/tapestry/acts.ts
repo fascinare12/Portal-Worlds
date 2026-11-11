@@ -17,6 +17,7 @@
  * shuffled before being shown.
  */
 
+import { CONQUEST } from './conquest';
 import { ROME } from './rome';
 import { NORTHMEN } from './vikings';
 
@@ -85,7 +86,7 @@ export interface Act {
   latin: string;
   meaning: string;
   /** Whose art the borders and beasts are taken from. */
-  style: 'roman' | 'norse' | 'bayeux';
+  style: 'roman' | 'norse' | 'bayeux' | 'norman';
   /** Told to the player once, at the head of the act: what the pictures here are modelled on. */
   modelled: string;
   /** Said when the whole act is stitched. */
@@ -611,8 +612,19 @@ export const ACTS: Act[] = [
     style: 'bayeux',
     modelled:
       'This part follows the Bayeux Tapestry itself, made in the 1070s: its captions, its scenes, and its manner of drawing. Where a panel shows something the tapestry leaves out, the desk says so.',
-    closing: 'from an empty throne to a new king.',
+    closing: 'from an empty throne to a new king. What he did with the kingdom comes next.',
     panels: ANNO,
+  },
+  {
+    numeral: 'IV',
+    title: 'What the Conquest Changed',
+    latin: 'Anglia Mutata',
+    meaning: 'England changed',
+    style: 'norman',
+    modelled:
+      'There is no tapestry of these events. Where a real line survives, the caption over a panel quotes it in its own language: the Old English of the conquered, the Latin of the king\'s clerks, or the mixed English of two centuries later. Rest the pointer on a caption, or tap it, to see what it says and where it is from. The pictures are stitched like the rest of the cloth, but borrow from what the Normans built: castles of earth and timber, great churches with round arches, and the zigzag they cut in stone round every door. The beasts in the border are the ones the king\'s surveyors counted, and the ones he kept for himself.',
+    closing: 'from a castle on every hill to an English with French in its mouth.',
+    panels: CONQUEST,
   },
 ];
 

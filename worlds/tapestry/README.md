@@ -4,7 +4,7 @@ The world behind the gold pool in the wood: a long strip of embroidered linen,
 read from left to right, that teaches medieval history. The player is the
 scribe who finishes it.
 
-Three acts are made so far, twenty-nine panels and 96 questions. The cloth
+Four acts are made so far, thirty-eight panels and 131 questions. The cloth
 opens on the first:
 
 - **I · Rome's Shadow** (nine panels): the empire at its height; whether Rome
@@ -18,8 +18,12 @@ opens on the first:
   the Northmen of Normandy became French, and William's childhood.
 - **III · The Year 1066** (twelve panels): from King Edward dying without an
   heir to William crowned on Christmas Day.
+- **IV · What the Conquest Changed** (nine panels): castles; the Harrying of
+  the North; who owned the land; Domesday Book; French above and English
+  below; the new stone churches; the king's forests; the village behind the
+  plough; and the reckoning at William's death.
 
-The first panel of each act is open from the start, so either can be begun
+The first panel of each act is open from the start, so any can be begun
 first. Within an act the panels unlock in order.
 
 ## One cloth, changing borders
@@ -33,6 +37,10 @@ at its head:
   the gold haloes and domes of Constantinople.
 - **1066** follows the Bayeux Tapestry itself: slanting bars in the borders,
   and its birds, lions, dragons, hounds and fish.
+- **What the Conquest Changed** has the zigzag the Normans cut round their
+  doors, round-headed arches between the beasts, castles of earth and timber
+  and great churches; and its border beasts are the ones Domesday counted and
+  the king kept for himself: ox, pig, stag and hare.
 - **The Viking Thread** has plaited borders, knots between ravens, wolves and
   ribbon-beasts, ships with chequered sails as on the Gotland picture-stones,
   and rune-stones. There is no tapestry of these events, so every Latin
@@ -88,6 +96,11 @@ that it is the scribe's own.
 | The road east | Arabic | Ibn Fadlan |
 | Cnut | Old English | the Anglo-Saxon Chronicle, 1017 |
 | Rollo | Latin | King Charles's charter of 918 |
+| Castles; Domesday; the forest; the reckoning | Old English | the Anglo-Saxon Chronicle, 1066, 1085, 1087 |
+| The Harrying; whose land | Latin | Domesday Book |
+| Two tongues | Middle English | Robert of Gloucester, c. 1300 |
+| Stone | Latin | William of Malmesbury |
+| Behind the plough | Old English | King William's writ to London |
 | The rest | Latin | the scribe's own |
 
 How well each is checked. In Act I: Virgil, the Rule of Benedict, the Frankish
@@ -98,6 +111,12 @@ were confirmed against search results quoting editions. The charter's wording
 is as scholars cite it. The Arabic line matched the text of the standard
 edition in a search, but the edition itself could not be opened from here.
 A second rune-stone that was wanted could not be confirmed and was left out.
+In Act IV: the four Chronicle lines were read in Plummer and Earle's edition
+of the Old English, and Robert of Gloucester's in Wright's edition (both
+scanned at archive.org); Orderic's figure was read in Forester's translation.
+Malmesbury's Latin and the London writ are as quoted in recent scholarly
+articles found by search. `WASTA EST` and `TERRA REGIS` are Domesday's own
+standing phrases, given from general knowledge.
 
 ## The look
 
@@ -109,7 +128,7 @@ A second rune-stone that was wanted could not be confirmed and was left out.
 - There are no colour gradients, because the real cloth has none.
 - Each scene is scattered with birds, plants and stones.
 
-**Whose account?** Eight panels are told twice, from sources that disagree:
+**Whose account?** Eleven panels are told twice, from sources that disagree:
 
 | Panel | One telling | The other |
 | --- | --- | --- |
@@ -121,6 +140,9 @@ A second rune-stone that was wanted could not be confirmed and was left out.
 | Harold's oath | the Normans (William of Poitiers) | the English (the Chronicle's silence; Eadmer) |
 | Stamford Bridge | the English (Anglo-Saxon Chronicle) | the Northmen (Snorri's saga, c. 1230) |
 | Harold's death | the arrow (the tapestry; Amatus; Baudri) | the sword (the Carmen, c. 1067) |
+| The Harrying of the North | Orderic Vitalis: a hundred thousand dead | Domesday: one word, "waste", and what it can and cannot prove |
+| Domesday Book | the English chronicler: shameful prying | the king's treasurer, a century on: justice |
+| Behind the plough | what was lost: freedom, and the murdrum fine | what stayed (shires, laws, coin) and what ended (slavery) |
 
 Both tellings must be stitched, side by side in the same panel, and then one
 more question asks her to weigh them: what they agree on, what they differ
@@ -179,7 +201,7 @@ are **Unpick only this act** and **Unpick the whole cloth**.
 - `acts.ts`: the acts, and the history of 1066. Every caption, account,
   source note, question and hint. The first answer listed for each question
   is the right one.
-- `rome.ts`, `vikings.ts`: the same for Acts I and II.
+- `rome.ts`, `vikings.ts`, `conquest.ts`: the same for Acts I, II and IV.
 - `stitch.ts`: drawing as embroidery, thread by thread, and a record of each
   stitch so that the stitching can be played back.
 - `scenes.ts`: the figures, horses, ships and buildings, the twelve scenes,
@@ -191,6 +213,5 @@ stitched, `?at=6` opens on that panel.
 
 ## Still to make
 
-Acts IV and V of the outline: what the Conquest changed; the medieval world
-beyond England. Each will take its borders from its own
-sources, as above.
+Act V of the outline: the medieval world beyond England. It will take its
+borders from its own sources, as above.
