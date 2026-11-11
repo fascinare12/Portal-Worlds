@@ -681,7 +681,9 @@ function render(): void {
     html =
       `<p class="voice">The beasts of the border</p><p>Every finished panel brings the next one nearer. Once a beast is yours, tap any beast in the border under a finished panel to change it for one of yours.</p>` +
       `<div class="zoo">${BEASTS.map((b, i) => `<div class="${have[i] ? '' : 'locked'}"><img src="${portraits[i]}" alt=""><span><b>${have[i] ? esc(b.name) : '?'}</b>${have[i] ? esc(b.about) : `Joins after ${BEAST_AT[i]} finished ${BEAST_AT[i] === 1 ? 'panel' : 'panels'}.`}</span></div>`).join('')}</div>` +
-      `<button class="go" data-do="unbeast">Back to the cloth</button><button class="go quiet" data-do="fresh">Unpick everything and start again</button>`;
+      `<button class="go" data-do="unbeast">Back to the cloth</button>` +
+      `<p class="voice" style="margin-top:16px">Starting again</p><p>Unpicking takes the stitches out so that the questions can be answered afresh. The beasts you have collected depend on how many panels are finished, so they go back too.</p>` +
+      `<button class="go quiet" data-do="fresh-act">Unpick only ${act.numeral} · ${esc(act.title)}</button><button class="go quiet" data-do="fresh">Unpick the whole cloth</button>`;
   } else {
     const first = PANELS.reduce((n, x) => n + kept[x.id].first, 0);
     const asked = PANELS.reduce((n, x) => n + kept[x.id].asked, 0);
@@ -800,9 +802,11 @@ $('page').addEventListener('click', (e) => {
   } else if (d.do === 'unrune' || d.do === 'unbeast') {
     reading = false;
     settle();
-  } else if (d.do === 'fresh') {
-    if (!window.confirm('Unpick everything and start again on bare linen?')) return;
-    for (const x of PANELS) kept[x.id] = blank(x);
+  } else if (d.do === 'fresh' || d.do === 'fresh-act') {
+    // One act, or all of them.
+    const all = d.do === 'fresh';
+    if (!window.confirm(all ? 'Unpick the whole cloth and start again on bare linen?' : `Unpick ${ACTS[p.act].title} and start it again?`)) return;
+    for (const x of PANELS) if (all || x.act === p.act) kept[x.id] = blank(x);
     drawn.clear();
     sewing = null;
     go(PANELS.findIndex((x) => x.act === p.act));
