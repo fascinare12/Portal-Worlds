@@ -5,39 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <title>Portal Worlds: The Printer's World</title>
     <style>
-      /* Not built yet. For now this is the bare sheet: cream paper with only the outline block printed. */
-      html, body { margin: 0; height: 100%; overflow: hidden; background: #efe6c9; -webkit-user-select: none; user-select: none; }
-      body { background-image: repeating-linear-gradient(0deg, rgba(120, 100, 60, 0.05) 0 1px, transparent 1px 4px), repeating-linear-gradient(90deg, rgba(120, 100, 60, 0.03) 0 1px, transparent 1px 7px); }
-      svg { position: fixed; inset: 0; width: 100%; height: 100%; }
-      svg * { fill: none; stroke: #141a2e; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #e9e0c6; -webkit-user-select: none; user-select: none; }
+      canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
       button { border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-      #home { position: fixed; left: 14px; top: 14px; width: 52px; height: 52px; border-radius: 50%; z-index: 3; background: radial-gradient(circle, #fff 0%, #8fd49a 45%, #4f9a5c 100%); box-shadow: 0 0 16px #8fd49a; }
-      #seal { position: fixed; right: 7%; bottom: 9%; width: 46px; height: 46px; background: #cc3122; border-radius: 4px; box-shadow: inset 0 0 0 7px #cc3122, inset 0 0 0 11px #efe6c9; }
       #veil { position: fixed; inset: 0; pointer-events: none; background: #efe6c9; opacity: 1; transition: opacity 1.8s ease; z-index: 9; }
       #veil.open { opacity: 0; }
+      .round { position: fixed; top: 14px; width: 52px; height: 52px; border-radius: 50%; z-index: 3; }
+      #home { left: 14px; background: radial-gradient(circle, #fff 0%, #8fd49a 45%, #4f9a5c 100%); box-shadow: 0 0 16px #8fd49a; }
+      #sound { right: 14px; background: rgba(22, 40, 74, 0.1); color: #16284a; font-size: 22px; box-shadow: inset 0 0 0 2px rgba(22, 40, 74, 0.5); }
+      /* A fresh sheet: a blank page with a turned corner. */
+      #fresh { right: 78px; background: rgba(22, 40, 74, 0.1); box-shadow: inset 0 0 0 2px rgba(22, 40, 74, 0.5); }
+      #fresh::before { content: ''; position: absolute; left: 17px; top: 13px; width: 18px; height: 25px; background: #f6efd9; box-shadow: 0 0 0 2px #16284a; clip-path: polygon(0 0, 62% 0, 100% 28%, 100% 100%, 0 100%); }
+      /* The cartouche, as on every print in the series: here it holds the seals she has collected. */
+      #seals { position: fixed; left: 22px; top: 84px; padding: 7px 6px; display: grid; gap: 6px; background: rgba(240, 232, 208, 0.85); box-shadow: 0 0 0 2px #16284a, 0 0 0 5px rgba(240, 232, 208, 0.85), 0 0 0 6px #16284a; z-index: 3; pointer-events: none; }
+      #seals i { display: block; width: 22px; height: 22px; box-shadow: inset 0 0 0 1.5px rgba(22, 40, 74, 0.45); transition: transform 0.5s cubic-bezier(0.2, 2.2, 0.4, 1), background 0.2s; }
+      #seals i.on { background: #c23a26; box-shadow: none; transform: rotate(-4deg); }
+      #seals i.stamp { transform: scale(2.4) rotate(8deg); }
+      /* A wordless hint: a ring that pulses where a tap would send her, until she has moved. */
+      #hint { position: fixed; left: 50%; top: 56%; width: 64px; height: 64px; margin: -32px; border-radius: 50%; box-shadow: 0 0 0 3px #16284a; opacity: 0.7; pointer-events: none; z-index: 3; animation: tap 1.5s ease-out infinite; transition: opacity 0.8s; }
+      @keyframes tap { 0% { transform: scale(0.35); opacity: 0.9; } 100% { transform: scale(1.25); opacity: 0; } }
     </style>
   </head>
   <body>
-    <svg viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice">
-      <path d="M0 330 H800" />
-      <path d="M250 330 C330 300 390 210 420 130 H470 C500 210 560 300 650 330" />
-      <path d="M404 170 l14 16 l12 -14 l14 18 l12 -16 l14 14 l14 -18" />
-      <path d="M120 90 h210 a22 22 0 0 1 0 44 h-210 a22 22 0 0 1 0 -44 z" />
-      <path d="M0 370 q25 -18 50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0 t50 0" />
-      <path d="M0 420 q30 -20 60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0 t60 0" />
-    </svg>
-    <button id="home" aria-label="Back to the wood"></button>
-    <div id="seal"></div>
+    <canvas id="world"></canvas>
+    <button id="home" class="round" aria-label="Back to the wood"></button>
+    <button id="fresh" class="round" aria-label="Start a fresh sheet"></button>
+    <button id="sound" class="round" aria-label="Sound on or off">♪</button>
+    <div id="seals"></div>
+    <div id="hint"></div>
     <div id="veil"></div>
-    <script type="module">
-      const veil = document.getElementById('veil');
-      document.getElementById('home').onclick = () => {
-        veil.style.background = '#4f9a5c';
-        veil.classList.remove('open');
-        setTimeout(() => { window.location.href = '../../index.html#from-print'; }, 1700);
-      };
-      window.addEventListener('pageshow', (e) => { if (e.persisted) window.location.reload(); });
-      requestAnimationFrame(() => veil.classList.add('open'));
-    </script>
+    <script type="module" src="./main.ts"></script>
   </body>
 </html>
