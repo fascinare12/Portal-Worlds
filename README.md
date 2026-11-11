@@ -31,6 +31,7 @@ in `vite.config.ts`, and set `world: '<name>'` on a pool in
 |---|---|---|
 | Desert | `worlds/desert/` | pale sand; shows a pyramid being built |
 | Shibuya | `worlds/shibuya/` | red; shows 日本 being sprayed on a wall |
+| The deep sea | `worlds/sea/` | ice blue; shows a jellyfish beating in dark water |
 
 ## Visitors
 
@@ -43,6 +44,9 @@ shakes itself dry, trots about with its nose down, freezes with ears pricked,
 pounces nose-first into the grass, curls up for a nap, then stretches and
 jumps back in. It has one tail for every five words found in Shibuya, up to
 nine.
+
+A jellyfish made of light rises out of the ice-blue pool, drifts among the
+trees as if the air were sea, and sinks back in.
 
 ## Time of day
 

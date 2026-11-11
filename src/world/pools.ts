@@ -140,6 +140,32 @@ const waterFragment = /* glsl */ `
     return c;
   }
 
+  // What you see when you lean over the ice-blue pool: dark water, drifting sparks,
+  // and one jellyfish beating slowly, its tentacles trailing.
+  vec3 seaPicture(vec2 p, float t) {
+    vec3 c = mix(vec3(0.0, 0.02, 0.08), vec3(0.02, 0.2, 0.36), smoothstep(-1.0, 1.0, p.y));
+    for (int i = 0; i < 12; i++) {
+      float fi = float(i);
+      vec2 s = vec2(sin(fi * 3.7 + t * 0.1) * 0.8, fract(fi * 0.37 + t * 0.03) * 2.0 - 1.0);
+      c += vec3(0.3, 0.9, 1.0) * smoothstep(0.035, 0.0, length(p - s)) * (0.5 + 0.5 * sin(t * 2.0 + fi));
+    }
+    float beat = sin(t * 1.8);
+    vec2 j = p - vec2(0.0, 0.12 + beat * 0.03);
+    float w = 0.34 * (1.0 + 0.12 * beat);
+    float dome = length(vec2(j.x / w, max(j.y, 0.0) / 0.26));
+    float bell = smoothstep(1.04, 0.98, dome) * step(-0.02, j.y);
+    c += vec3(0.35, 0.85, 1.0) * bell * (0.25 + 0.75 * smoothstep(0.55, 1.0, dome));
+    for (int k = 0; k < 5; k++) {
+      float fk = float(k) - 2.0;
+      float y = -j.y;
+      if (y > 0.0 && y < 0.75) {
+        float x = fk * 0.12 * (1.0 + 0.12 * beat) + sin(y * 9.0 + t * 2.0 + fk) * 0.1 * y;
+        c += vec3(0.4, 0.8, 1.0) * smoothstep(0.016, 0.0, abs(j.x - x)) * (1.0 - y / 0.75) * 0.8;
+      }
+    }
+    return c;
+  }
+
   // Three koi, white with red and orange patches, swimming round the pool.
   vec3 koi(vec3 col, vec2 p, float t) {
     for (int i = 0; i < 3; i++) {
@@ -213,10 +239,10 @@ const waterFragment = /* glsl */ `
       vec2 p = vec2(dot(off, across), dot(off, away)) / uRadius;
       p += 0.012 * vec2(sin(p.y * 18.0 + uTime * 1.3), cos(p.x * 16.0 + uTime * 1.1)); // seen through water
       float window = smoothstep(1.0, 0.72, length(p)) * uReveal;
-      col = mix(col, uScene > 1.5 ? kanjiPicture(p, uTime) : desertPicture(p, uTime), window);
+      col = mix(col, uScene > 2.5 ? seaPicture(p, uTime) : uScene > 1.5 ? kanjiPicture(p, uTime) : desertPicture(p, uTime), window);
     }
     // The red pool has koi in it, circling just under the surface.
-    if (uScene > 1.5) col = koi(col, vPos / uRadius, uTime);
+    if (uScene > 1.5 && uScene < 2.5) col = koi(col, vPos / uRadius, uTime);
     // Woken by a touch: a ring of light runs outward and the whole pool brightens.
     float wake = uPulse * (1.0 - 0.6 * uOpen);
     float ring = smoothstep(0.25, 0.0, abs(r - (1.0 - uPulse) * 1.6));

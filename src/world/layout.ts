@@ -18,7 +18,7 @@ export interface Pool {
   open: boolean;
   /** The world this pool leads to, once that world exists: the folder name under worlds/. */
   world?: string;
-  /** The picture seen when looking into the pool: 1 = a pyramid being built, 2 = kanji being sprayed on a wall. */
+  /** The picture seen when looking into the pool: 1 = a pyramid being built, 2 = kanji being sprayed on a wall, 3 = a jellyfish in dark water. */
   scene?: number;
 }
 
@@ -66,6 +66,12 @@ function makePools(): Pool[] {
         p.color = 0xe0383a;
         p.world = 'shibuya';
         p.scene = 2;
+      }
+      if (i === 6) {
+        // The third doorway, ice blue: the deep sea.
+        p.color = 0x6fe3ff;
+        p.world = 'sea';
+        p.scene = 3;
       }
     }
   });

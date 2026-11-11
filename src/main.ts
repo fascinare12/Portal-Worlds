@@ -5,6 +5,7 @@ import { lerp, smoothstep } from './noise';
 import { createAtmosphere } from './world/atmosphere';
 import { daylight, updateDaylight } from './world/daylight';
 import { createFox } from './world/creatures/fox';
+import { createJelly } from './world/creatures/jelly';
 import { createSphinx } from './world/creatures/sphinx';
 import { createForest } from './world/forest';
 import { pools } from './world/layout';
@@ -38,6 +39,9 @@ scene.add(sphinx.group);
 const cityIndex = pools.findIndex((p) => p.world === 'shibuya');
 const fox = createFox(pools[cityIndex], () => poolsView.stir(cityIndex));
 scene.add(fox.group);
+const seaIndex = pools.findIndex((p) => p.world === 'sea');
+const jelly = createJelly(pools[seaIndex], () => poolsView.stir(seaIndex));
+scene.add(jelly.group);
 
 const rig = new CameraRig(canvas, terrain.mesh);
 const finish = new Finish(renderer);
@@ -164,6 +168,7 @@ renderer.setAnimationLoop(() => {
   poolsView.update(time, dt, window.innerHeight, rig.camera.position);
   sphinx.update(dt);
   fox.update(dt);
+  jelly.update(dt);
   terrain.update(time, poolsView.glow);
   atmosphere.update(time, rig.zoom, window.innerHeight);
   const blur = LEVELS[level].blur ? smoothstep(0.6, 0.95, rig.zoom) : 0;
