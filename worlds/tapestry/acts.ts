@@ -32,6 +32,12 @@ export interface Telling {
   voice?: string;
   /** The same in Latin, stitched above that half of the panel. */
   banner?: string;
+  /**
+   * A real inscription in runes to stitch over this telling in place of a banner: the runes
+   * themselves, how they read letter for letter, what they mean, where they are, and one word of
+   * them set as a puzzle to decode.
+   */
+  runes?: { text: string; reads: string; means: string; source: string; word: string; answer: string; wordMeans: string };
   account: string[];
   /** Where the account comes from. */
   source: string;
@@ -42,10 +48,18 @@ export interface Panel {
   /** Which act it belongs to: its place in ACTS. */
   act: number;
   id: string;
-  /** The Latin stitched along the top. */
+  /** The words stitched along the top, in the language of whoever left the record. */
   caption: string;
-  /** What it means. */
+  /** What they mean. */
   meaning: string;
+  /** The language, when it is not Latin. */
+  language?: string;
+  /** How to say it, for a caption that is not in our letters. */
+  reads?: string;
+  /** 'arabic' for a caption that joins its letters and runs right to left. */
+  script?: 'arabic';
+  /** If the caption is a real quotation: where it is from. Without this it is the scribe's own. */
+  quoted?: string;
   title: string;
   date: string;
   /** One telling, or two that disagree. */
@@ -573,7 +587,7 @@ export const ACTS: Act[] = [
     meaning: 'The thread of the Northmen',
     style: 'norse',
     modelled:
-      'There is no tapestry of these events, so every caption in this part is the scribe\'s own. The pictures are stitched like the rest of the cloth, but they borrow from the Northmen\'s own art: the ships with chequered sails cut on the picture-stones of Gotland, the ribbon-beasts they carved on wood and stone, and the woven hangings found in the ship burial at Oseberg in Norway.',
+      'There is no tapestry of these events. Where a real record survives, the caption over a panel is a line of it in its own language: Old English, Arabic, Latin, or runes. Rest the pointer on a caption, or tap it, to see what it says and where it is from. The pictures are stitched like the rest of the cloth, but borrow from the Northmen\'s own art: the ships with chequered sails cut on the picture-stones of Gotland, the ribbon-beasts they carved on wood and stone, and the woven hangings found in the ship burial at Oseberg in Norway.',
     closing: 'from the first raid to a boy duke in Normandy. The year 1066 comes next.',
     panels: NORTHMEN,
   },
@@ -590,5 +604,8 @@ export const ACTS: Act[] = [
   },
 ];
 
+const OWN_1066 = ['claimants', 'stamford'];
 /** Every panel of the cloth in order, each knowing which act it is in. */
-export const PANELS: Panel[] = ACTS.flatMap((act, i) => act.panels.map((p) => ({ ...p, act: i })));
+export const PANELS: Panel[] = ACTS.flatMap((act, i) =>
+  act.panels.map((p) => ({ ...p, act: i, quoted: p.quoted ?? (act.style === 'bayeux' && !OWN_1066.includes(p.id) ? 'The Bayeux Tapestry, 1070s' : undefined) })),
+);

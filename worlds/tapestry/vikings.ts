@@ -7,8 +7,13 @@ import type { PanelData } from './acts';
  * Sources. Quotations from the Anglo-Saxon Chronicle are from James Ingram's
  * translation (1823), in the public domain. Alcuin, Ibn Fadlan, Dudo of
  * Saint-Quentin and the charter of 918 are described or given in reported
- * speech, not quoted at length. All the Latin captions in this act are the
- * scribe's own: there is no tapestry of these events.
+ * speech, not quoted at length.
+ *
+ * Captions. There is no tapestry of these events. Where a real record
+ * survives, the caption is a line of it in its own language: Old English from
+ * the Chronicle (793 and 1017), Arabic from Ibn Fadlan, Latin from the
+ * charter of 918, and runes from a Swedish rune-stone. The other captions
+ * are Latin of the scribe's own, and the game says which is which.
  *
  * In every question the FIRST answer listed is the right one.
  */
@@ -45,8 +50,10 @@ export const NORTHMEN: PanelData[] = [
   },
   {
     id: 'lindisfarne',
-    caption: 'HIC PAGANI ECCLESIAM VASTANT',
-    meaning: 'Here the heathens lay waste the church',
+    caption: 'EARMLICE HÆÞENRA MANNA HERGUNC ADILEGODE GODES CYRICAN IN LINDISFARNAEE',
+    meaning: 'Wretchedly, the harrying of heathen men destroyed God\'s church on Lindisfarne',
+    language: 'Old English',
+    quoted: 'The Anglo-Saxon Chronicle (manuscripts D and E), under the year 793',
     title: 'The raid on Holy Island',
     date: 'Lindisfarne, Northumbria, 793',
     tellings: [
@@ -75,6 +82,15 @@ export const NORTHMEN: PanelData[] = [
       {
         voice: 'What the Northmen left',
         banner: 'LAPIDES DICUNT',
+        runes: {
+          text: 'ᛁᚾ ᚢᛚᚠᚱ ᚼᛅᚠᛁᛦ ᚬᚾᚴᛚᛅᛏᛁ ᚦᚱᚢ ᚴᛁᛅᛚᛏᛅᚴᛅᛏ',
+          reads: 'in ulfr hafiʀ onklati þru kialtakat',
+          means: 'And Ulf has taken three payments in England',
+          source: 'A rune-stone at Yttergärde in Sweden (catalogued as U 344), carved in the 1020s or soon after. The carver wrote a letter only once where one word ends and the next begins with it.',
+          word: 'ᚴᚾᚢᛏᚱ',
+          answer: 'knutr',
+          wordMeans: 'Knútr: the Danish king the English called Cnut. The stone goes on to list who made each payment, and ends "þa kalt knutr": "then Cnut paid."',
+        },
         account: [
           'The men who raided Lindisfarne wrote nothing about it that has come down to us. Northmen of that time did not write histories. They cut short messages in runes, on stone and wood and bone.',
           'Their own stories, the sagas, were written down in Iceland about four hundred years later.',
@@ -104,8 +120,12 @@ export const NORTHMEN: PanelData[] = [
   },
   {
     id: 'east',
-    caption: 'HIC MERCATORES AD ORIENTEM NAVIGANT',
-    meaning: 'Here merchants sail to the east',
+    caption: 'لم أر أتم أبدانا منهم كأنهم النخل شقر حمر',
+    meaning: 'I have never seen bodies more perfect than theirs: they are like palm trees, fair and ruddy',
+    language: 'Arabic',
+    script: 'arabic',
+    reads: 'lam ara atamma abdānan minhum, ka-annahum al-nakhl, shuqr ḥumr',
+    quoted: 'Ahmad ibn Fadlan, the account of his journey, 920s',
     title: 'The road east',
     date: 'The river Volga, 921 and 922',
     tellings: [
@@ -174,8 +194,10 @@ export const NORTHMEN: PanelData[] = [
   },
   {
     id: 'cnut',
-    caption: 'HIC CNUT REX ANGLORUM',
-    meaning: 'Here is Cnut, King of the English',
+    caption: 'HER ON ÞISUM GEARE FENG CNUT CYNING TO EALLON ANGELCYNNES RYCE',
+    meaning: 'In this year King Cnut succeeded to the whole kingdom of the English',
+    language: 'Old English',
+    quoted: 'The Anglo-Saxon Chronicle, under the year 1017',
     title: 'A Danish king of England',
     date: 'England, 1016 to 1042',
     tellings: [
@@ -210,8 +232,9 @@ export const NORTHMEN: PanelData[] = [
   },
   {
     id: 'rollo',
-    caption: 'HIC ROLLO TERRAM A REGE ACCEPIT',
-    meaning: 'Here Rollo received land from the king',
+    caption: 'NORMANNIS SEQUANENSIBUS VIDELICET ROLLONI SUISQUE COMITIBUS PRO TUTELA REGNI',
+    meaning: 'To the Northmen of the Seine, namely Rollo and his companions, for the protection of the kingdom',
+    quoted: 'A charter of King Charles the Simple, 14 March 918',
     title: 'The bargain on the Seine',
     date: 'Northern France, 911',
     tellings: [
