@@ -84,10 +84,11 @@ None of the prints themselves are used: every cut-out is drawn in code.
 ## Sound
 
 A koto, made in the browser: each pluck is a model of a string, tuned to the
-five notes of the *in* scale (D, E flat, G, A, B flat). The tune plays only
-while new ground is printing, so the music is the sound of the picture being
-made, with a soft rubbing like the printer's pad underneath. Reaching a
-lantern sounds two knocks of wooden clappers and a rolled chord.
+five notes of the *in* scale (D, E flat, G, A, B flat). The music is sparse:
+one chord, rolled from the bottom string up, each time you set off walking,
+and never more often than every four seconds. Under it there is only a faint
+rubbing, like the printer's pad, while new ground prints. Reaching a lantern
+sounds two knocks of wooden clappers and a rolled chord.
 
 ## What is remembered
 
