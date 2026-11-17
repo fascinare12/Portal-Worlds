@@ -16,6 +16,7 @@ export default defineConfig({
         sea: resolve(__dirname, 'worlds/sea/index.html'),
         print: resolve(__dirname, 'worlds/print/index.html'),
         tapestry: resolve(__dirname, 'worlds/tapestry/index.html'),
+        canon: resolve(__dirname, 'worlds/canon/index.html'),
       },
     },
   },

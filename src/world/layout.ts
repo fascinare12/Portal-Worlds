@@ -85,6 +85,11 @@ function makePools(): Pool[] {
         p.world = 'tapestry';
         p.scene = 5;
       }
+      if (i === 15) {
+        // The sixth doorway, white: a piece of music that climbs for ever. A band with one side turns inside it.
+        p.color = 0xf6f4ee;
+        p.world = 'canon';
+      }
       // A pool whose world has not been built yet stays dark, like any other; it is given its
       // colour on the day it opens.
       if (!p.world) {

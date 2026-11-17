@@ -34,6 +34,7 @@ in `vite.config.ts`, and set `world: '<name>'` on a pool in
 | The deep sea | `worlds/sea/` | ice blue; shows small fish circling in dark water |
 | The Printer's World | `worlds/print/` | parchment cream; a woodblock print appears on its surface block by block |
 | The Tapestry | `worlds/tapestry/` | wool gold; shows soldiers being embroidered on linen |
+| The Endless Canon | `worlds/canon/` | white; a band with one side turns in it, with ants walking round |
 
 ## Visitors
 

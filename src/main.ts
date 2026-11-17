@@ -6,6 +6,7 @@ import { createAtmosphere } from './world/atmosphere';
 import { daylight, updateDaylight } from './world/daylight';
 import { createFox } from './world/creatures/fox';
 import { createJelly } from './world/creatures/jelly';
+import { createMobius } from './world/creatures/mobius';
 import { createPaper } from './world/creatures/paper';
 import { createSphinx } from './world/creatures/sphinx';
 import { createForest } from './world/forest';
@@ -46,6 +47,10 @@ scene.add(jelly.group);
 const printIndex = pools.findIndex((p) => p.world === 'print');
 const paper = createPaper(pools[printIndex], () => poolsView.stir(printIndex));
 scene.add(paper.group);
+
+const canonPool = pools.find((p) => p.world === 'canon');
+const mobius = canonPool ? createMobius(canonPool) : null;
+if (mobius) scene.add(mobius.group);
 
 const rig = new CameraRig(canvas, terrain.mesh);
 const finish = new Finish(renderer);
@@ -174,6 +179,7 @@ renderer.setAnimationLoop(() => {
   fox.update(dt);
   jelly.update(dt);
   paper.update(dt);
+  mobius?.update(dt);
   terrain.update(time, poolsView.glow);
   atmosphere.update(time, rig.zoom, window.innerHeight);
   const blur = LEVELS[level].blur ? smoothstep(0.6, 0.95, rig.zoom) : 0;
