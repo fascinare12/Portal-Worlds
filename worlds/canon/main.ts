@@ -696,11 +696,13 @@ renderer.setAnimationLoop(() => {
   eyeTop.set(0.01, focusY + 190, 0.01);
   camera.position.lerpVectors(eye, eyeTop, above * above * (3 - 2 * above));
   camera.up.set(0, 1 - above, -above).normalize();
-  camera.fov = THREE.MathUtils.lerp(46, 9.5, above);
+  // From above, narrow enough to flatten the spiral and wide enough to hold all three rings, whichever way the screen is turned.
+  camera.fov = THREE.MathUtils.lerp(46, THREE.MathUtils.radToDeg(2 * Math.atan(15.5 / (190 * Math.min(1, camera.aspect)))), above);
   camera.updateProjectionMatrix();
   camera.lookAt(head.set(0, focusY - (tall() ? 9 : 3.2) * (1 - above), 0));
 
-  spire.position.y = focusY;
+  // From overhead the spire's flat top would loom over the innermost ring of stones, so it sinks until it is level with them.
+  spire.position.y = focusY - 53 * above;
   spireMat.uniforms.uEye.value = focusY;
   spireMat.uniforms.uTop.value = above;
   band.position.set(Math.cos(a + 2.45) * 58, focusY + 15, Math.sin(a + 2.45) * 58);
