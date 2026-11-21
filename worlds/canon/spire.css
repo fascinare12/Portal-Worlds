@@ -79,3 +79,6 @@ table.tally .row { flex-wrap: nowrap; }
 .row.tiny { gap: 2px; min-height: 18px; flex-wrap: nowrap; }
 .row.tiny .sym { width: 15px; height: 15px; border-radius: 3px; }
 .reasons button .row.tiny { display: flex; }
+.mv { display: inline-flex; align-items: center; gap: 2px; padding: 3px 7px; border-radius: 9px; background: #ece9e2; font-size: 17px; }
+.reasons button svg { pointer-events: none; }
+input[type=range] { accent-color: #c9951c; }

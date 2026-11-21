@@ -16,9 +16,14 @@ Built so far:
 | A loop through levels | Introduction | The Endless Canon (`canon.html`) | none yet |
 | Inside and outside | Chapter I, the MU-puzzle | `rules.html` | `rules.html?practice` |
 | Mirrors | Chapter II, the pq-system | `mirror.html` | `mirror.html?practice` |
+| Nesting | Chapter V | `nest.html` | `nest.html?practice` |
+| The record that breaks the player | Contracrostipunctus; chapters IX, XIV | `record.html` | `record.html?practice` |
+| Levels | Prelude, Ant Fugue; chapters X to XII | `levels.html` | `levels.html?practice` |
+| The loop closes | Chapter XX | `loop.html` | `loop.html?practice` |
 
-Four more steps are listed on the map as not built: nesting (ch. V), the record that breaks the player (ch. IV, IX, XIV), levels (ch. X to
-XII) and the loop closing (ch. XX).
+All seven steps on the map are built. The grouping into seven is this
+project's, not the book's: chapters III, VI to VIII, XIII and XV to XIX have
+no step of their own.
 
 ## Inside and outside
 
@@ -77,6 +82,76 @@ the same system would make. ◉ shows the rows as counts.
 - `checkReadings()` makes eighty puzzles of each kind for every reading and
   checks that exactly one offered reading fits all the rows shown, and that
   exactly one offered row belongs. It passes.
+
+## Nesting
+
+**The chamber.** First, stories inside stories: she goes three levels down
+by any doors (a book, a dream, a painting), then has to come home with the
+display hidden. One level short of home the page offers an ending that feels
+final; if she says she is home, she is told where she still is. ◉ shows the
+stack. Second, a fern whose rule mentions ferns: she grows it level by level,
+then removes the clause that stops it, and it runs until the page stops it.
+The card: push, pop, stack, recursion, bottoming out, tonic and pseudo-tonic.
+
+**Practice** (six kinds): how deep are you after these moves; which room are
+you in; which of four journeys ends at home; how many tips after so many
+rounds of splitting; which definition can be followed to the end; what a
+step is worth when each step is defined by the one before.
+
+## The record that breaks the player
+
+**The chamber** follows the idea of the dialogue, not its script. She writes
+three-note records for four of the Crab's players. Two perfect players each
+shatter on the record that spells their own build. A player that cannot
+sound one note survives, and cannot play that record. Player Omega rebuilds
+itself as each record reversed, and is caught by a record that reads the
+same both ways. From outside she matches six pieces of the story to six
+pieces of logic, then turns the MU-puzzle into numbers (M is 3, I is 1, U is
+0, as in chapter IX) in three questions. The card: Gödel numbering, TNT, the
+statement G, consistent and complete, the Incompleteness Theorem.
+
+**Practice** (five kinds): rows as numbers and back; which rule on the row
+matches a change in its number; story to logic; which record is unchanged by
+a player's rebuilding; and sentences about themselves, sorted into true,
+false, cannot be either, and could be either.
+
+## Levels
+
+**The chamber** is a small ant colony on a canvas: eighty ants with three
+rules (wander; follow scent away from home; carry food straight home leaving
+scent). When twelve crumbs are home she is shown one ant and its rulebook and
+asked whether it knows where the food is. She moves the food, the road moves,
+and she is asked where the route was kept. Then a word, WHOLE, made of the
+word "part", with a slider from far to near, and the question of which
+reading is the real one. The card: levels of description, Aunt Hillary,
+signals and symbols, reductionism and holism, chunking, epiphenomenon.
+
+**Practice** (five kinds): a letter made of letters, read far or near; three
+levels, asked for any one; which short description expands to exactly this
+row; which of four true statements is at the highest or lowest level; which
+statement about a different thing is at the same level.
+
+## The loop closes
+
+**The chamber.** A dial she sets turns five stones each round: a plain
+hierarchy. Then the dial is wired to the last stone, so the row sets the rule
+that changes the row. She has to find a start that holds still, one that
+goes round for ever, one that flips between two, and one that switches itself
+off (the last two need six-place stones). Two dials that turn each other
+have no top. One question names the level nothing inside can reach. The card
+(Tangled Hierarchy, Strange Loop, inviolate level, self-symbol) is followed
+by the map drawn inside itself, and a way out to the wood.
+
+**Practice** (five kinds): what a self-turning dial does in the end; where it
+is after some rounds; what two lamps do when each one's rule is about the
+other; what nothing inside a given loop can change; two dials that turn each
+other.
+
+For these four, `checkKinds()` in `shell.ts` makes each kind of question 150
+times in each skin and checks it is well formed (two to four distinct
+options, one right). The right answers themselves are computed by the same
+code that asks the question, so that check does not test them independently;
+each kind was read by eye in the browser.
 
 ---
 
@@ -149,6 +224,8 @@ shown on the clock and not left to the line.
 - `rules.html`, `rules.ts`, `system.ts`: the MU-puzzle chamber, its practice, and the small formal systems.
 - `mirror.html`, `mirror.ts`, `readings.ts`: the pq-system chamber, its practice, and the readings.
 - `draw.ts`: how a symbol looks and sounds in each skin.
+- `shell.ts`: what the later chamber pages share, and the runner for generated practice.
+- `nest.ts`, `record.ts`, `levels.ts`, `loop.ts` (each with its `.html`): the four later chambers and their practice.
 - `canon.html`, `main.ts`: the Endless Canon.
 - `score.ts`: the notes, and the rules that place them in the endless piece.
 - `sound.ts`: the voices.
