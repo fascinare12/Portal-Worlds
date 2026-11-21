@@ -107,18 +107,23 @@ function restart(): void {
 }
 
 function board(target: string | null): string {
-  const stones = [...now]
-    .map((s, i) => {
-      const pick = choosing?.at.includes(i);
-      return draw(s, skin).replace('class="sym"', `class="sym${pick ? ' pick' : ''}${fresh >= 0 && i >= fresh ? ' new' : ''}"${pick ? ` data-at="${i}"` : ''}`);
-    })
-    .join('');
+  const stones = [...now].map((s, i) => draw(s, skin).replace('class="sym"', `class="sym${fresh >= 0 && i >= fresh ? ' new' : ''}"`)).join('');
+  // When a rule fits in more than one place, each place is shown whole: the marks that would be replaced, ringed.
+  let places = '';
+  if (choosing) {
+    const rule = sys.rules[choosing.rule];
+    const span = rule.kind === 'rewrite' ? rule.from.length : 1;
+    places =
+      `<div class="label">It fits in ${choosing.at.length} places. The ringed marks are the ones that would be replaced. Choose one:</div><div class="reasons">` +
+      choosing.at.map((at) => `<button data-at="${at}"><div class="row small">${[...now].map((s, i) => draw(s, skin).replace('class="sym"', `class="sym ${i >= at && i < at + span ? 'hit' : 'dim'}"`)).join('')}</div></button>`).join('') +
+      `</div>`;
+  }
   const rules = sys.rules
     .map((r, i) => `<button class="ruleb${refused === i ? ' no' : ''}${choosing?.rule === i ? ' sel' : ''}" data-rule="${i}"><span class="n">${i + 1}</span>${ruleSays(r, skin)}</button>`)
     .join('');
   return (
     (target !== null ? `<div class="label">Make this</div>${row(target, skin)}` : '') +
-    `<div class="label">You have${choosing ? ' · where? press one of the marked ones' : ''}</div><div class="row" id="now">${stones || '<span class="nothing">nothing at all</span>'}</div>` +
+    `<div class="label">You have</div><div class="row" id="now">${stones || '<span class="nothing">nothing at all</span>'}</div>${places}` +
     `<div class="label">The rules</div><div class="rules">${rules}</div>` +
     `<div class="bar"><button class="chip pale" data-do="undo"${trail.length < 2 ? ' disabled' : ''}>↶ undo</button><button class="chip pale" data-do="restart"${trail.length < 2 ? ' disabled' : ''}>start again</button>${practising && !verdict ? '<button class="chip" data-do="cannot">It cannot be done</button>' : ''}<span class="soft" style="font-size:14px">${trail.length - 1} ${trail.length === 2 ? 'move' : 'moves'}</span></div>`
   );

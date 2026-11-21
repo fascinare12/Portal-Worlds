@@ -82,3 +82,5 @@ table.tally .row { flex-wrap: nowrap; }
 .mv { display: inline-flex; align-items: center; gap: 2px; padding: 3px 7px; border-radius: 9px; background: #ece9e2; font-size: 17px; }
 .reasons button svg { pointer-events: none; }
 input[type=range] { accent-color: #c9951c; }
+.sym.hit { outline: 3px solid #2f3440; outline-offset: 1px; }
+.sym.dim { opacity: 0.3; }
