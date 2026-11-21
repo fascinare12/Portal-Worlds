@@ -17,8 +17,12 @@ const tick = (name: string, on: boolean) => {
 };
 tick('canon', (canon?.stage ?? 0) >= 5);
 tick('rules', !!rules?.chapter);
-const right = Object.values((rules?.practice ?? {}) as Record<string, { right: number }>).reduce((n, f) => n + (f.right ?? 0), 0);
-if (right) $('done1').textContent = `${right} practice ${right === 1 ? 'puzzle' : 'puzzles'} solved`;
+const mirror = read('portal-worlds-spire-mirror-v1');
+tick('mirror', !!mirror?.chapter);
+for (const [kept, id] of [[rules, 'done1'], [mirror, 'done2']] as const) {
+  const right = Object.values((kept?.practice ?? {}) as Record<string, { right: number }>).reduce((n, f) => n + (f.right ?? 0), 0);
+  if (right) $(id).textContent = `${right} practice ${right === 1 ? 'puzzle' : 'puzzles'} solved`;
+}
 
 const veil = $('veil');
 $('home').onclick = () => {

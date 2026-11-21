@@ -19,6 +19,7 @@ export default defineConfig({
         canon: resolve(__dirname, 'worlds/canon/index.html'),
         canonLoop: resolve(__dirname, 'worlds/canon/canon.html'),
         canonRules: resolve(__dirname, 'worlds/canon/rules.html'),
+        canonMirror: resolve(__dirname, 'worlds/canon/mirror.html'),
       },
     },
   },
