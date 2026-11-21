@@ -71,3 +71,11 @@ table.tally tr.goal td { background: rgba(201, 149, 28, 0.14); }
 .steps a.card { display: block; text-decoration: none; }
 .steps .card.later { opacity: 0.55; box-shadow: none; background: rgba(255, 255, 255, 0.5); }
 .tick { float: right; color: #2f7d4f; font-size: 15px; }
+
+.ruleb[disabled] { opacity: 0.4; cursor: default; }
+.reasons button[disabled] { cursor: default; }
+.reasons button .row { display: inline-flex; vertical-align: middle; }
+table.tally .row { flex-wrap: nowrap; }
+.row.tiny { gap: 2px; min-height: 18px; flex-wrap: nowrap; }
+.row.tiny .sym { width: 15px; height: 15px; border-radius: 3px; }
+.reasons button .row.tiny { display: flex; }

@@ -15,9 +15,9 @@ Built so far:
 | --- | --- | --- | --- |
 | A loop through levels | Introduction | The Endless Canon (`canon.html`) | none yet |
 | Inside and outside | Chapter I, the MU-puzzle | `rules.html` | `rules.html?practice` |
+| Mirrors | Chapter II, the pq-system | `mirror.html` | `mirror.html?practice` |
 
-Five more steps are listed on the map as not built: mirrors (ch. II), nesting
-(ch. V), the record that breaks the player (ch. IV, IX, XIV), levels (ch. X to
+Four more steps are listed on the map as not built: nesting (ch. V), the record that breaks the player (ch. IV, IX, XIV), levels (ch. X to
 XII) and the loop closing (ch. XX).
 
 ## Inside and outside
@@ -50,6 +50,33 @@ either gets there, or says it cannot be done and picks the reason from three.
 
 Kept in this browser: whether the chamber is done, and right answers by
 family.
+
+## Mirrors
+
+**The chamber** is the pq-system. She makes three rows from the starting rows
+and the one rule, then is asked of four rows whether each can be made.
+Nothing is said about meaning. Then ◉ offers four ways to read the marks:
+"plus, equals" and "equals, taken from" both fit every row; "times, equals"
+fits one or two and then fails; "horse, happy, apple" says nothing. A last
+question asks whether a row that reads as a true sum, but has two p's, can be
+made. It cannot: the reading gives no power over the system. The card gives
+the book's words: well-formed string, axiom schema, interpretation,
+isomorphism, meaningful and meaningless, passive meaning.
+
+**Practice** shows three to five rows that some system makes and asks either
+which of three readings makes them all true, or which of four further rows
+the same system would make. ◉ shows the rows as counts.
+
+- Eleven readings (`readings.ts`) in three levels: plus, less than, the same
+  as, one less than; take away, half of, more than, the larger; times, the
+  smaller, goes exactly into.
+- The first row shown is chosen, where possible, so that a wrong reading fits
+  it too.
+- Which of the three symbols is the repeated mark changes every puzzle, as
+  does the skin.
+- `checkReadings()` makes eighty puzzles of each kind for every reading and
+  checks that exactly one offered reading fits all the rows shown, and that
+  exactly one offered row belongs. It passes.
 
 ---
 
@@ -120,6 +147,8 @@ shown on the clock and not left to the line.
 
 - `index.html`, `hub.ts`, `spire.css`: the map, and the look shared by the pages of words and stones.
 - `rules.html`, `rules.ts`, `system.ts`: the MU-puzzle chamber, its practice, and the small formal systems.
+- `mirror.html`, `mirror.ts`, `readings.ts`: the pq-system chamber, its practice, and the readings.
+- `draw.ts`: how a symbol looks and sounds in each skin.
 - `canon.html`, `main.ts`: the Endless Canon.
 - `score.ts`: the notes, and the rules that place them in the endless piece.
 - `sound.ts`: the voices.
