@@ -36,6 +36,18 @@ in `vite.config.ts`, and set `world: '<name>'` on a pool in
 | The Tapestry | `worlds/tapestry/` | wool gold; shows soldiers being embroidered on linen |
 | The Spire | `worlds/canon/` | white; a band with one side turns in it, with ants walking round |
 
+## The folk of the wood
+
+Tap a tree and someone comes out of it for a few seconds: a dryad rising
+from the crown in a swirl of leaves, a faun dancing once round the trunk, an
+owl sailing a circle overhead, or a squirrel racing over the leaves. Tap a
+tall mushroom and a mouse or a hedgehog runs a ring round its stem; now and
+then it is a guinea pig with a yellow ring tied to its back. They are the
+old creatures of myth and fable, not anyone's characters. Seen from far
+overhead they are drawn larger. (`src/world/folk.ts`; for development,
+`?folk=0&kind=2` taps the tree nearest the middle as the page opens, and
+`?folk=m0` a mushroom.)
+
 ## Visitors
 
 Creatures from other worlds come through their pools. A sandstone sphinx

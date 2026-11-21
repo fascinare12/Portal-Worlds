@@ -40,7 +40,8 @@ export function createMobius(pool: Pool): { group: THREE.Group; update(dt: numbe
   const dark = new THREE.MeshLambertMaterial({ color: 0x2a2622 });
   const bead = new THREE.SphereGeometry(1, 8, 6);
   const rider = new THREE.InstancedMesh(bead, dark, 3);
-  tilt.add(band, rider);
+  const riderLegs = new THREE.InstancedMesh(bead, dark, 6);
+  tilt.add(band, rider, riderLegs);
   float.add(tilt);
   float.position.set(pool.x, pool.level + radius * 0.62, pool.z);
 
@@ -48,7 +49,9 @@ export function createMobius(pool: Pool): { group: THREE.Group; update(dt: numbe
   const WALKERS = 11;
   const crowd = new THREE.InstancedMesh(bead, dark, WALKERS * 3);
   crowd.frustumCulled = false;
-  group.add(float, crowd);
+  const crowdLegs = new THREE.InstancedMesh(bead, dark, WALKERS * 6);
+  crowdLegs.frustumCulled = false;
+  group.add(float, crowd, crowdLegs);
 
   const rand = mulberry32(31);
   const SPEED = 0.85;
@@ -67,6 +70,27 @@ export function createMobius(pool: Pool): { group: THREE.Group; update(dt: numbe
   const up = new THREE.Vector3(0, 1, 0);
   const BEADS = [0.035, 0.028, 0.045]; // head, middle, tail
   let t = 0;
+  const side = new THREE.Vector3();
+  const reach = new THREE.Vector3();
+  const root = new THREE.Vector3();
+  /**
+   * Six legs for one ant: three a side, splayed out and down from the middle of its body, the
+   * front and back of one side stepping with the middle of the other, as real ants walk.
+   */
+  function legs(mesh: THREE.InstancedMesh, first: number, body: THREE.Vector3, fwd: THREE.Vector3, upward: THREE.Vector3, long: number, stride: number): void {
+    side.crossVectors(fwd, upward).normalize();
+    for (let leg = 0; leg < 6; leg++) {
+      const which = leg < 3 ? 1 : -1;
+      const along3 = (leg % 3) - 1; // back, middle, front
+      const swing = Math.sin(stride + (leg % 2 ? Math.PI : 0) + (which > 0 ? 0 : Math.PI)) * 0.35;
+      reach.copy(side).multiplyScalar(which).addScaledVector(upward, -0.75).addScaledVector(fwd, along3 * 0.55 + swing).normalize();
+      root.copy(body).addScaledVector(fwd, along3 * long * 0.22).addScaledVector(reach, long * 0.5);
+      quat.setFromUnitVectors(forward, reach);
+      size.set(long * 0.5, long * 0.05, long * 0.05);
+      m4.compose(root, quat, size);
+      mesh.setMatrixAt(first + leg, m4);
+    }
+  }
 
   function walk(w: Walker, dt: number): void {
     w.left -= dt;
@@ -146,7 +170,10 @@ export function createMobius(pool: Pool): { group: THREE.Group; update(dt: numbe
         m4.compose(ahead.copy(at).addScaledVector(along, (1 - part) * radius * 0.085).addScaledVector(normal, r * 1.1), quat, size);
         rider.setMatrixAt(part, m4);
       }
+      mobiusPoint(s, 0, radius, at);
+      legs(riderLegs, 0, at.addScaledVector(normal, radius * 0.05), along, normal, radius * 0.11, t * 9);
       rider.instanceMatrix.needsUpdate = true;
+      riderLegs.instanceMatrix.needsUpdate = true;
 
       // The ants in the wood. Under the water they are simply out of sight.
       walkers.forEach((w, i) => {
@@ -163,8 +190,11 @@ export function createMobius(pool: Pool): { group: THREE.Group; update(dt: numbe
           m4.compose(at.set(px, groundHeight(px, pz) + r * 0.9, pz), quat, size);
           crowd.setMatrixAt(i * 3 + part, m4);
         }
+        const long = hidden ? 0 : radius * 0.2;
+        legs(crowdLegs, i * 6, at.set(w.x, groundHeight(w.x, w.z) + radius * 0.09, w.z), along, up, long, t * 9 + i);
       });
       crowd.instanceMatrix.needsUpdate = true;
+      crowdLegs.instanceMatrix.needsUpdate = true;
     },
   };
 }
