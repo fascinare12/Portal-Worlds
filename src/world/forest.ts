@@ -5,6 +5,7 @@ import spikeUrl from '../textures/spike.webp';
 import sprigUrl from '../textures/sprig.webp';
 import { daylight } from './daylight';
 import { createFoliage } from './foliage';
+import { tallMushrooms } from './folk';
 import { groundHeight, poolAt, pools, trees } from './layout';
 import { paint, wind } from './paint';
 import { season } from './season';
@@ -304,6 +305,8 @@ function createDetails(): THREE.Group {
     // Most are small; now and then one grows as tall as a child's knee.
     const grown = rand() < 0.1 ? 2.6 + rand() * 1.6 : 0.9 + rand() * 1.6;
     const s = poolAt(x, z, 3) || Math.hypot(x, z) > 110 ? 0 : grown;
+    // The tall ones are big enough for something to live under.
+    if (s >= 2.6) tallMushrooms.push({ x, y: groundHeight(x, z), z, h: 0.45 * s });
     dummy.position.set(x, groundHeight(x, z) - 0.02, z);
     dummy.rotation.set((rand() - 0.5) * 0.3, rand() * 6.28, (rand() - 0.5) * 0.3);
     dummy.scale.setScalar(s);

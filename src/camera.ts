@@ -75,6 +75,8 @@ export class CameraRig {
   private lastDrag = 0;
   private stride = 0;
 
+  /** Called with the line of sight of every tap, before the view moves. */
+  onTap: ((ray: THREE.Ray) => void) | null = null;
   /** Called when someone leaning over a pool that leads somewhere taps it again. */
   onDive: ((pool: Pool) => void) | null = null;
   private diving: { pool: Pool; t: number } | null = null;
@@ -245,6 +247,7 @@ export class CameraRig {
   /** Tap: glide to the tapped spot. Tapping a pool also leans in for a close look. */
   private goTo(clientX: number, clientY: number): void {
     this.raycaster.setFromCamera(this.ndc(clientX, clientY), this.camera);
+    this.onTap?.(this.raycaster.ray);
     const hit = this.raycaster.intersectObject(this.ground)[0];
     if (!hit) return;
     const pool = poolAt(hit.point.x, hit.point.z);

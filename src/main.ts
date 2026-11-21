@@ -9,8 +9,9 @@ import { createJelly } from './world/creatures/jelly';
 import { createMobius } from './world/creatures/mobius';
 import { createPaper } from './world/creatures/paper';
 import { createSphinx } from './world/creatures/sphinx';
+import { createFolk, tallMushrooms } from './world/folk';
 import { createForest } from './world/forest';
-import { pools } from './world/layout';
+import { pools, trees } from './world/layout';
 import { wind } from './world/paint';
 import { createPools } from './world/pools';
 import { createTerrain } from './world/terrain';
@@ -53,6 +54,25 @@ const mobius = canonPool ? createMobius(canonPool) : null;
 if (mobius) scene.add(mobius.group);
 
 const rig = new CameraRig(canvas, terrain.mesh);
+
+// Tap a tree or a tall mushroom, and someone comes out for a moment.
+const folk = createFolk();
+scene.add(folk.group);
+rig.onTap = (ray) => folk.tap(ray);
+// For looking at one of them while developing: ?folk=12 taps that tree as the page opens.
+const showFolk = new URLSearchParams(window.location.search).get('folk');
+if (showFolk !== null) {
+  setTimeout(() => {
+    const eye = rig.camera.position;
+    const n = Number(showFolk.replace('m', '')) || 0;
+    const list = showFolk.startsWith('m') ? tallMushrooms.map((m) => new THREE.Vector3(m.x, m.y + m.h * 0.5, m.z)) : trees.map((t) => new THREE.Vector3(t.x, t.base + t.h, t.z));
+    // Nearest to the middle of what is being looked at.
+    const centre = homePool ? new THREE.Vector3(homePool.x, homePool.level, homePool.z) : new THREE.Vector3(0, 0, 0);
+    const target = list.sort((a, b) => Math.hypot(a.x - centre.x, a.z - centre.z) - Math.hypot(b.x - centre.x, b.z - centre.z))[n];
+    const kind = new URLSearchParams(window.location.search).get('kind');
+    if (target) folk.tap(new THREE.Ray(eye.clone(), target.clone().sub(eye).normalize()), kind === null ? undefined : Number(kind));
+  }, 3500);
+}
 const finish = new Finish(renderer);
 
 // Quality steps down by itself on devices that cannot keep up, so movement stays smooth.
@@ -180,6 +200,7 @@ renderer.setAnimationLoop(() => {
   jelly.update(dt);
   paper.update(dt);
   mobius?.update(dt);
+  folk.update(dt);
   terrain.update(time, poolsView.glow);
   atmosphere.update(time, rig.zoom, window.innerHeight);
   const blur = LEVELS[level].blur ? smoothstep(0.6, 0.95, rig.zoom) : 0;
