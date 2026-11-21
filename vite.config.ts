@@ -17,6 +17,8 @@ export default defineConfig({
         print: resolve(__dirname, 'worlds/print/index.html'),
         tapestry: resolve(__dirname, 'worlds/tapestry/index.html'),
         canon: resolve(__dirname, 'worlds/canon/index.html'),
+        canonLoop: resolve(__dirname, 'worlds/canon/canon.html'),
+        canonRules: resolve(__dirname, 'worlds/canon/rules.html'),
       },
     },
   },

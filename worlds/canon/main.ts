@@ -584,9 +584,9 @@ $('go').onclick = () => {
 };
 const veil = $('veil');
 $('home').onclick = () => {
-  veil.style.background = '#4f9a5c';
+  // Back to the map of the Spire; the wood is one step further out.
   veil.classList.remove('open');
-  setTimeout(() => (window.location.href = '../../index.html#from-canon'), 1700);
+  setTimeout(() => (window.location.href = './index.html'), 900);
 };
 window.addEventListener('pageshow', (e) => {
   if (e.persisted) window.location.reload();
