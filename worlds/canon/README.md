@@ -1,4 +1,59 @@
-# The Endless Canon
+# The Spire
+
+The world behind the white pool in the wood: a playable companion to Douglas
+Hofstadter's *Gödel, Escher, Bach*. The pool opens on a map (`index.html`) of
+the steps of the book's argument. Each step has two things:
+
+- a **chamber**, played before or beside its chapter, which ends in a card
+  tying what was done to the book's own terms;
+- **practice**: short puzzles without end that ask for the same move in
+  different dress, for making the idea a habit and not only understood.
+
+Built so far:
+
+| Step | In the book | Chamber | Practice |
+| --- | --- | --- | --- |
+| A loop through levels | Introduction | The Endless Canon (`canon.html`) | none yet |
+| Inside and outside | Chapter I, the MU-puzzle | `rules.html` | `rules.html?practice` |
+
+Five more steps are listed on the map as not built: mirrors (ch. II), nesting
+(ch. V), the record that breaks the player (ch. IV, IX, XIV), levels (ch. X to
+XII) and the loop closing (ch. XX).
+
+## Inside and outside
+
+**The chamber** is the MU-puzzle. She starts with MI and four rules and tries
+to make MU, for as long as she likes; after a dozen moves the page suggests
+pressing ◉. From outside she stops making rows: she counts the I's in a row,
+ties them in threes, and tries each rule from each place a row can be. No
+rule lands on "none left over", which is where MU is. The card then gives the
+book's words: string, axiom, rule of production, theorem, derivation, M-mode
+and I-mode, decision procedure.
+
+**Practice** makes a new small system each time (`system.ts`): a start, two
+to four rewriting rules, and a target. Half the targets can be reached. She
+either gets there, or says it cannot be done and picks the reason from three.
+◉ shows tallies of the rows she has made, to look for what never changes.
+
+- There are eight families, each with one thing its rules cannot change: the
+  row never shortens; the first symbol is fixed; a count is fixed; a count
+  keeps its oddness; two kinds never pass each other; a difference is fixed;
+  a weighted total is fixed; a count's leftover in threes (the MU-puzzle's
+  own).
+- Three levels. Harder families open after three right answers at the level
+  below. The family she has got right least often comes up most.
+- Three skins (stones, notes, a garden), changed every puzzle.
+- `selfCheck()` in `system.ts` makes sixty puzzles in every family and checks
+  each by search: reachable targets are reachable in at least three moves,
+  unreachable ones are unreachable, the stated reason holds for every row
+  that can be made, and the wrong reasons really are wrong. It passes.
+
+Kept in this browser: whether the chamber is done, and right answers by
+family.
+
+---
+
+## The Endless Canon
 
 The world behind the white pool in the wood: a spire in white mist, and round
 it a path of stones that is also a piece of music. Time runs round the spire;
@@ -34,7 +89,7 @@ or down, which changes that note in every round at once.
 
 - Drag to look round the spire; scroll or pinch to come nearer.
 - **◉** looks from the side or from above. **new** takes it apart. **♪** is
-  the sound. The green button goes home. Press the panel's heading to fold it.
+  the sound. ☰ goes back to the map. Press the panel's heading to fold it.
 
 Kept in this browser: which rule she has reached and how the rules are set.
 Changed stones are not kept.
@@ -63,8 +118,10 @@ shown on the clock and not left to the line.
 
 ## Files
 
+- `index.html`, `hub.ts`, `spire.css`: the map, and the look shared by the pages of words and stones.
+- `rules.html`, `rules.ts`, `system.ts`: the MU-puzzle chamber, its practice, and the small formal systems.
+- `canon.html`, `main.ts`: the Endless Canon.
 - `score.ts`: the notes, and the rules that place them in the endless piece.
 - `sound.ts`: the voices.
-- `main.ts`: the spire, the stones, the walkers, the rules and what is said.
 
 For development: `?fresh`, `?stage=3`, `?top`, `?speed=4`.
