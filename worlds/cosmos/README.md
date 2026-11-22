@@ -35,6 +35,9 @@ appealing.
 | 7 · Horizons | `horizons.html`: a ship under steady thrust on the spacetime diagram; a message from home whose sending time is slid past the last moment it can ever arrive | Exponentials and logarithms |
 | 8 · Black holes | `holes.html`: a ship hovering at any height, shown on the budget's arrow; a dropped beacon with its own clock and a far watcher's; three real masses | Limits |
 | 9 · Wormholes | `wormholes.html`: light going round against a ship going through; one mouth taken on the twins' journey until it makes a time machine | None new |
+| 10 · Light as messenger | `light.html`: a glowing body of any temperature with its curve; a spectrum to match against the lines of five elements, at rest and receding | Powers of ten; logarithms to base ten |
+| 11 · The life of a star | `stars.html`: a star to squeeze, puff up and starve; a star of any mass, with its brightness, colour, lifetime and ending | Balance and feedback; power laws |
+| 12 · The distance ladder | `ladder.html`: the Earth's orbit and a star's shift; a lamp of known brightness to place; the whole ladder on a scale of powers of ten | Small angles; inverse-square for light |
 
 The whole plan, nineteen steps in seven stages, with what each unbuilt step
 is meant to hold and how to add one, is in [`PLAN.md`](PLAN.md). The map
@@ -104,14 +107,33 @@ an order of magnitude only). All sources fetched were European, Japanese or
 American institutions writing in English or Japanese; none disagreed on any
 figure used.
 
+For steps 10 to 12 the checks are `checkStarlight()` in `starlight.ts`: Wien's
+law against a hunt for the top of the Planck curve; the fourth-power law
+against the curve added up; hydrogen's lines against Rydberg's formula; the
+four pieces of the brightness rule against each other where they meet; each
+typical star's brightness against its size and temperature; the parsec from
+the astronomical unit and a second of arc; and the inverse-square law against
+the same light through spheres of different size.
+
+Quoted in steps 10 to 12 and where checked: the table of typical stars and
+the four-piece brightness rule (Wikipedia, "Main sequence" and
+"Mass–luminosity relation"); the Cepheid rule (Wikipedia, citing Benedict and
+others 2007); Proxima's parallax, Bessel and 61 Cygni, Leavitt 1912,
+Andromeda's distance, the Chandrasekhar limit (Wikipedia). From memory and not
+re-fetched: Fraunhofer, Kirchhoff and Bunsen, Balmer, the helium dates, Payne
+1925, the 1987 supernova's neutrinos, the solar neutrino experiments, Hubble's
+1923 Cepheid and his distance for it, the 1998 supernova result, Gaia's star
+count, and the two values of the Hubble constant.
+
 ## Files
 
 - `physics.ts`: the arithmetic of special relativity, and its checks.
 - `gravity.ts`: light cones, clocks and height, curved surfaces, tides and orbits, and their checks.
 - `strong.ts`: the thrusting ship, the black hole and the wormhole mouth, and their checks.
 - `art.ts`: shared drawing pieces (stars, shaded planet, black hole, glows). Decoration only.
+- `starlight.ts`: glowing bodies and spectral lines, stars by mass, and distances, with their checks.
 - `chamber.ts`: what a chamber's page does, shared by steps 3 onward.
-- `budget.ts`, `twins.ts`, `cones.ts`, `falling.ts`, `tides.ts`, `orbits.ts`, `horizons.ts`, `holes.ts`, `wormholes.ts` (each with its `.html`): the chambers and practice.
+- `budget.ts`, `twins.ts`, `cones.ts`, `falling.ts`, `tides.ts`, `orbits.ts`, `horizons.ts`, `holes.ts`, `wormholes.ts`, `light.ts`, `stars.ts`, `ladder.ts` (each with its `.html`): the chambers and practice.
 - `PLAN.md`: the full plan.
 - `index.html`, `hub.ts`: the map. `cosmos.css`: the night colours.
 - The page shell and practice runner are shared with the Spire

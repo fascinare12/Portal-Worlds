@@ -57,11 +57,11 @@ Status: ✓ built and live · ○ not built.
 
 ### D · Light and stars
 
-| | Step | The idea | The playable (proposed) | Math it brings in |
+| | Step | The idea | The playable | Math it brings in |
 | --- | --- | --- | --- | --- |
-| ○ | 10 · Light as messenger | Colour gives temperature (blackbody); lines give ingredients; shifted lines give speed | A spectrum to tune | Logarithms; powers of ten |
-| ○ | 11 · The life of a star | Gravity against pressure; fusion; mass decides lifetime and ending (white dwarf, neutron star, black hole). May need to split in two | Build stars of different mass | Balance and feedback |
-| ○ | 12 · The distance ladder | Parallax, standard candles (Cepheids, type Ia supernovae), redshift | Measuring rung by rung | Small angles; inverse-square for brightness |
+| ✓ | 10 · Light as messenger (`light`) | Colour gives temperature; dark lines give ingredients; their shift gives speed. A missing line is not a missing element | A glowing body with its curve; a spectrum to match against five elements, at rest and receding | Powers of ten and logarithms to base ten |
+| ✓ | 11 · The life of a star (`stars`) | A self-correcting balance of gravity and pressure; mass decides brightness, colour, lifetime and ending; where the elements were made | A star to squeeze, puff up and starve (a cartoon, labelled as one); a star of any mass | Balance and feedback; power laws |
+| ✓ | 12 · The distance ladder (`ladder`) | Parallax, standard candles, Cepheids, supernovae, redshift; each rung calibrated on the one below | The Earth's orbit and a star's shift; a lamp to place; the whole ladder in powers of ten | Small angles and radians; inverse-square for light |
 
 ### E · The cosmos
 
@@ -133,7 +133,7 @@ And two common pictures are replaced by better ones:
 - `chamber.ts` runs the steps: give it the steps, a figure built once
   (`frame`), a `paint` to bring it up to date, and the drawer.
 - Put new physics and its second-route checks in a module beside
-  `gravity.ts` (stage C's is `strong.ts`), and call the check from the page's `expose`.
+  `gravity.ts` (stage C's is `strong.ts`, stage D's `starlight.ts`), and call the check from the page's `expose`.
 - Keep each instruction short: write " ¶ " between paragraphs in a step's
   text, end with the thing to do in bold, and give the figure a colour `key`
   instead of describing the colours in the prose. Use `art.ts` for stars,
@@ -144,6 +144,13 @@ And two common pictures are replaced by better ones:
 - Update the status marks in this file and the table in `README.md`.
 
 ## Known weak points to revisit
+
+- Step 11's balance figure is a cartoon (a damped spring), not a stellar
+  model. Its lifetimes come from a four-piece fit and are estimates; for the
+  smallest stars they are too short. The neutron-star / black-hole boundary
+  is rough and unsettled. Type Ia supernovae and binaries get one line.
+- Step 10's star colours are an approximate fit, for painting only.
+- Step 12 mentions the Hubble tension and leaves it for step 15.
 
 - Step 8 treats only the non-spinning hole; spin (Kerr), accretion discs and
   jets are named or left out. Hawking radiation is deferred to step 19.
