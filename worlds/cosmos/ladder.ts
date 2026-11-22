@@ -304,6 +304,7 @@ if (sh.practising) {
     },
     key: () => [['#7fb6ff', 'January'], ['#ff9ab8', 'July'], ['#e8c24a', 'the shift']],
     drawer,
+    next: ['expansion', 'On to the cosmos'],
   });
   sh.draw();
 }

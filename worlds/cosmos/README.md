@@ -38,6 +38,9 @@ appealing.
 | 10 · Light as messenger | `light.html`: a glowing body of any temperature with its curve; a spectrum to match against the lines of five elements, at rest and receding | Powers of ten; logarithms to base ten |
 | 11 · The life of a star | `stars.html`: a star to squeeze, puff up and starve; a star of any mass, with its brightness, colour, lifetime and ending | Balance and feedback; power laws |
 | 12 · The distance ladder | `ladder.html`: the Earth's orbit and a star's shift; a lamp of known brightness to place; the whole ladder on a scale of powers of ten | Small angles; inverse-square for light |
+| 13 · Space stretching | `expansion.html`: a field of galaxies to stretch and to stand anywhere in; a wave of light stretched on its way; three histories of the universe's size | Proportionality; the scale factor |
+| 14 · The oldest light | `oldest.html`: the universe cooling until it clears; a ripple of sound spreading and freezing; the expansion rate set until the ruler's angle fits | Waves |
+| 15 · The Hubble tension | `tension.html`: a measurement to repeat; the two results as bell curves, with a hidden bias to try; eight real measurements | Error bars |
 
 The whole plan, nineteen steps in seven stages, with what each unbuilt step
 is meant to hold and how to add one, is in [`PLAN.md`](PLAN.md). The map
@@ -125,6 +128,29 @@ re-fetched: Fraunhofer, Kirchhoff and Bunsen, Balmer, the helium dates, Payne
 1923 Cepheid and his distance for it, the 1998 supernova result, Gaia's star
 count, and the two values of the Hubble constant.
 
+For steps 13 to 15 the checks are `checkCosmology()` in `cosmology.ts`. The
+standard model is coded directly, the measured contents of the universe are
+put in, and the check asks whether the published figures come out: an age of
+13.8 billion years; clearing at about 370,000 years; a sound ruler of 144
+megaparsecs; the oldest light 13,870 megaparsecs away; the ruler's angle as
+measured; an edge of sight of 46 billion light-years; and, solving for it, an
+expansion rate between 66.5 and 68.5. They do. The three histories are checked
+against a known formula and against each other; the bell curve against its
+familiar fractions; and the size of the tension against the figure the
+measuring team quotes.
+
+Step 15 is dated November 2026, and was written after web searches for the
+state of the question that month. Its figures and where they came from: the
+ladder at 73.50 ± 0.81 (NOIRLab's page on the H0 Distance Network, 2026,
+fetched); the oldest light at about 67.2 (the same page) with ± 0.4 taken from
+a search summary of the combined Planck, ACT and SPT analysis, not from the
+paper; SH0ES at 73.49 ± 0.93 and the red-giant ladder at about 70.4 (search
+summaries of the 2025 papers, not fetched); lensing at 71.1 +2.4 −2.3 (the
+TDCOSMO 2026 abstract, fetched); Planck 2018, the neutron-star figure and the
+DESI figure (from memory). The two readings of the tension quoted are from
+abstracts fetched from arXiv: a review by Cai and Wang (2026) and an analysis
+by Pantos and Perivolaropoulos (2026). Several of these are preprints.
+
 ## Files
 
 - `physics.ts`: the arithmetic of special relativity, and its checks.
@@ -132,8 +158,9 @@ count, and the two values of the Hubble constant.
 - `strong.ts`: the thrusting ship, the black hole and the wormhole mouth, and their checks.
 - `art.ts`: shared drawing pieces (stars, shaded planet, black hole, glows). Decoration only.
 - `starlight.ts`: glowing bodies and spectral lines, stars by mass, and distances, with their checks.
+- `cosmology.ts`: the expanding universe, the sound ruler and its angle, uncertainty, and the measured values of H0, with their checks.
 - `chamber.ts`: what a chamber's page does, shared by steps 3 onward.
-- `budget.ts`, `twins.ts`, `cones.ts`, `falling.ts`, `tides.ts`, `orbits.ts`, `horizons.ts`, `holes.ts`, `wormholes.ts`, `light.ts`, `stars.ts`, `ladder.ts` (each with its `.html`): the chambers and practice.
+- `budget.ts`, `twins.ts`, `cones.ts`, `falling.ts`, `tides.ts`, `orbits.ts`, `horizons.ts`, `holes.ts`, `wormholes.ts`, `light.ts`, `stars.ts`, `ladder.ts`, `expansion.ts`, `oldest.ts`, `tension.ts` (each with its `.html`): the chambers and practice.
 - `PLAN.md`: the full plan.
 - `index.html`, `hub.ts`: the map. `cosmos.css`: the night colours.
 - The page shell and practice runner are shared with the Spire

@@ -185,7 +185,7 @@ function room(): string {
   if (beam) {
     // The bend is real and far too small to see; it is drawn here some hundred million million times too large.
     const sag = pushed ? 46 : 0;
-    s += `<path d="M133 70Q230 70 327 ${70 + sag}" stroke="#e8c24a" stroke-width="3" fill="none" filter="url(#art-glow)"/><circle cx="133" cy="70" r="5" fill="#e8c24a"/><path d="M327 70h-12" stroke="#aab0d6" stroke-width="2.5"/>`;
+    s += `<path d="M133 70Q230 70 327 ${70 + sag}" stroke="#e8c24a" stroke-width="9" fill="none" opacity="0.25" stroke-linecap="round"/><path d="M133 70Q230 70 327 ${70 + sag}" stroke="#e8c24a" stroke-width="3" fill="none"/><circle cx="133" cy="70" r="5" fill="#e8c24a"/><path d="M327 70h-12" stroke="#aab0d6" stroke-width="2.5"/>`;
     s += `<text x="338" y="${75 + sag}" font-size="12">${pushed ? 'lands low' : 'lands level'}</text>`;
   }
   return `<svg viewBox="0 -44 460 372" style="width:100%;max-width:520px;display:block;margin:auto;background:#070919">${s}</svg>`;
