@@ -1,6 +1,7 @@
 import { Shell, checkKinds, choices, pickOne, runPractice } from '../canon/shell';
 import type { Kind } from '../canon/shell';
 import './cosmos.css';
+import { DEFS } from './art';
 import { expose, runChamber } from './chamber';
 import type { Running } from './chamber';
 import { frac, tidy } from './physics';
@@ -119,10 +120,9 @@ const TOP = 5.2;
 const where = (tau: number) => (off === Infinity ? ship(tau) : shipCut(tau, off));
 
 function diagram(): string {
-  let g = '';
+  let g = DEFS;
   if (off === Infinity) g += `<path d="M${X(-0.6)} ${Y(0.4)}L${X(4.2)} ${Y(TOP)}H${X(-0.6)}Z" fill="rgba(255,154,154,0.09)"/><text x="${X(0.75)}" y="${Y(4.55)}" font-size="12" text-anchor="middle" fill="#ff9a9a">never seen from the ship</text><text x="${X(0.75)}" y="${Y(4.55) + 15}" font-size="12" text-anchor="middle" fill="#ff9a9a">while the engines burn</text>`;
-  g += `<path d="M${X(-0.6)} ${Y(0.4)}L${X(4.2)} ${Y(TOP)}" stroke="${off === Infinity ? '#ff9a9a' : '#4a5080'}" stroke-dasharray="5 5" fill="none"/>`;
-  if (off === Infinity) g += `<text x="${X(1.85)}" y="${Y(3.1)}" font-size="12" fill="#ff9a9a" transform="rotate(-45 ${X(1.85)} ${Y(3.1)})">the horizon</text>`;
+  g += `<path d="M${X(-0.6)} ${Y(0.4)}L${X(4.2)} ${Y(TOP)}" stroke="${off === Infinity ? '#ff9a9a' : '#4a5080'}" stroke-width="2" stroke-dasharray="6 5" fill="none"/>`;
   // What the ship sees of home, and what home hears from the ship.
   const ray = (x0: number, t0: number, x1: number, t1: number, colour: string, width = 1.2) => {
     // Cut off at the top of the picture.
@@ -217,7 +217,7 @@ if (sh.practising) {
     kicker: 'Horizons · 7',
     title: 'Horizons',
     steps: [
-      { say: 'The diagram again: time up, distance across. Home is the gold line. The blue line is a ship that starts beside home and fires its engines steadily, at about the push of the Earth\'s gravity, and never stops. Its path bends over toward the slope of light and never reaches it, because of the budget. The dots are years on each clock. Home sends the ship a message by light: the green line. <b>Slide the sending time later, to half a year.</b>', until: () => sentMax >= 0.5 },
+      { say: 'The diagram again: time up, distance across. The dots are years on each clock. ¶ A ship starts beside home and fires its engines steadily, at about the push of the Earth\'s gravity, and never stops. Its path bends toward the slope of light but never reaches it, because of the budget. ¶ Home sends the ship a message by light. <b>Slide the sending time later, to half a year.</b>', until: () => sentMax >= 0.5 },
       { say: 'Sent at half a year, it arrives when the ship\'s clock reads 0.69. Light is faster than the ship at every moment, and always will be.', ask: ['Is there any message home could send too late for it ever to catch the ship?', ['No: light is faster, so sooner or later it must arrive', 'Yes'], 1, '<b>Slide the sending time on, to 0.9, to 0.99, and past 1.</b> Watch the arrival time.'] },
       { say: '<b>Slide the sending time on, to 0.9, to 0.99, and past 1.</b> Watch the arrival time.', until: () => sentMax >= 1.05 },
       { say: 'Anything sent after one year never arrives, however long you wait.', ask: ['The ship never reaches the speed of light. So how does the light fail to catch it?', ['It gains on the ship for ever, but by less and less, and never closes the gap', 'The ship does outrun light in the end', 'The light gives out on the way'], 0, 'The blue path keeps nearing the dotted red line and never touches it, and light sent late runs along beside that line. The red line is the ship\'s <b>horizon</b>: the edge of everything it will ever see.'] },
@@ -226,7 +226,7 @@ if (sh.practising) {
       { say: '<b>Now turn on "the ship\'s replies".</b>', until: () => layer.replies },
       { say: 'The blue dashes are messages from the ship.', ask: ['Do the ship\'s messages reach home?', ['Yes, every one', 'Only those sent in the first year', 'No'], 0, 'A horizon is one-way. Home hears from the ship for ever; the ship can never hear what home did after its first year.'] },
       { say: 'Set the sending time somewhere past one year, so that the message is lost. <b>Then cut the engines.</b>', until: () => off !== Infinity },
-      { say: 'With the engines off the ship coasts, slower than light, and the lost message arrives after all.', ask: ['So what was the horizon?', ['A barrier in space, one light-year behind the start', 'Nothing in space at all: a consequence of the plan to keep thrusting for ever'], 1, 'There was never anything there. A horizon is a fact about a whole journey, not about a place. Keep all four of its properties in mind for the next chamber: it exists though nothing reaches light speed; nothing marks it; it is one-way; and what one observer never sees, another passes through untroubled. Gravity can make a horizon with all of those, and no engines to cut.'] },
+      { say: 'With the engines off the ship coasts, slower than light, and the lost message arrives after all.', ask: ['So what was the horizon?', ['A barrier in space, one light-year behind the start', 'Nothing in space at all: a consequence of the plan to keep thrusting for ever'], 1, 'There was never anything there. A horizon is a fact about a whole journey, not about a place. ¶ Keep four things in mind for the next chamber. A horizon can exist though nothing reaches light speed. Nothing marks it. It is one-way. And what one observer never sees, another passes through untroubled. ¶ Gravity can make a horizon with all four properties, and with no engines to cut.'] },
     ],
     summary: '<b>A horizon is the edge of what an observer can ever see.</b> Steady thrust is enough to make one: light sent too late chases the ship for ever. Nothing is there; it is one-way; and the crew see everything behind it slow, redden and freeze, while the people behind it notice nothing.',
     frame: () =>
@@ -247,6 +247,7 @@ if (sh.practising) {
       if (what === 'layer') layer[value as keyof typeof layer] = !layer[value as keyof typeof layer];
       else if (what === 'off') off = Number(value);
     },
+    key: () => [['#e8c24a', 'home'], ['#7fb6ff', 'the ship'], ['#8fe0a4', 'a message that arrives'], ['#ff9a9a', 'one that never does; and the horizon']],
     drawer,
     next: ['holes', 'On to black holes'],
   });

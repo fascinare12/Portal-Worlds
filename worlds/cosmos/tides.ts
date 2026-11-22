@@ -1,6 +1,7 @@
 import { Shell, checkKinds, choices, numbers, pickOne, runPractice } from '../canon/shell';
 import type { Kind } from '../canon/shell';
 import './cosmos.css';
+import { DEFS, planet, stars } from './art';
 import { expose, runChamber } from './chamber';
 import type { Running } from './chamber';
 import { apart, checkGravity } from './gravity';
@@ -183,8 +184,8 @@ const GAP = 0.2; // half the walkers' starting separation, in radians of longitu
 
 function walkers(): string {
   const Ht = 300;
-  let g = '';
-  const dot = (x: number, y: number, c: string) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="${c}"/>`;
+  let g = DEFS;
+  const dot = (x: number, y: number, c: string) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6.5" fill="${c}" filter="url(#art-glow)"/>`;
   const line = (pts: [number, number][], c: string, w = 3) => `<polyline points="${pts.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ')}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linejoin="round"/>`;
   if (surface === 'flat') {
     for (let i = 0; i <= 6; i++) g += `<path d="M${30 + i * 40} 30V270M30 ${30 + i * 40}H270" stroke="#2c3260"/>`;
@@ -201,7 +202,7 @@ function walkers(): string {
       const z = Math.cos(lat) * Math.cos(lon);
       return [150 + R * x, 160 - R * (y * Math.cos(tilt) - z * Math.sin(tilt)), y * Math.sin(tilt) + z * Math.cos(tilt)];
     };
-    g += `<circle cx="150" cy="160" r="${R}" fill="#12173a" stroke="#4a5080"/>`;
+    g += `<circle cx="150" cy="160" r="${R}" fill="url(#art-globe)" stroke="#5f6aa8"/>`;
     const front = (pts: [number, number, number][]) => pts.filter((p) => p[2] > 0).map((p) => [p[0], p[1]] as [number, number]);
     for (let lon = -Math.PI; lon < Math.PI; lon += Math.PI / 6) g += line(front(Array.from({ length: 31 }, (_, i) => P((i / 30) * QUARTER * 2 - QUARTER, lon))), '#2c3260', 1);
     for (const lat of [0, Math.PI / 6, Math.PI / 3]) g += line(front(Array.from({ length: 61 }, (_, i) => P(lat, (i / 60) * Math.PI * 2 - Math.PI))), lat === 0 ? '#8d93b8' : '#2c3260', lat === 0 ? 1.5 : 1);
@@ -242,13 +243,13 @@ function ring(): string {
   const f = FRAMES[Math.min(FRAMES.length - 1, Math.round(tideT * (FRAMES.length - 1)))];
   const e = extent(f);
   const u = 52;
-  let g = `<rect x="20" y="20" width="260" height="260" fill="#0b0e22" stroke="#8d93b8" stroke-width="3"/><circle cx="150" cy="150" r="${u}" fill="none" stroke="#3b4170" stroke-dasharray="3 5"/>`;
+  let g = DEFS + stars(460, 304, 40, 13) + `<rect x="20" y="20" width="260" height="260" rx="4" fill="#0b0e22" stroke="#aab0d6" stroke-width="3.5"/><circle cx="150" cy="150" r="${u}" fill="none" stroke="#3b4170" stroke-dasharray="3 5"/>`;
   g += `<polygon points="${f.balls.map((b) => `${(150 + b[0] * u).toFixed(1)},${(150 - b[1] * u).toFixed(1)}`).join(' ')}" fill="none" stroke="#ff9ab8" stroke-width="1.5"/>`;
-  for (const b of f.balls) g += `<circle cx="${(150 + b[0] * u).toFixed(1)}" cy="${(150 - b[1] * u).toFixed(1)}" r="6" fill="#ff9ab8"/>`;
+  for (const b of f.balls) g += `<circle cx="${(150 + b[0] * u).toFixed(1)}" cy="${(150 - b[1] * u).toFixed(1)}" r="6" fill="#ff9ab8" filter="url(#art-glow)"/>`;
   g += `<text x="150" y="296" font-size="11" text-anchor="middle" opacity="0.7">inside the falling lift (the planet is below)</text>`;
   // Where the lift is.
   const Y = (r: number) => 262 - (r - 1) * 74;
-  g += `<path d="M340 300Q390 232 440 300Z" fill="#24402c"/><path d="M390 ${Y(4)}V${Y(1.05)}" stroke="#3b4170" stroke-dasharray="3 5"/><rect x="381" y="${Y(f.r) - 9}" width="18" height="18" fill="#0b0e22" stroke="#8d93b8" stroke-width="2"/><text x="390" y="26" font-size="11" text-anchor="middle" opacity="0.7">where the lift is</text>`;
+  g += `${planet(390, 372, 104)}<path d="M390 ${Y(4)}V${Y(1.05)}" stroke="#3b4170" stroke-dasharray="3 5"/><rect x="381" y="${Y(f.r) - 9}" width="18" height="18" fill="#0b0e22" stroke="#8d93b8" stroke-width="2"/><text x="390" y="26" font-size="11" text-anchor="middle" opacity="0.7">where the lift is</text>`;
   return `<svg viewBox="0 0 460 304" style="width:100%;max-width:560px;display:block;margin:auto">${g}</svg><p>The ring is now <b>${tidy(e.tall / 2)}</b> times its first height and <b>${tidy(e.wide / 2)}</b> times its first width.</p>`;
 }
 
@@ -298,7 +299,7 @@ if (sh.practising) {
       { say: '<b>Switch to the globe and walk them all the way.</b>', until: () => reached.sphere > 0.97 },
       { say: 'They have met at the pole.', ask: ['Neither of them ever turned. What brought them together?', ['A force pulling each toward the other', 'The shape of the surface they walk in', 'They were not really walking straight'], 1, 'Each path is as straight as a path in a globe can be. On a curved surface, straight lines that begin parallel do not stay parallel. That is what curvature <i>means</i>, and the walkers can find it out without ever seeing the globe from outside: each need only watch the other.'] },
       { say: '<b>Now try the saddle.</b>', until: () => reached.saddle > 0.8 },
-      { say: 'On a saddle the straight paths spread. Now back to the falling lift of the last chamber; but make it a big lift, and let it fall for a long time toward the Earth, with two balls floating in it side by side. Each ball falls straight toward the centre of the Earth.', ask: ['Watching from inside the lift, what do you see the two balls do?', ['Stay exactly as they were', 'Drift slowly toward each other', 'Drift slowly apart'], 1, 'Two straight lines through spacetime, starting parallel, drawing together: the walkers on the globe. Below is the same lift with a whole ring of loose balls. <b>Slide time forward.</b>'] },
+      { say: 'On a saddle the straight paths spread. ¶ Now back to the falling lift of the last chamber. Make it a big lift, and let it fall toward the Earth for a long time, with two balls floating in it side by side. Each ball falls straight toward the centre of the Earth.', ask: ['Watching from inside the lift, what do you see the two balls do?', ['Stay exactly as they were', 'Drift slowly toward each other', 'Drift slowly apart'], 1, 'Two straight lines through spacetime start out parallel and draw together, exactly like the walkers on the globe. ¶ Below is the same lift, now with a whole ring of loose balls. <b>Slide time forward.</b>'] },
       { say: '<b>Slide time forward,</b> and watch the ring as the lift falls.', until: () => tideMax > 0.95 },
       { say: 'The ring has been squeezed from the sides, and stretched from top to bottom.', ask: ['Why stretched?', ['The lowest balls are nearest the planet and pulled hardest, so they get ahead', 'The air in the lift pushes them', 'The floor of the lift pushes them'], 0, 'Nothing touches the balls at all. This stretching and squeezing is the part of gravity that falling cannot remove, however you move. It has a familiar name: the tide.'] },
       { say: 'The Moon does this to the whole Earth, stretching it along the line that joins them.', ask: ['How many bulges of ocean does that raise?', ['One, facing the Moon', 'Two: one facing the Moon and one on the far side', 'None: water cannot be stretched'], 1, 'Two, like the top and bottom of the ring; and the Earth turns under both, which is why most coasts have two high tides a day.'] },
@@ -329,6 +330,7 @@ if (sh.practising) {
         ($('walk') as HTMLInputElement).value = '0';
       }
     },
+    key: () => [['#e8c24a', 'one walker'], ['#7fb6ff', 'the other'], ['#fff', 'their distance apart, on the graph'], ['#ff9ab8', 'the loose balls']],
     drawer,
     next: ['orbits', 'On to orbits'],
   });

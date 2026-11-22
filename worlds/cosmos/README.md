@@ -109,6 +109,7 @@ figure used.
 - `physics.ts`: the arithmetic of special relativity, and its checks.
 - `gravity.ts`: light cones, clocks and height, curved surfaces, tides and orbits, and their checks.
 - `strong.ts`: the thrusting ship, the black hole and the wormhole mouth, and their checks.
+- `art.ts`: shared drawing pieces (stars, shaded planet, black hole, glows). Decoration only.
 - `chamber.ts`: what a chamber's page does, shared by steps 3 onward.
 - `budget.ts`, `twins.ts`, `cones.ts`, `falling.ts`, `tides.ts`, `orbits.ts`, `horizons.ts`, `holes.ts`, `wormholes.ts` (each with its `.html`): the chambers and practice.
 - `PLAN.md`: the full plan.

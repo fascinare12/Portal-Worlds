@@ -134,6 +134,10 @@ And two common pictures are replaced by better ones:
   (`frame`), a `paint` to bring it up to date, and the drawer.
 - Put new physics and its second-route checks in a module beside
   `gravity.ts` (stage C's is `strong.ts`), and call the check from the page's `expose`.
+- Keep each instruction short: write " ¶ " between paragraphs in a step's
+  text, end with the thing to do in bold, and give the figure a colour `key`
+  instead of describing the colours in the prose. Use `art.ts` for stars,
+  planets and glows.
 - Give the previous chamber a "next" link.
 - Fetch every link before adding it. Note in the README anything quoted that
   could not be confirmed.

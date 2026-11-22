@@ -1,6 +1,7 @@
 import { Shell, checkKinds, choices, numbers, pickOne, runPractice } from '../canon/shell';
 import type { Kind } from '../canon/shell';
 import './cosmos.css';
+import { DEFS, planet, stars } from './art';
 import { expose, runChamber } from './chamber';
 import type { Running } from './chamber';
 import { checkGravity, farthest, fire } from './gravity';
@@ -136,33 +137,39 @@ let flight: Flight = fire(v, PLANET);
 let made = '';
 let clock = 0;
 const W = 460;
-const HT = 470;
-const U = 48;
-const X = (x: number) => W / 2 + x * U;
-const Y = (y: number) => 118 - y * U;
+const HT = 440;
+/** The scale and centre of the picture, which pulls back as the path grows. */
+let view = { u: 110, cy: 150 };
+const X = (x: number) => W / 2 + x * view.u;
+const Y = (y: number) => view.cy - y * view.u;
 
 function remake(): void {
   const key = `${v}|${crude}`;
   if (key === made) return;
   made = key;
   flight = crude ? fire(v, PLANET, 0.2, true, 14) : fire(v, PLANET);
+  // Fit the whole path: from the launch at the top to its lowest point, and its widest.
+  const low = Math.max(1, v < 1 && !crude ? flight.near : Math.min(flight.far, 9));
+  const u = Math.min(108, (HT - 76) / (1 + low), (W - 70) / (2 * Math.max(1, Math.sqrt(low))));
+  view = { u, cy: 40 + u };
 }
 const fateWords = () => (flight.fate === 'lands' ? 'It comes down.' : flight.fate === 'escapes' ? 'It leaves and does not come back.' : Math.abs(v - 1) < 0.006 ? 'A circle. It never lands.' : v < 1 ? `It clears the ground and comes back round, dipping to ${tidy(flight.near)} of its starting distance.` : `An oval. It swings out to ${tidy(farthest(v))} times its starting distance and comes back.`);
 
 function scene(): string {
   remake();
-  let g = '';
-  for (const [x, y] of [[40, 60], [410, 40], [70, 300], [400, 250], [330, 420], [120, 430], [30, 180], [435, 150]]) g += `<circle cx="${x}" cy="${y}" r="1.5" fill="#e9e6f5" opacity="0.7"/>`;
-  g += `<circle cx="${X(0)}" cy="${Y(0)}" r="${PLANET * U}" fill="#24402c" stroke="#3f7a52" stroke-width="2"/><path d="M${X(-0.06)} ${Y(PLANET - 0.02)}L${X(0)} ${Y(1)}L${X(0.06)} ${Y(PLANET - 0.02)}Z" fill="#3f7a52"/>`;
+  let g = DEFS + stars(W, HT, 80, 3);
+  g += `<circle cx="${X(0)}" cy="${Y(0)}" r="${view.u}" fill="none" stroke="#5f6aa8" stroke-width="1.5" stroke-dasharray="4 6"/>`;
+  g += `<path d="M${X(-0.07)} ${Y(PLANET - 0.03)}L${X(0)} ${Y(1)}L${X(0.07)} ${Y(PLANET - 0.03)}Z" fill="#2f7a56"/>` + planet(X(0), Y(0), PLANET * view.u);
+  g += `<rect x="${X(0) - 3}" y="${Y(1) - 6}" width="${Math.max(10, view.u * 0.12)}" height="6" rx="2" fill="#aab0d6"/>`;
   const step = crude ? 1 : Math.max(1, Math.floor(flight.path.length / 700));
   let d = '';
   flight.path.forEach((p, i) => {
     if (i % step === 0 || i === flight.path.length - 1) d += `${d ? 'L' : 'M'}${X(p[0]).toFixed(1)} ${Y(p[1]).toFixed(1)}`;
   });
-  g += `<path d="${d}" stroke="#e8c24a" stroke-width="${crude ? 1.5 : 2.5}" fill="none" stroke-linejoin="round"/>`;
-  if (crude) for (const p of flight.path) g += `<circle cx="${X(p[0]).toFixed(1)}" cy="${Y(p[1]).toFixed(1)}" r="2.8" fill="#fff"/>`;
+  g += `<path d="${d}" stroke="#e8c24a" stroke-width="${crude ? 1.5 : 3}" fill="none" stroke-linejoin="round" stroke-linecap="round" ${crude ? '' : 'filter="url(#art-glow)"'}/>`;
+  if (crude) for (const p of flight.path) g += `<circle cx="${X(p[0]).toFixed(1)}" cy="${Y(p[1]).toFixed(1)}" r="3.2" fill="#fff"/>`;
   g += `<g id="ball"></g>`;
-  return `<svg viewBox="0 0 ${W} ${HT}" style="width:100%;max-width:520px;display:block;margin:auto">${g}</svg>`;
+  return `<svg viewBox="0 0 ${W} ${HT}" style="width:100%;max-width:520px;display:block;margin:auto;background:#070919">${g}</svg>`;
 }
 /** Where the ball is now along its path, which loops (or is fired again) for ever. */
 function ball(): string {
@@ -172,7 +179,7 @@ function ball(): string {
   const t = flight.fate === 'orbits' && flight.period ? (clock * 1.6) % end : (clock * 1.6) % (Math.min(end, 22) + 1.2);
   if (t > end) return '';
   const i = Math.min(path.length - 1, Math.round((t / end) * (path.length - 1)));
-  return `<circle cx="${X(path[i][0]).toFixed(1)}" cy="${Y(path[i][1]).toFixed(1)}" r="6" fill="#fff"/>`;
+  return `<circle cx="${X(path[i][0]).toFixed(1)}" cy="${Y(path[i][1]).toFixed(1)}" r="6.5" fill="#fff" filter="url(#art-glow)"/>`;
 }
 
 function drawer(): string {
@@ -217,7 +224,7 @@ if (sh.practising) {
     kicker: 'Gravity · 6',
     title: 'Orbits',
     steps: [
-      { say: 'A cannon stands on a mountain and fires level with the ground. (The mountain is absurdly tall, so that the picture can be read.) There is no air. At this speed the ball comes down not far off. <b>Fire faster, and watch where it lands.</b>', until: () => top >= 0.74 },
+      { say: 'A cannon stands on a mountain and fires level with the ground. There is no air. (The mountain is absurdly tall, so that the picture can be read.) ¶ At this speed the ball comes down not far off. <b>Fire faster, and watch where it lands.</b>', until: () => top >= 0.74 },
       { say: 'Faster, and it lands further round the planet. It is falling the whole time; but the ground is curving away beneath it.', ask: ['Is there a speed at which the ball falls for ever and never lands?', ['No: whatever falls must land', 'Yes: when the ground curves away as fast as the ball drops', 'Only if an engine keeps pushing it'], 1, '<b>Find the speed that gives a perfect circle.</b>'] },
       { say: '<b>Find the speed that gives a perfect circle:</b> the same height all the way round.', until: () => Math.abs(v - 1) < 0.006 && !crude },
       { say: 'That is an orbit. Nothing holds the ball up and nothing pushes it along.', ask: ['Is the ball in the circular orbit still falling?', ['No: it has escaped gravity', 'Yes, all the time. It keeps missing', 'Only on the far side of the planet'], 1, 'Falling freely, exactly as in the cut lift; which is why astronauts float. An orbit is the straight line of the last two chambers, round a planet.'] },
@@ -248,6 +255,7 @@ if (sh.practising) {
         ($('speed') as HTMLInputElement).value = value;
       } else if (what === 'crude') crude = !crude;
     },
+    key: () => [['#e8c24a', 'the path'], ['#fff', 'the ball, now'], ['#5f6aa8', 'the circular orbit, for comparison']],
     drawer,
     next: ['horizons', 'On to horizons'],
   });

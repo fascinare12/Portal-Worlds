@@ -1,6 +1,7 @@
 import { Shell, checkKinds, choices, numbers, pickOne, runPractice, shuffled } from '../canon/shell';
 import type { Kind } from '../canon/shell';
 import './cosmos.css';
+import { DEFS, stars } from './art';
 import { expose, runChamber } from './chamber';
 import type { Running } from './chamber';
 import { C, G_SURFACE, YEAR, checkGravity, higher, orbiting, thrown, truePeak } from './gravity';
@@ -162,27 +163,33 @@ function room(): string {
   // The ball is let go every four seconds. Pushed rooms: it meets the floor. Free rooms: it stays put.
   const t = clock % 4;
   const drop = pushed ? Math.min(118, 0.5 * 420 * t * t) : 0;
-  let s = '';
+  let s = DEFS;
   // What is outside, which the person inside cannot see.
-  if (scene === 'ground') s += `<rect x="0" y="262" width="460" height="40" fill="#24402c"/><text x="12" y="287" font-size="12">the ground</text>`;
-  else if (scene === 'rocket') s += `<path d="M150 262L230 ${296 + Math.sin(clock * 30) * 4}L310 262Z" fill="#e8c24a" opacity="0.9"/><path d="M190 262L230 ${284 + Math.cos(clock * 37) * 3}L270 262Z" fill="#fff"/>` + stars();
-  else if (scene === 'fall') s += `<path d="M230 30V8" stroke="#8d93b8" stroke-width="2" stroke-dasharray="3 4"/><path d="M0 300Q230 262 460 300V302H0Z" fill="#24402c"/><text x="12" y="296" font-size="12">the ground, coming up</text>` + [70, 110, 350, 395].map((x, i) => `<path d="M${x} ${40 + ((clock * 160 + i * 70) % 190)}v-26" stroke="#4a5080" stroke-width="2"/>`).join('');
-  else s += stars();
-  s += `<rect x="130" y="30" width="200" height="232" fill="#0b0e22" stroke="#8d93b8" stroke-width="3"/>`;
+  if (scene === 'ground') {
+    s += `<rect x="100" y="-44" width="260" height="306" fill="#131a3e"/><path d="M100 -44V262M360 -44V262" stroke="#2c3260" stroke-width="3"/><path d="M230 30V-44" stroke="#8d93b8" stroke-width="3"/><rect x="0" y="262" width="460" height="66" fill="url(#art-ground)"/><text x="14" y="292" font-size="13">the ground</text><text x="372" y="20" font-size="12" opacity="0.7">lift shaft</text>`;
+  } else if (scene === 'rocket') {
+    const f = Math.sin(clock * 31) * 5;
+    s += stars(460, 330, 55, 11) + `<path d="M150 262Q230 ${356 + f} 310 262Z" fill="url(#art-flame)" filter="url(#art-glow)"/><path d="M196 262Q230 ${316 - f} 264 262Z" fill="#fff" opacity="0.9"/>`;
+    s += `<path d="M130 30Q230 -92 330 30Z" fill="#2a3166" stroke="#8d93b8" stroke-width="3"/><path d="M130 190L92 272H130ZM330 190L368 272H330Z" fill="#2a3166" stroke="#8d93b8" stroke-width="3" stroke-linejoin="round"/>`;
+  } else if (scene === 'fall') {
+    s += `<rect x="100" y="-44" width="260" height="372" fill="#131a3e"/><path d="M100 -44V328M360 -44V328" stroke="#2c3260" stroke-width="3"/><path d="M230 30q9 -16 -3 -30q-8 -10 4 -22" stroke="#8d93b8" stroke-width="3" fill="none"/>`;
+    s += [112, 124, 336, 348].map((x, i) => `<path d="M${x} ${-30 + ((clock * 210 + i * 83) % 330)}v-34" stroke="#5f6aa8" stroke-width="2.5" stroke-linecap="round"/>`).join('');
+    s += `<text x="372" y="20" font-size="12" opacity="0.7">cable cut</text>`;
+  } else s += stars(460, 330, 70, 5);
+  s += `<rect x="130" y="30" width="200" height="232" rx="4" fill="#0b0e22" stroke="#aab0d6" stroke-width="3.5"/><path d="M133 258H327" stroke="#4a5080" stroke-width="5"/>`;
   // The person: feet on the floor where there is a push; afloat where there is not.
-  const py = pushed ? 0 : -34 + Math.sin(clock * 0.9) * 4;
-  s += `<g transform="translate(180 ${py})" stroke="#e9e6f5" stroke-width="3" fill="none" stroke-linecap="round"><circle cx="0" cy="170" r="11"/><path d="M0 181V225M0 225L-10 260M0 225L10 260M0 195L24 ${pushed ? 180 : 186}M0 195L-14 214"/></g>`;
-  s += `<circle cx="212" cy="${(pushed ? 138 : 150 + py) + drop}" r="8" fill="#ff9ab8"/>`;
+  const py = pushed ? 0 : -40 + Math.sin(clock * 0.9) * 5;
+  const lean = pushed ? 0 : Math.sin(clock * 0.6) * 6;
+  s += `<g transform="translate(180 ${py}) rotate(${lean} 0 215)"><g stroke="#e9e6f5" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M0 186V224"/><path d="M0 224L${pushed ? -9 : -14} ${pushed ? 256 : 250}M0 224L${pushed ? 9 : 12} ${pushed ? 256 : 252}"/><path d="M0 194L24 ${pushed ? 180 : 188}M0 194L-14 214"/></g><circle cx="0" cy="170" r="12" fill="#e9e6f5"/></g>`;
+  s += `<circle cx="214" cy="${(pushed ? 150 : 150 + py) + drop}" r="8" fill="#ff9ab8" filter="url(#art-glow)"/>`;
   if (beam) {
     // The bend is real and far too small to see; it is drawn here some hundred million million times too large.
     const sag = pushed ? 46 : 0;
-    s += `<path d="M133 70Q230 70 327 ${70 + sag}" stroke="#e8c24a" stroke-width="2.5" fill="none"/><circle cx="133" cy="70" r="4" fill="#e8c24a"/><path d="M327 70h-10" stroke="#8d93b8" stroke-width="2"/>`;
-    if (pushed) s += `<text x="336" y="${75 + sag}" font-size="11">lands low</text>`;
+    s += `<path d="M133 70Q230 70 327 ${70 + sag}" stroke="#e8c24a" stroke-width="3" fill="none" filter="url(#art-glow)"/><circle cx="133" cy="70" r="5" fill="#e8c24a"/><path d="M327 70h-12" stroke="#aab0d6" stroke-width="2.5"/>`;
+    s += `<text x="338" y="${75 + sag}" font-size="12">${pushed ? 'lands low' : 'lands level'}</text>`;
   }
-  s += `<text x="230" y="20" font-size="13" text-anchor="middle">${SCENES.find((k) => k[0] === scene)![1]}</text>`;
-  return `<svg viewBox="0 0 460 304" style="width:100%;max-width:520px;display:block;margin:auto">${s}</svg>`;
+  return `<svg viewBox="0 -44 460 372" style="width:100%;max-width:520px;display:block;margin:auto;background:#070919">${s}</svg>`;
 }
-const stars = () => [[30, 40], [80, 190], [60, 120], [380, 60], [420, 170], [360, 240], [100, 270], [410, 280]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.6" fill="#e9e6f5"/>`).join('');
 
 function tower(): string {
   const day = higher(h) * 86400;
@@ -259,15 +266,15 @@ if (sh.practising) {
     kicker: 'Gravity · 4',
     title: 'Falling is the straight line',
     steps: [
-      { say: 'You are shut in a lift with no windows, standing on Earth. You let go of a ball and it drops to the floor. <b>Now switch to the rocket:</b> far from any planet, with engines pushing the floor up at a steady rate.', until: () => scene === 'rocket' },
+      { say: 'You are shut in a lift with no windows, standing on Earth. You let go of a ball, and it drops to the floor. ¶ <b>Now switch to the rocket.</b> It is far from any planet, and its engines push the floor up at a steady rate.', until: () => scene === 'rocket' },
       { say: 'The ball meets the floor in just the same way. In the rocket nothing pulls the ball down: the floor comes up to it.', ask: ['From inside, without looking out, which experiment tells the two rooms apart?', ['Dropping a heavy ball and a light one together', 'Standing on a set of scales', 'Neither. Nothing done inside the room can'], 2, 'In both rooms everything let go reaches the floor together, whatever it weighs, and the scales read the same. Einstein\'s proposal was that there is no difference to find: not a hidden one, none.'] },
       { say: '<b>Now cut the lift\'s cable.</b>', until: () => scene === 'fall' },
       { say: 'The lift, you and the ball are all falling together.', ask: ['You let go of the ball. As you see it, what does it do?', ['Drops to the floor as before', 'Stays floating where you let it go', 'Rises to the ceiling'], 1, 'It floats, and so do you. Look at the fourth room, drifting in deep space: it is the same. What you feel as weight was only ever the floor pushing on your feet.'] },
       { say: '<b>Turn on the beam of light,</b> and look at it in each room.', until: () => beam },
       { say: 'In the rocket the beam lands low on the far wall, because the floor rose while the light was crossing.', ask: ['If nothing can tell the rocket from the ground, what must light do on the ground?', ['Bend downward too', 'Go perfectly straight, since light weighs nothing', 'Slow down and stop'], 0, 'Gravity bends light. Across a room the bend is less than the width of an atom, and is drawn here vastly too large. Past the Sun it is big enough to measure, and it was, in 1919.'] },
-      { say: 'One consequence more, and it is the important one. In the rocket, put a clock in the nose that flashes once a second toward the tail. While each flash is on its way, the tail gains speed toward it. So the flashes arrive closer together than they were sent: the twins\' Doppler effect, without end. Watched from the tail, the nose clock runs fast.', ask: ['So, in a house on the ground: which runs faster, a clock in the attic or one in the cellar?', ['The one in the attic', 'The one in the cellar', 'Neither'], 0, 'Higher clocks run faster. Not seem to: do. Bring them together afterwards and the attic clock has counted more. <b>Slide the height below</b> and see how much.'] },
+      { say: 'One consequence more, and it is the important one. ¶ In the rocket, put a clock in the nose that flashes once a second toward the tail. While each flash is on its way down, the tail gains speed toward it. So the flashes arrive closer together than they were sent. This is the twins\' Doppler effect, and here it never stops. ¶ Watched from the tail, the nose clock runs fast.', ask: ['So, in a house on the ground: which runs faster, a clock in the attic or one in the cellar?', ['The one in the attic', 'The one in the cellar', 'Neither'], 0, 'Higher clocks run faster. This is not an appearance: bring the two together afterwards and the attic clock has counted more. <b>Slide the height below</b> and see how much.'] },
       { say: 'Slide the height of the upper clock, from a step on a staircase to a navigation satellite.', until: () => towered },
-      { say: 'Now put that together with the twins. There, of all the paths between two meetings, the straight one put the most time on its clock. <b>Throw a clock up and catch it two seconds later.</b> Higher up it ticks faster; but going higher in the same two seconds means going faster, which costs. Slide the peak of the arc and find the most time.', until: () => Math.abs(H - truePeak(T)) < 0.16 },
+      { say: 'Now put that together with the twins, where the straight path between two meetings put the most time on its clock. ¶ <b>Throw a clock up and catch it two seconds later.</b> Two things pull against each other. Higher up, it ticks faster. But to go higher in the same two seconds it must move faster, and moving costs time. ¶ <b>Slide the peak of the arc and find the most time.</b>', until: () => Math.abs(H - truePeak(T)) < 0.16 },
       { say: 'The most time comes when the arc peaks at 4.9 metres.', ask: ['Throw a real ball so that it comes back to your hand after two seconds. How high does it go?', ['About 2.5 metres', 'About 4.9 metres', 'About 9.8 metres'], 1, 'The same. Nothing steers the ball onto that arc: it is the straight line, the path of most time, and the ball simply follows it. It looks curved only on a drawing of height against time. You, standing and watching, are the one being pushed off a straight line, by the ground.'] },
     ],
     summary: '<b>Gravity is not a force that pulls things off their straight paths. Free fall is the straight path.</b> Clocks run at different rates at different heights, and a falling thing follows the line of most time through that. Weight is what it feels like to be held off the line.',

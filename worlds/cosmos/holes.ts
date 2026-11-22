@@ -1,6 +1,7 @@
 import { Shell, checkKinds, choices, pickOne, runPractice } from '../canon/shell';
 import type { Kind } from '../canon/shell';
 import './cosmos.css';
+import { DEFS, hole as holeArt, stars } from './art';
 import { expose, runChamber } from './chamber';
 import type { Running } from './chamber';
 import { PACES, frac, tidy } from './physics';
@@ -177,12 +178,12 @@ function dial(): string {
   const x = v * 180;
   const y = -up * 180;
   const push = (C * C) / (2 * horizon(hole.suns) * r * r) / up / 9.80665;
-  let g = `<path d="M0 0H190M0 0V-190" stroke="#8d93b8" stroke-width="1.5" fill="none"/><path d="M180 0A180 180 0 0 0 0 -180" stroke="#3b4170" stroke-width="2" fill="none" stroke-dasharray="4 5"/>`;
+  let g = DEFS + `<path d="M0 0H190M0 0V-190" stroke="#8d93b8" stroke-width="1.5" fill="none"/><path d="M180 0A180 180 0 0 0 0 -180" stroke="#3b4170" stroke-width="2" fill="none" stroke-dasharray="4 5"/>`;
   g += `<text x="95" y="20" font-size="12" text-anchor="middle">falling speed there →</text><text x="-12" y="-95" font-size="12" text-anchor="middle" transform="rotate(-90 -12 -95)">hovering clock's rate →</text>`;
-  g += `<line x1="0" y1="0" x2="${x}" y2="0" stroke="#7fb6ff" stroke-width="5"/><line x1="${x}" y1="0" x2="${x}" y2="${y}" stroke="#e8c24a" stroke-width="5"/><line x1="0" y1="0" x2="${x}" y2="${y}" stroke="#fff" stroke-width="3"/><circle cx="${x}" cy="${y}" r="7" fill="#fff"/>`;
+  g += `<line x1="0" y1="0" x2="${x}" y2="0" stroke="#7fb6ff" stroke-width="5"/><line x1="${x}" y1="0" x2="${x}" y2="${y}" stroke="#e8c24a" stroke-width="5"/><line x1="0" y1="0" x2="${x}" y2="${y}" stroke="#fff" stroke-width="3"/><circle cx="${x}" cy="${y}" r="7" fill="#fff" filter="url(#art-glow)"/>`;
   // The hole and the ship, to scale along one line.
   const R = (d: number) => 240 + d * 20;
-  g += `<circle cx="${R(0)}" cy="-150" r="20" fill="#000" stroke="#ff9a9a" stroke-dasharray="3 3"/><line x1="${R(1)}" y1="-150" x2="${R(10)}" y2="-150" stroke="#3b4170"/><rect x="${R(r) - 6}" y="-158" width="12" height="16" fill="#7fb6ff"/><text x="${R(0)}" y="-118" font-size="11" text-anchor="middle" fill="#ff9a9a">horizon</text>`;
+  g += `${holeArt(R(0), -150, 20)}<circle cx="${R(0)}" cy="-150" r="20" fill="none" stroke="#ff9a9a" stroke-dasharray="3 3"/><line x1="${R(1)}" y1="-150" x2="${R(10)}" y2="-150" stroke="#3b4170"/><rect x="${R(r) - 6}" y="-158" width="12" height="16" fill="#7fb6ff"/><text x="${R(0)}" y="-118" font-size="11" text-anchor="middle" fill="#ff9a9a">horizon</text>`;
   g += `<text x="232" y="-78" font-size="13">hovering at ${tidy(r)} horizon radii</text><text x="232" y="-56" font-size="13">clock runs at ${tidy(up)} of a far one</text><text x="232" y="-34" font-size="13">fallers pass at ${tidy(v)} of light speed</text><text x="232" y="-12" font-size="13">push to hover: ${big(push)} g</text>`;
   return `<svg viewBox="-28 -205 500 235" style="width:100%;max-width:560px;display:block;margin:auto">${g}</svg>`;
 }
@@ -190,28 +191,36 @@ function dial(): string {
 const FLASH = 0.25;
 function drop(): string {
   const at = falling(START, tau);
-  const R = (d: number) => 40 + d * 74;
-  let g = `<rect x="${R(0)}" y="14" width="${R(1) - R(0)}" height="52" fill="#000"/><line x1="${R(1)}" y1="8" x2="${R(1)}" y2="72" stroke="#ff9a9a" stroke-dasharray="4 4"/><text x="${R(1)}" y="86" font-size="11" text-anchor="middle" fill="#ff9a9a">horizon</text><text x="${R(0)}" y="86" font-size="11" text-anchor="middle" opacity="0.7">centre</text><line x1="${R(1)}" y1="40" x2="${R(5.4)}" y2="40" stroke="#3b4170"/>`;
-  for (let d = 2; d <= 5; d++) g += `<text x="${R(d)}" y="86" font-size="11" text-anchor="middle" opacity="0.6">${d}</text>`;
-  g += `<text x="${R(5.4)}" y="30" font-size="11" text-anchor="end" opacity="0.7">to the watcher, far away →</text>`;
-  g += `<circle cx="${R(at)}" cy="40" r="8" fill="${at > 1 ? '#e8c24a' : '#8d93b8'}"/>`;
+  const R = (d: number) => 76 + d * 68;
+  const MID = 84;
+  let g = DEFS + stars(460, 170, 36, 9) + holeArt(R(0), MID, R(1) - R(0));
+  g += `<line x1="${R(1)}" y1="6" x2="${R(1)}" y2="162" stroke="#ff9a9a" stroke-dasharray="4 4"/><line x1="${R(1)}" y1="${MID}" x2="${R(5.5)}" y2="${MID}" stroke="#3b4170"/>`;
+  g += `<text x="${R(1)}" y="184" font-size="12" text-anchor="middle" fill="#ff9a9a">horizon</text><text x="${R(0)}" y="184" font-size="12" text-anchor="middle" opacity="0.8">centre</text>`;
+  for (let d = 2; d <= 5; d++) g += `<path d="M${R(d)} ${MID - 4}v8" stroke="#5f6aa8"/><text x="${R(d)}" y="184" font-size="11" text-anchor="middle" opacity="0.6">${d}</text>`;
+  g += `<text x="${R(5.5)}" y="${MID - 14}" font-size="12" text-anchor="end" opacity="0.8">to the watcher, far away →</text>`;
+  // The last few flashes it sent, on their way out.
+  if (at > 1) for (let k = 1; k <= 3; k++) g += `<path d="M${R(at) + 10 + k * 13} ${MID - 9 - k * 2}q7 ${9 + k * 2} 0 ${18 + k * 4}" stroke="#e8c24a" stroke-width="2" fill="none" opacity="${0.75 - k * 0.2}"/>`;
+  g += `<circle cx="${R(at)}" cy="${MID}" r="8" fill="${at > 1 ? '#e8c24a' : '#8d93b8'}" filter="url(#art-glow)"/>`;
   // The beacon's own clock: an even line.
   const T = (t: number) => 40 + (t / END) * 380;
-  g += `<text x="40" y="122" font-size="12">the beacon's own clock</text><line x1="${T(0)}" y1="140" x2="${T(END)}" y2="140" stroke="#8d93b8"/>`;
-  for (let k = 0; k * FLASH <= END; k++) g += `<line x1="${T(k * FLASH)}" y1="${k * FLASH <= tau ? 132 : 136}" x2="${T(k * FLASH)}" y2="${k * FLASH <= tau ? 148 : 144}" stroke="${k * FLASH <= tau ? (k * FLASH < CROSS ? '#e8c24a' : '#8d93b8') : '#3b4170'}" stroke-width="2"/>`;
-  g += `<line x1="${T(CROSS)}" y1="126" x2="${T(CROSS)}" y2="154" stroke="#ff9a9a" stroke-dasharray="3 3"/><text x="${T(CROSS)}" y="168" font-size="11" text-anchor="end" fill="#ff9a9a">crosses the horizon</text><text x="${T(END)}" y="168" font-size="11" text-anchor="end" opacity="0.7" dx="18">centre</text>`;
+  g += `<text x="40" y="222" font-size="13">the beacon's own clock</text><line x1="${T(0)}" y1="242" x2="${T(END)}" y2="242" stroke="#8d93b8"/>`;
+  for (let k = 0; k * FLASH <= END; k++) {
+    const sent = k * FLASH <= tau;
+    g += `<line x1="${T(k * FLASH)}" y1="${sent ? 233 : 238}" x2="${T(k * FLASH)}" y2="${sent ? 251 : 246}" stroke="${sent ? (k * FLASH < CROSS ? '#e8c24a' : '#8d93b8') : '#3b4170'}" stroke-width="2.5" stroke-linecap="round"/>`;
+  }
+  g += `<line x1="${T(CROSS)}" y1="226" x2="${T(CROSS)}" y2="258" stroke="#ff9a9a" stroke-dasharray="3 3"/><text x="${T(CROSS) - 4}" y="272" font-size="12" text-anchor="end" fill="#ff9a9a">crosses the horizon</text><text x="${T(END) + 18}" y="272" font-size="12" text-anchor="end" opacity="0.8">centre</text>`;
   // The watcher's clock: when each of those flashes arrives.
   const SPAN = 30;
   const W = (u: number) => 40 + (Math.min(u, SPAN) / SPAN) * 380;
-  g += `<text x="40" y="204" font-size="12">the watcher's clock, as each flash arrives</text><line x1="${W(0)}" y1="222" x2="${W(SPAN)}" y2="222" stroke="#8d93b8"/><text x="${W(SPAN) + 4}" y="226" font-size="12" fill="#ff9a9a">→</text>`;
+  g += `<text x="40" y="310" font-size="13">the watcher's clock, as each flash arrives</text><line x1="${W(0)}" y1="330" x2="${W(SPAN)}" y2="330" stroke="#8d93b8"/><text x="${W(SPAN) + 4}" y="335" font-size="14" fill="#ff9a9a">→</text>`;
   for (let k = 0; k * FLASH <= Math.min(tau, CROSS - 1e-9); k++) {
     const u = seen(falling(START, k * FLASH)) - seen(START);
-    if (u <= SPAN) g += `<line x1="${W(u)}" y1="214" x2="${W(u)}" y2="230" stroke="#e8c24a" stroke-width="2"/>`;
+    if (u <= SPAN) g += `<line x1="${W(u)}" y1="321" x2="${W(u)}" y2="339" stroke="#e8c24a" stroke-width="2.5" stroke-linecap="round"/>`;
   }
-  g += `<text x="${W(SPAN)}" y="250" font-size="11" text-anchor="end" fill="#ff9a9a">the flash from the horizon itself: never</text>`;
+  g += `<text x="${W(SPAN)}" y="360" font-size="12" text-anchor="end" fill="#ff9a9a">the flash from the horizon itself: never</text>`;
   const own = `The beacon's clock reads <b>${span(tau * unit())}</b>. It is ${at > 1 ? `at ${tidy(at)} horizon radii` : at > 0.001 ? `inside, at ${tidy(at)} of the horizon's radius` : 'at the centre'}.`;
   const far = at > 1.0005 ? `The flash it sends now reaches the watcher after <b>${span((seen(at) - seen(START)) * unit())}</b>, slowed ${tidy(1 / (1 - plunge(at)))} times.` : at > 1 ? 'The flash it sends now will take longer to climb out than anyone will wait.' : '<span class="bad">Nothing it sends now ever reaches the watcher.</span>';
-  return `<svg viewBox="0 0 460 258" style="width:100%;max-width:560px;display:block;margin:auto">${g}</svg><p>${own} ${far}</p>`;
+  return `<svg viewBox="0 0 460 368" style="width:100%;max-width:560px;display:block;margin:auto">${g}</svg><p>${own} ${far}</p>`;
 }
 
 function scale(): string {
@@ -264,10 +273,10 @@ if (sh.practising) {
     kicker: 'Horizons · 8',
     title: 'Black holes',
     steps: [
-      { say: 'Squeeze enough mass into a small enough space and gravity makes a horizon: for ten Suns\' worth, a sphere 30 km in radius. A ship hovers above it on its engines. The arrow is the budget from the first chamber: across is the speed at which things falling from far away go past the ship; up is the rate of the ship\'s clock, against a clock far away. <b>Lower the ship toward the horizon.</b>', until: () => rMin < 1.2 },
+      { say: 'Squeeze enough mass into a small enough space and gravity makes a horizon. For ten Suns\' worth of mass, it is a sphere 30 km in radius. A ship hovers above it on its engines. ¶ The arrow is the budget from the first chamber. <b>Across</b> is the speed at which things falling from far away go past the ship. <b>Up</b> is the rate of the ship\'s clock, against a clock far away. ¶ <b>Lower the ship toward the horizon.</b>', until: () => rMin < 1.2 },
       { say: 'A clock held still at any height runs exactly like a clock moving at the falling speed for that height. At the horizon the falling speed is the speed of light.', ask: ['What of a ship hovering exactly at the horizon?', ['Its clock would run at half speed', 'It cannot be done: the clock rate goes to nothing and the push needed grows without limit', 'It would hover normally'], 1, 'The arrow lies flat. No engine can hold anything still at the horizon, just as none can reach the speed of light.'] },
       { say: 'Look at the push needed to hover, close in. The ship is thrusting hard and steadily, and getting nowhere.', ask: ['In the last chamber, who had a horizon just behind them?', ['Someone drifting freely', 'Someone thrusting hard and steadily'], 1, 'The hovering ship <i>is</i> the ever-thrusting ship, and the black hole\'s horizon is its horizon. So we know what to expect of something that stops thrusting and falls: it is "home". <b>Drop a beacon, below.</b>'] },
-      { say: 'A beacon is let fall, flashing regularly by its own clock. <b>Slide its clock forward, all the way.</b> The upper line is its own time; the lower shows when each flash reaches a watcher far away.', until: () => tauMax >= END - 0.02 },
+      { say: 'A beacon is let fall, flashing regularly by its own clock. The upper line of marks is its own time. The lower line shows when each of those flashes reaches a watcher far away. ¶ <b>Slide its clock forward, all the way.</b>', until: () => tauMax >= END - 0.02 },
       { say: 'By its own clock the beacon reached the horizon, passed it, and reached the centre soon after. The watcher\'s line tells another story.', ask: ['When does the watcher see the beacon cross the horizon?', ['At the moment it crosses', 'After a delay, like any distant event', 'Never: the last flashes arrive ever further apart, redder and dimmer, without end'], 2, 'Exactly as the ship\'s crew saw home\'s clock creep toward one year and never pass it. In practice the picture reddens and fades from sight very quickly; but no flash from the horizon ever arrives.'] },
       { say: 'Two accounts of one fall.', ask: ['Did the beacon cross the horizon or not?', ['No: it hangs at the horizon for ever', 'Yes. The watcher merely never receives the light that would show it'], 1, 'It crossed, as home lived on past its first year. "Never" is a fact about what light can reach the watcher, not about what happens to the beacon.'] },
       { say: 'Everything about a black hole scales with its mass. <b>Choose a bigger one,</b> and read the line beneath.', until: () => hole.id !== 'ten' },
@@ -298,6 +307,7 @@ if (sh.practising) {
     act: (what, value) => {
       if (what === 'hole') hole = HOLES.find((h) => h.id === value) ?? hole;
     },
+    key: () => [['#7fb6ff', 'falling speed there'], ['#e8c24a', 'the hovering clock\'s rate; the beacon and its flashes'], ['#ff9a9a', 'the horizon']],
     drawer,
     next: ['wormholes', 'On to wormholes'],
   });

@@ -1,5 +1,6 @@
 import { Shell, checkKinds, choices, numbers, pickOne, runPractice, shuffled } from '../canon/shell';
 import type { Kind } from '../canon/shell';
+import { paras, saidBox, stepLine } from './chamber';
 import './cosmos.css';
 import { PACES, along, beta, checkPhysics, doppler, frac, rate, tidy } from './physics';
 
@@ -137,9 +138,9 @@ let step = 0;
 let said = '';
 
 const STEPS: { say: string; ask?: [string, string[], number, string]; until?: () => boolean; show?: (keyof typeof layer)[] }[] = [
-  { say: 'Time runs up the page; distance runs across. A line is a whole life. The gold line is the twin who stays at home: no distance, ten years. The blue line is the twin who flies 3 light-years out at 0.6 of the speed of light and straight back.', ask: ['Ten years pass at home. From the budget: how much does the traveller age?', ['6 years', '8 years', '10 years'], 1, 'At 0.6 the clock runs at 0.8. Ten years at home, eight on board. The dots are birthdays: count them on each line.'], show: ['birthdays'] },
+  { say: 'Time runs up the page and distance runs across, so a line is a whole life. ¶ The <b>gold</b> line is the twin who stays at home: ten years, going nowhere. The <b>blue</b> line is the twin who flies 3 light-years out at 0.6 of the speed of light, and straight back.', ask: ['Ten years pass at home. From the budget: how much does the traveller age?', ['6 years', '8 years', '10 years'], 1, 'At 0.6 the clock runs at 0.8. Ten years at home, eight on board. The dots are birthdays: count them on each line.'], show: ['birthdays'] },
   { say: 'Eight dots against ten. But remember the puzzle: on the way out, each twin measures the <i>other\'s</i> clock running slow. The same on the way back.', ask: ['Both see the other\'s clock slow, yet only one comes home younger. What is different about the two of them?', ['Speed really does slow a clock, and only the traveller was really moving', 'The traveller\'s line has a corner in it; the stay-at-home\'s is straight', 'The engines\' force squeezed the traveller\'s clock'], 1, 'Neither is "really" moving, and force does nothing to a good clock. The two lines are different shapes: one straight, one bent. Each clock records the length of its own line.'] },
-  { say: 'You need not take that on trust. Each twin sends out a flash of light on every birthday. Light climbs the page at 45°. <b>Turn on "flashes from home"</b> and follow them to the blue line.', until: () => layer.home },
+  { say: 'You need not take that on trust. Each twin sends out a flash of light on every birthday, and light climbs the page at 45°. ¶ <b>Turn on "flashes from home"</b> and follow them to the blue line.', until: () => layer.home },
   { say: 'On the way out the traveller is running from the flashes, and they arrive rarely. On the way back the traveller runs into them.', ask: ['The outward leg takes 4 years on board. How many of home\'s flashes arrive during it?', ['2', '4', '5'], 0, 'Two on the way out, and eight on the way back: ten in all. The traveller watches ten years go by at home while living through eight. Now turn on "flashes from the ship": home receives four in the first eight years, and four more in the last two. Eight. Both twins agree on everything they actually see.'], show: ['ship'] },
   { say: 'One layer more. <b>Turn on "the traveller\'s now".</b> Each grey line joins events the traveller reckons happen at the same moment.', until: () => layer.now },
   { say: 'Moving, the traveller\'s idea of "at the same time" is tilted. Outbound it tilts one way, homebound the other. At the corner it swings.', ask: ['Just before the turn the traveller reckons it is year 3.2 at home. Just after, year 6.8. What happened at home in between?', ['Home lived through 3.6 years in an instant', 'Nothing. The traveller changed which moments count as "now"', 'Time at home ran backwards'], 1, 'Nothing happens to the twin at home. "Now, far away" is bookkeeping, and the traveller swapped one set of books for another. This is the relativity of simultaneity, and it is where the missing years are.'] },
@@ -163,7 +164,7 @@ function diagram(): string {
       const t = tau / rate(v);
       const x = shipAt(t);
       const home = out ? t - v * x : t + v * x;
-      s += `<line x1="${X(0)}" y1="${Y(home)}" x2="${X(x)}" y2="${Y(t)}" stroke="#7d83a8" stroke-width="1.2"/>`;
+      s += `<line x1="${X(0)}" y1="${Y(home)}" x2="${X(x)}" y2="${Y(t)}" stroke="#7d83a8" stroke-width="1.2" opacity="0.8"/>`;
     }
     const before = T / 2 - v * L;
     const after = T / 2 + v * L;
@@ -234,15 +235,15 @@ if (sh.practising) {
         ['now', 'the traveller\'s now'],
       ] as [keyof typeof layer, string][]
     )
-      .map(([k, name]) => `<button class="chip${layer[k] ? '' : ' pale'}" data-do="layer" data-v="${k}">${name}</button>`)
+      .map(([k, name]) => `<button class="chip${layer[k] ? ' gold' : ' pale'}" data-do="layer" data-v="${k}">${name}</button>`)
       .join('');
     sh.page.innerHTML =
       `<div class="kicker">Spacetime · 2</div><h1>The twins</h1>` +
-      `<div class="card">${said ? `<p class="${said.startsWith('Yes') ? 'good' : 'bad'}">${said}</p>` : ''}` +
+      `<div class="card">${stepLine(step, STEPS.length)}${saidBox(said)}` +
       (done
         ? `<p><b>A clock measures the length of its own path through spacetime, and the straight path is the longest.</b> Every puzzle about who ages how much comes down to drawing the lines and measuring them.</p>`
-        : `<p>${s.say}</p>${s.ask ? `<p><b>${s.ask[0]}</b></p><div class="reasons">${s.ask[1].map((o, i) => `<button data-do="answer" data-v="${i}">${o}</button>`).join('')}</div>` : ''}`) +
-      `</div><div class="card">${diagram()}<div class="bar">${TRIPS.map((t, i) => `<button class="chip${trip === i ? ' gold' : ' pale'}" data-do="trip" data-v="${i}">${t.name}: ${t.L} light-years at ${t.v}</button>`).join('')}</div><div class="bar">${toggles}</div></div>` +
+        : `${paras(s.say)}${s.ask ? `<p><b>${s.ask[0]}</b></p><div class="reasons">${s.ask[1].map((o, i) => `<button data-do="answer" data-v="${i}">${o}</button>`).join('')}</div>` : ''}`) +
+      `</div><div class="card">${diagram()}<div class="bar">${TRIPS.map((t, i) => `<button class="chip${trip === i ? ' gold' : ' pale'}" data-do="trip" data-v="${i}">${t.name}: ${t.L} light-years at ${t.v}</button>`).join('')}</div><div class="bar">${toggles}</div><div class="key"><span><i style="background:#e8c24a"></i>home, and its flashes</span><span><i style="background:#7fb6ff"></i>the traveller, and theirs</span><span><i style="background:#7d83a8"></i>the traveller's "now"</span><span><i style="background:#ff9ab8"></i>years of home jumped at the turn</span></div></div>` +
       (done ? `${drawer()}<div class="bar"><a class="chip gold" href="./twins.html?practice">Practise ▶</a><a class="chip" href="./cones.html">On to light cones ▶</a><a class="chip pale" href="./index.html">Back to the map</a></div>` : '');
   };
   const advance = () => {
