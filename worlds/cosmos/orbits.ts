@@ -249,6 +249,7 @@ if (sh.practising) {
       } else if (what === 'crude') crude = !crude;
     },
     drawer,
+    next: ['horizons', 'On to horizons'],
   });
   sh.draw();
   let last = performance.now();

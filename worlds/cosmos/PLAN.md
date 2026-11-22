@@ -49,11 +49,11 @@ Status: ✓ built and live · ○ not built.
 
 ### C · Horizons
 
-| | Step | The idea | The playable (proposed) | Math it brings in |
+| | Step | The idea | The playable | Math it brings in |
 | --- | --- | --- | --- | --- |
-| ○ | 7 · Horizons | A steadily accelerating traveller has a region they can never see or hear from (Rindler horizon). The Unruh effect belongs here, stated as predicted and not yet measured directly | The twins' diagram with a curved (hyperbolic) worldline; send signals and see which arrive | Exponentials; hyperbolas |
-| ○ | 8 · Black holes | The same horizon, made by gravity. Falling in takes finite time on your own clock; watched from far away you never quite arrive. Last stable orbit; tides at the horizon are gentle for big holes | Drop a clock in; orbits from step 6 with the relativistic correction | Limits |
-| ○ | 9 · Wormholes | Allowed by the equations, never observed, and would need matter of a kind not known to exist in bulk. Clearly marked speculative | Two mouths and a shortcut on an embedding picture | None new |
+| ✓ | 7 · Horizons (`horizons`) | A ship that thrusts for ever has a last message that can ever catch it. A horizon is nowhere in particular, one-way, and belongs to the observer. Unruh effect stated as predicted, not measured | The spacetime diagram with the ship's bent path; a message to send; layers; engines to cut | Exponentials and logarithms |
+| ✓ | 8 · Black holes (`holes`) | The same horizon, made by gravity: hovering is thrusting, falling is being "home". Finite on the faller's clock, never seen by the far watcher. Tides at the horizon go as 1/M². Non-spinning hole only | Hovering on the budget's arrow; a dropped beacon with both clocks; three real masses | Limits |
+| ✓ | 9 · Wormholes (`wormholes`) | Allowed by the equations, needing negative energy, never seen; an open one makes a time machine, which is why most expect it is forbidden. Teaches measured / predicted / allowed-on-paper | A race round and through; one mouth taken on the twins' journey | None new |
 
 ### D · Light and stars
 
@@ -132,14 +132,21 @@ And two common pictures are replaced by better ones:
   card on in `index.html`.
 - `chamber.ts` runs the steps: give it the steps, a figure built once
   (`frame`), a `paint` to bring it up to date, and the drawer.
-- Put new physics and its second-route checks in `gravity.ts` or a new
-  module beside it, and call the check from the page's `expose`.
+- Put new physics and its second-route checks in a module beside
+  `gravity.ts` (stage C's is `strong.ts`), and call the check from the page's `expose`.
 - Give the previous chamber a "next" link.
 - Fetch every link before adding it. Note in the README anything quoted that
   could not be confirmed.
 - Update the status marks in this file and the table in `README.md`.
 
 ## Known weak points to revisit
+
+- Step 8 treats only the non-spinning hole; spin (Kerr), accretion discs and
+  jets are named or left out. Hawking radiation is deferred to step 19.
+- Step 9 leaves out ER = EPR and the 2022 quantum-computer "wormhole"; both
+  belong with step 19 and need care.
+- Step 7's "1 g" is really 0.97 g, chosen so the horizon is exactly one
+  light-year behind. The page says so.
 
 - Practice in steps 1 and 2 is arithmetic-heavy.
 - The saddle in step 5 is a sketch, not a true constant-curvature surface.
