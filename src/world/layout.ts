@@ -18,7 +18,7 @@ export interface Pool {
   open: boolean;
   /** The world this pool leads to, once that world exists: the folder name under worlds/. */
   world?: string;
-  /** The picture seen when looking into the pool: 1 = a pyramid being built, 2 = kanji being sprayed on a wall, 3 = fish circling in dark water, 4 = a woodblock print being made, 5 = soldiers being embroidered on linen. */
+  /** The picture seen when looking into the pool: 1 = a pyramid being built, 2 = kanji being sprayed on a wall, 3 = fish circling in dark water, 4 = a woodblock print being made, 5 = soldiers being embroidered on linen, 6 = a field of stars and the Milky Way. */
   scene?: number;
 }
 
@@ -52,6 +52,13 @@ function makePools(): Pool[] {
   // Open roughly one pool in three, each to a differently coloured world.
   let c = 0;
   pools.forEach((p, i) => {
+    if (i === 4) {
+      // The seventh doorway, the dark blue of a night sky: spacetime, the stars, and what is known about them.
+      p.open = true;
+      p.color = 0x16226e;
+      p.world = 'cosmos';
+      p.scene = 6;
+    }
     if (i % 3 === 0) {
       p.open = true;
       p.color = OPEN_COLORS[c++ % OPEN_COLORS.length];

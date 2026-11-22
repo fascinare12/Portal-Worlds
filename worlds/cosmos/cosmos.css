@@ -1,0 +1,27 @@
+/* The night world: the Spire's pages, turned dark. */
+html, body { background: #0b0e22; color: #e9e6f5; }
+#veil { background: #16226e; }
+.round { background: rgba(255, 255, 255, 0.12); color: #e9e6f5; box-shadow: 0 1px 10px rgba(0, 0, 0, 0.5); }
+#home { background: radial-gradient(circle, #fff 0%, #8fd49a 45%, #4f9a5c 100%); box-shadow: 0 0 16px #8fd49a; }
+#eye.on { background: #e8c24a; color: #0b0e22; }
+.kicker, .book h3 { color: #e8c24a; }
+.card { background: rgba(255, 255, 255, 0.07); box-shadow: none; border: 1px solid rgba(255, 255, 255, 0.08); }
+.book { border-left: 4px solid #e8c24a; }
+.chip { background: #e9e6f5; color: #0b0e22; }
+.chip.gold { background: #e8c24a; color: #0b0e22; }
+.chip.pale { background: rgba(255, 255, 255, 0.14); color: #e9e6f5; }
+.reasons button, .ruleb { background: rgba(255, 255, 255, 0.1); box-shadow: none; color: #e9e6f5; }
+.good { color: #8fe0a4; }
+.bad { color: #ff9a9a; }
+table.tally td, table.tally th { border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+.steps .card.later { background: rgba(255, 255, 255, 0.03); opacity: 0.6; }
+.tick { color: #8fe0a4; }
+details { margin: 12px 0; }
+details > summary { cursor: pointer; font-variant: small-caps; letter-spacing: 0.06em; color: #e8c24a; font-size: 16px; padding: 4px 0; }
+details .card { margin-top: 6px; }
+.eq { font-family: 'Cambria Math', 'STIX Two Math', Georgia, serif; font-size: 20px; text-align: center; margin: 10px 0; }
+.links { margin: 0; padding-left: 18px; font-size: 16px; line-height: 1.6; }
+.links a { color: #b9c4ff; }
+svg text { fill: #e9e6f5; font-family: Georgia, serif; }
+input[type=range] { width: 100%; accent-color: #e8c24a; }
+.track h2.group { font-weight: normal; font-size: 22px; margin: 26px 0 0; color: #b9c4ff; }

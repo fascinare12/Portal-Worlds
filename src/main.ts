@@ -6,6 +6,7 @@ import { createAtmosphere } from './world/atmosphere';
 import { daylight, updateDaylight } from './world/daylight';
 import { createFox } from './world/creatures/fox';
 import { createJelly } from './world/creatures/jelly';
+import { createMeteors } from './world/creatures/meteor';
 import { createMobius } from './world/creatures/mobius';
 import { createPaper } from './world/creatures/paper';
 import { createSphinx } from './world/creatures/sphinx';
@@ -52,6 +53,10 @@ scene.add(paper.group);
 const canonPool = pools.find((p) => p.world === 'canon');
 const mobius = canonPool ? createMobius(canonPool) : null;
 if (mobius) scene.add(mobius.group);
+
+const nightIndex = pools.findIndex((p) => p.world === 'cosmos');
+const meteors = nightIndex >= 0 ? createMeteors(pools[nightIndex], () => poolsView.stir(nightIndex)) : null;
+if (meteors) scene.add(meteors.group);
 
 const rig = new CameraRig(canvas, terrain.mesh);
 
@@ -200,6 +205,7 @@ renderer.setAnimationLoop(() => {
   jelly.update(dt);
   paper.update(dt);
   mobius?.update(dt);
+  meteors?.update(dt);
   folk.update(dt);
   terrain.update(time, poolsView.glow);
   atmosphere.update(time, rig.zoom, window.innerHeight);
