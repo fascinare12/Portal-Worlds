@@ -40,3 +40,23 @@ export const hole = (cx: number, cy: number, r: number) => `<circle cx="${cx}" c
 
 /** Something drawn with a soft glow round it. */
 export const glow = (inner: string) => `<g filter="url(#art-glow)">${inner}</g>`;
+
+/**
+ * Roughly the colour a glowing body of the given temperature (in kelvin) looks to the eye:
+ * Tanner Helland's fit to the blackbody colours. Good enough to paint a star with; not a measurement.
+ */
+export function starColour(T: number): string {
+  const t = Math.max(10, Math.min(400, T / 100));
+  const clamp = (x: number) => Math.round(Math.max(0, Math.min(255, x)));
+  const r = t <= 66 ? 255 : 329.698727446 * Math.pow(t - 60, -0.1332047592);
+  const g = t <= 66 ? 99.4708025861 * Math.log(t) - 161.1195681661 : 288.1221695283 * Math.pow(t - 60, -0.0755148492);
+  const b = t >= 66 ? 255 : t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307;
+  return `rgb(${clamp(r)},${clamp(g)},${clamp(b)})`;
+}
+
+/** A star: a disc of the given colour with a wide soft halo. */
+export const star = (cx: number, cy: number, r: number, colour: string) =>
+  `<circle cx="${cx}" cy="${cy}" r="${r * 1.9}" fill="${colour}" opacity="0.10"/><circle cx="${cx}" cy="${cy}" r="${r * 1.35}" fill="${colour}" opacity="0.22"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="${colour}" filter="url(#art-glow)"/>`;
+
+/** The colours of the rainbow, as stops for a gradient running from 380 to 700 nanometres. */
+export const RAINBOW = `<linearGradient id="art-rainbow" x1="0" x2="1"><stop offset="0" stop-color="#5a00a8"/><stop offset="0.14" stop-color="#3a35ff"/><stop offset="0.30" stop-color="#00a2ff"/><stop offset="0.42" stop-color="#00e08a"/><stop offset="0.55" stop-color="#b6f000"/><stop offset="0.64" stop-color="#ffe600"/><stop offset="0.74" stop-color="#ff8a00"/><stop offset="0.88" stop-color="#ff1a00"/><stop offset="1" stop-color="#8a0000"/></linearGradient>`;

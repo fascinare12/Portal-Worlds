@@ -292,6 +292,7 @@ if (sh.practising) {
     },
     key: () => [['#e8c24a', 'light; mouth A'], ['#7fb6ff', 'the ship; mouth B'], ['#b9c4ff', 'the throat'], ['#ff9ab8', 'you']],
     drawer,
+    next: ['light', 'On to light and stars'],
   });
   sh.draw();
 }
