@@ -34,6 +34,8 @@ export interface Chamber {
   act?: (what: string, value: string) => void;
   /** A slider moved: its id and where it now is. */
   slide?: (id: string, value: number) => void;
+  /** What the colours in the figure stand for: each a colour and a few words. */
+  key?: () => [string, string][];
   drawer: () => string;
   /** The next chamber, if it is built: its page and what to call it. */
   next?: [string, string];
@@ -46,11 +48,23 @@ export interface Running {
   mark: (what: string, chosen: (value: string) => boolean) => void;
 }
 
+/** Text written with " ¶ " between its paragraphs, set as paragraphs. */
+export const paras = (text: string) => text.split(' ¶ ').map((p) => `<p>${p}</p>`).join('');
+/** What is said after an answer: set apart from what comes next, so the two are not read as one. */
+export function saidBox(said: string): string {
+  if (!said) return '';
+  const yes = said.startsWith('Yes');
+  const cut = said.indexOf('.') + 1;
+  return `<div class="said ${yes ? 'good' : 'bad'}"><p><b>${said.slice(0, cut)}</b>${said.slice(cut).split(' ¶ ').join('</p><p>')}</p></div>`;
+}
+/** How far through the chamber she is. */
+export const stepLine = (step: number, of: number) => `<div class="stepno">${step >= of ? 'Done' : `Step ${step + 1} of ${of}`}<span>${Array.from({ length: of }, (_, i) => `<i class="${i < step ? 'past' : i === step ? 'here' : ''}"></i>`).join('')}</span></div>`;
+
 export function runChamber(c: Chamber): Running {
   const { sh } = c;
   let step = 0;
   let said = '';
-  sh.page.innerHTML = `<div class="kicker">${c.kicker}</div><h1>${c.title}</h1><div id="top"></div><div class="card" id="figure">${c.frame()}</div><div id="rest"></div>`;
+  sh.page.innerHTML = `<div class="kicker">${c.kicker}</div><h1>${c.title}</h1><div id="top"></div><div class="card" id="figure">${c.frame()}<div id="key" class="key"></div></div><div id="rest"></div>`;
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
   const running: Running = {
     step: () => step,
@@ -65,10 +79,11 @@ export function runChamber(c: Chamber): Running {
     const s = c.steps[Math.min(step, c.steps.length - 1)];
     const done = step >= c.steps.length;
     $('top').innerHTML =
-      `<div class="card">${said ? `<p class="${said.startsWith('Yes') ? 'good' : 'bad'}">${said}</p>` : ''}` +
-      (done ? `<p>${c.summary}</p>` : `<p>${s.say}</p>${s.ask ? `<p><b>${s.ask[0]}</b></p><div class="reasons">${s.ask[1].map((o, i) => `<button data-do="answer" data-v="${i}">${o}</button>`).join('')}</div>` : ''}`) +
+      `<div class="card">${stepLine(step, c.steps.length)}${saidBox(said)}` +
+      (done ? paras(c.summary) : `${paras(s.say)}${s.ask ? `<p><b>${s.ask[0]}</b></p><div class="reasons">${s.ask[1].map((o, i) => `<button data-do="answer" data-v="${i}">${o}</button>`).join('')}</div>` : ''}`) +
       `</div>`;
     $('rest').innerHTML = done ? `${c.drawer()}<div class="bar"><a class="chip gold" href="./${c.file}.html?practice">Practise ▶</a>${c.next ? `<a class="chip" href="./${c.next[0]}.html">${c.next[1]} ▶</a>` : ''}<a class="chip pale" href="./index.html">Back to the map</a></div>` : '';
+    $('key').innerHTML = (c.key?.() ?? []).map(([colour, words]) => `<span><i style="background:${colour}"></i>${words}</span>`).join('');
     c.paint();
   };
   const advance = () => {

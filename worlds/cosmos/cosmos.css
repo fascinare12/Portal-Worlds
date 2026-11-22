@@ -27,3 +27,24 @@ input[type=range] { width: 100%; accent-color: #e8c24a; }
 .track h2.group { font-weight: normal; font-size: 22px; margin: 26px 0 0; color: #b9c4ff; }
 .example ol { margin: 6px 0; padding-left: 22px; line-height: 1.55; }
 .example .card p:first-child { margin-top: 0; }
+
+/* Labels stay readable where they cross a line. */
+svg text { paint-order: stroke; stroke: #0b0e22; stroke-width: 3.5px; stroke-linejoin: round; }
+#figure { background: radial-gradient(ellipse at 50% 0%, rgba(60, 76, 170, 0.22), rgba(255, 255, 255, 0.045) 60%); }
+#figure svg { border-radius: 10px; }
+.glow { filter: drop-shadow(0 0 5px currentColor); }
+.said { border-left: 3px solid currentColor; padding: 2px 0 2px 12px; margin: 0 0 14px; font-size: 0.94em; }
+.said p { margin: 4px 0; }
+.said p + p, .said { color: inherit; }
+.said.good p, .said.bad p { color: #d9d6ea; }
+.said.good p b:first-child { color: #8fe0a4; }
+.said.bad p b:first-child { color: #ff9a9a; }
+.stepno { font-variant: small-caps; letter-spacing: 0.06em; font-size: 13px; color: #8d93b8; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+.stepno span { display: inline-flex; gap: 4px; }
+.stepno i { width: 14px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.14); }
+.stepno i.past { background: #8fe0a4; }
+.stepno i.here { background: #e8c24a; }
+.key { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: #c9c6dc; margin-top: 10px; }
+.key:empty { display: none; }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+.key i { width: 18px; height: 5px; border-radius: 3px; display: inline-block; }

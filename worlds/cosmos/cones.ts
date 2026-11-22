@@ -1,6 +1,7 @@
 import { Shell, checkKinds, choices, numbers, pickOne, runPractice } from '../canon/shell';
 import type { Kind } from '../canon/shell';
 import './cosmos.css';
+import { DEFS } from './art';
 import { expose, runChamber } from './chamber';
 import { checkGravity, interval2, zone } from './gravity';
 import type { Zone } from './gravity';
@@ -165,7 +166,7 @@ function diagram(): string {
   const X = (x: number) => S / 2 + x * u;
   const Y = (t: number) => S / 2 - t * u;
   const R = 6.5;
-  let s = `<path d="M${X(0)} ${Y(0)}L${X(-R)} ${Y(R)}H${X(R)}Z" fill="rgba(232,194,74,0.10)"/><path d="M${X(0)} ${Y(0)}L${X(-R)} ${Y(-R)}H${X(R)}Z" fill="rgba(127,182,255,0.10)"/>`;
+  let s = DEFS + `<path d="M${X(0)} ${Y(0)}L${X(-R)} ${Y(R)}H${X(R)}Z" fill="url(#art-future)"/><path d="M${X(0)} ${Y(0)}L${X(-R)} ${Y(-R)}H${X(R)}Z" fill="url(#art-past)"/>`;
   s += `<path d="M${X(-R)} ${Y(-R)}L${X(R)} ${Y(R)}M${X(-R)} ${Y(R)}L${X(R)} ${Y(-R)}" stroke="#8d93b8" stroke-dasharray="4 5" fill="none"/>`;
   s += `<path d="M${X(-R)} ${Y(0)}H${X(R)}M${X(0)} ${Y(-R)}V${Y(R)}" stroke="#3b4170" fill="none"/>`;
   s += `<text x="${X(0)}" y="${Y(5.9)}" font-size="13" text-anchor="middle" fill="#e8c24a">future</text><text x="${X(0)}" y="${Y(-6.1)}" font-size="13" text-anchor="middle" fill="#7fb6ff">past</text><text x="${X(-5.3)}" y="${Y(0.25)}" font-size="13" text-anchor="middle">elsewhere</text><text x="${X(5.3)}" y="${Y(0.25)}" font-size="13" text-anchor="middle">elsewhere</text>`;
@@ -183,9 +184,9 @@ function diagram(): string {
     const [t, x] = boosted(e.t, e.x, v);
     if (Math.abs(t) > R || Math.abs(x) > R) continue;
     if (sel === e.name) s += `<line x1="${X(0)}" y1="${Y(0)}" x2="${X(x)}" y2="${Y(t)}" stroke="${zone(e.t, e.x) === 'elsewhere' ? '#ff9a9a' : '#8fe0a4'}" stroke-width="2.5"/>`;
-    s += `<g data-do="tap" data-v="${e.name}" style="cursor:pointer"><circle cx="${X(x)}" cy="${Y(t)}" r="17" fill="transparent"/><circle cx="${X(x)}" cy="${Y(t)}" r="9" fill="${sel === e.name ? '#fff' : '#ff9ab8'}"/><text x="${X(x)}" y="${Y(t) + 4}" font-size="11" text-anchor="middle" style="fill:#0b0e22;font-weight:bold">${e.name}</text></g>`;
+    s += `<g data-do="tap" data-v="${e.name}" style="cursor:pointer"><circle cx="${X(x)}" cy="${Y(t)}" r="17" fill="transparent"/><circle cx="${X(x)}" cy="${Y(t)}" r="9" fill="${sel === e.name ? '#fff' : '#ff9ab8'}"/><text x="${X(x)}" y="${Y(t) + 4}" font-size="11" text-anchor="middle" style="fill:#0b0e22;font-weight:bold;stroke:none">${e.name}</text></g>`;
   }
-  s += `<circle cx="${X(0)}" cy="${Y(0)}" r="7" fill="#fff"/><text x="${X(0) - 11}" y="${Y(0) + 17}" font-size="12" text-anchor="end">you, now</text>`;
+  s += `<circle cx="${X(0)}" cy="${Y(0)}" r="7" fill="#fff" filter="url(#art-glow)"/><text x="${X(0) - 11}" y="${Y(0) + 17}" font-size="12" text-anchor="end">you, now</text>`;
   return `<svg viewBox="0 0 ${S} ${S}" style="width:100%;max-width:520px;display:block;margin:auto">${s}</svg>`;
 }
 
@@ -237,14 +238,14 @@ if (sh.practising) {
     kicker: 'Flat spacetime · 3',
     title: 'Light cones',
     steps: [
-      { say: 'The diagram from the twins: time up the page, distance across. The white dot is you, here, now. The dotted lines are light: the upper pair is light leaving you now, the lower pair light arriving now. The pink dots are five things that happen. <b>Tap A.</b>', until: () => sel === 'A' },
+      { say: 'The diagram from the twins: time up the page, distance across. The white dot is you, here, now. ¶ The dotted lines are light. The upper pair is light leaving you now; the lower pair is light arriving now. ¶ The pink dots are five things that happen. <b>Tap A.</b>', until: () => sel === 'A' },
       { say: 'A is 1 light-year away and 4 years off. Something leaving you now at a quarter of the speed of light gets there in time.', ask: ['C is 4 light-years away and happens 1 year from now. Can anything you do now make a difference to C?', ['Yes, given a fast enough ship', 'No: it would take four times the speed of light', 'Yes, but only by radio'], 1, 'Radio is light, and light needs 4 years. C lies outside the dotted lines. Tap it.'] },
       { say: 'Now look down the page, at what has already happened.', ask: ['B was 2 light-years away, 3 years ago. Which is true?', ['B can have affected you: its light got here a year ago', 'You can still affect B', 'B and you can have nothing to do with each other'], 0, 'Light from B took 2 years and arrived a year ago. So the upper wedge is everything you can still affect, the lower wedge is everything that can have affected you, and the two sides are neither. The sides are called <i>elsewhere</i>.'] },
       { say: 'The Sun is 8 light-minutes from Earth.', ask: ['If the Sun vanished this instant, when would anything on Earth change?', ['At once: the Earth would fly off straight away', 'After 8 minutes', 'After 16 minutes'], 1, 'The Sun-right-now is in our elsewhere. For 8 minutes the sky stays bright and the Earth keeps to its orbit, because changes in gravity travel at the speed of light too.'] },
       { say: 'Now the strange part. The slider shows the <i>same five events</i> as timed by someone passing you, right here, right now. <b>Slide it to 0.6 heading right, and watch C.</b>', until: () => v >= 0.58 },
-      { say: 'For you, C is a year in the future. For the passer-by, C happened 1.75 years ago.', ask: ['Who is right about whether C comes before or after this moment?', ['You are: you are the one at rest', 'The passer-by is', 'Neither: for events in elsewhere, the order is not a fact'], 2, 'This is the twins\' tilted "now" again. It does no harm, because neither of you can know of C, or do anything to it, until its light arrives.'] },
+      { say: 'For you, C is a year in the future. For the passer-by, C happened 1.75 years ago. Same event, different date.', ask: ['Who is right about whether C comes before or after this moment?', ['You are: you are the one at rest', 'The passer-by is', 'Neither: for events in elsewhere, the order is not a fact'], 2, 'This is the twins\' tilted "now" again. It does no harm, because neither of you can know of C, or do anything to it, until its light arrives.'] },
       { say: '<b>Now slide all the way the other way, past 0.6 heading left,</b> and watch A and B the whole time.', until: () => low <= -0.58 },
-      { say: 'Every event slid along its own faint curve.', ask: ['Did any speed carry A below this moment, or out of the upper wedge?', ['Yes, at the highest speeds', 'No: what is inside a wedge stays inside it'], 1, 'Everyone agrees on what is in your future, your past and your elsewhere, and on the order of anything that could be cause and effect. And this is why nothing outruns light: a faster message would run from you to somewhere like C, and some passers-by find C earlier than now. For them your message arrives before you send it. Relay it back the same way and you could answer yourself before you asked.'] },
+      { say: 'Every event slid along its own faint curve.', ask: ['Did any speed carry A below this moment, or out of the upper wedge?', ['Yes, at the highest speeds', 'No: what is inside a wedge stays inside it'], 1, 'Everyone agrees on what is in your future, your past and your elsewhere, and on the order of anything that could be cause and effect. ¶ This is why nothing outruns light. A faster-than-light message would run from you to somewhere like C. But some passers-by find C <i>earlier</i> than now, so for them your message arrives before you send it. Relay it back the same way, and you could answer yourself before you asked.'] },
     ],
     summary: '<b>The light cone sorts every event into your future, your past, and elsewhere.</b> Everyone agrees on the sorting. Only inside the cones is "before" and "after" a fact, and that is exactly where causes and effects live.',
     frame: () => `<div id="diagram"></div><div class="bar"><span class="soft">0.9 ←</span><input id="pass" type="range" min="-0.9" max="0.9" step="0.01" value="0" style="flex:1"><span class="soft">→ 0.9</span></div><div class="bar"><button class="chip pale" data-do="rest" data-v="0">back to your own reckoning</button></div><div id="told"></div>`,
@@ -263,6 +264,7 @@ if (sh.practising) {
         ($('pass') as HTMLInputElement).value = '0';
       }
     },
+    key: () => [['rgba(232,194,74,0.55)', 'your future'], ['rgba(127,182,255,0.55)', 'your past'], ['#8d93b8', 'light'], ['#ff9ab8', 'events']],
     drawer,
     next: ['falling', 'On to falling'],
   });

@@ -1,6 +1,7 @@
 import { Shell, checkKinds, choices, numbers, pickOne, runPractice } from '../canon/shell';
 import type { Kind } from '../canon/shell';
 import './cosmos.css';
+import { DEFS, stars } from './art';
 import { expose, runChamber } from './chamber';
 import type { Running } from './chamber';
 import { PACES, beta, frac, rate, tidy } from './physics';
@@ -144,22 +145,22 @@ function road(f: number): [number, number] {
 }
 
 function race(): string {
-  let g = '';
+  let g = DEFS + stars(460, 300, 45, 21);
   let d = '';
   for (let i = 0; i <= 100; i++) {
     const [x, y] = road(i / 100);
     d += `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
   }
-  g += `<path d="${d}" stroke="#4a5080" stroke-width="14" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#8d93b8" stroke-width="1" fill="none" stroke-dasharray="2 6"/>`;
+  g += `<path d="${d}" stroke="#2c3470" stroke-width="22" fill="none" stroke-linecap="round" opacity="0.6"/><path d="${d}" stroke="#4a5494" stroke-width="14" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#8d93b8" stroke-width="1" fill="none" stroke-dasharray="2 6"/>`;
   g += `<text x="40" y="160" font-size="12" text-anchor="middle" transform="rotate(-90 40 160)">the ordinary road: ${FAR} light-years</text>`;
   if (open) {
-    g += `<path d="M346 66Q358 155 346 244M374 66Q362 155 374 244" stroke="#b9c4ff" stroke-width="2" fill="none"/><path d="M346 66L374 66M346 244L374 244" stroke="#b9c4ff" stroke-width="2"/><text x="386" y="158" font-size="12" fill="#b9c4ff">the throat:</text><text x="386" y="174" font-size="12" fill="#b9c4ff">${tidy(throat)} light-${throat === 1 ? 'year' : 'years'}</text>`;
+    g += `<path d="M346 66Q358 155 346 244L374 244Q362 155 374 66Z" fill="rgba(185,196,255,0.14)"/><path d="M346 66Q358 155 346 244M374 66Q362 155 374 244" stroke="#b9c4ff" stroke-width="2" fill="none" filter="url(#art-glow)"/><path d="M346 66L374 66M346 244L374 244" stroke="#b9c4ff" stroke-width="2"/><text x="386" y="158" font-size="12" fill="#b9c4ff">the throat:</text><text x="386" y="174" font-size="12" fill="#b9c4ff">${tidy(throat)} light-${throat === 1 ? 'year' : 'years'}</text>`;
     const s = Math.min(1, (pace * now) / throat);
     const l = Math.min(1, now / throat);
     g += `<circle cx="353" cy="${66 + 178 * l}" r="5" fill="#e8c24a"/><rect x="361" y="${60 + 178 * s}" width="10" height="12" fill="#7fb6ff"/>`;
   }
   const [lx, ly] = road(Math.min(1, now / FAR));
-  g += `<circle cx="${lx}" cy="${ly}" r="7" fill="#e8c24a"/>`;
+  g += `<circle cx="${lx}" cy="${ly}" r="7" fill="#e8c24a" filter="url(#art-glow)"/>`;
   g += `<circle cx="360" cy="60" r="11" fill="#0b0e22" stroke="#fff" stroke-width="2"/><text x="360" y="64" font-size="12" text-anchor="middle">A</text><circle cx="360" cy="250" r="11" fill="#0b0e22" stroke="#fff" stroke-width="2"/><text x="360" y="254" font-size="12" text-anchor="middle">B</text>`;
   g += `<text x="230" y="158" font-size="11" text-anchor="middle" opacity="0.6">(the gap between the arms is not part of space)</text>`;
   const ship = throat / pace;
@@ -182,7 +183,7 @@ function machine(): string {
     if (t <= 1 + T) return { x: APART + out - v * (t - 1 - T / 2), own: 1 + (t - 1) * rate(v) };
     return { x: APART, own: t - behind };
   };
-  let g = '';
+  let g = DEFS;
   // The throat: it joins the two mouths wherever their own clocks agree.
   for (let own = 0; own <= TOP; own += 2) {
     // The outside time at which B's own clock reads this.
@@ -199,7 +200,7 @@ function machine(): string {
   const exit = enter - behind;
   const back = exit + APART;
   g += `<line x1="${X(APART)}" y1="${Y(enter)}" x2="${X(0)}" y2="${Y(exit)}" stroke="#ff9ab8" stroke-width="2.5" stroke-dasharray="6 4"/><line x1="${X(0)}" y1="${Y(exit)}" x2="${X(APART)}" y2="${Y(back)}" stroke="#ff9ab8" stroke-width="2.5"/>`;
-  g += `<circle cx="${X(APART)}" cy="${Y(enter)}" r="6" fill="#ff9ab8"/><circle cx="${X(0)}" cy="${Y(exit)}" r="5" fill="#ff9ab8"/><circle cx="${X(APART)}" cy="${Y(back)}" r="6" fill="${back < enter ? '#ff9a9a' : '#8fe0a4'}" stroke="#fff" stroke-width="1.5"/>`;
+  g += `<circle cx="${X(APART)}" cy="${Y(enter)}" r="6" fill="#ff9ab8" filter="url(#art-glow)"/><circle cx="${X(0)}" cy="${Y(exit)}" r="5" fill="#ff9ab8"/><circle cx="${X(APART)}" cy="${Y(back)}" r="6" fill="${back < enter ? '#ff9a9a' : '#8fe0a4'}" stroke="#fff" stroke-width="1.5"/>`;
   g += `<text x="${X(APART) + 10}" y="${Y(enter) + 4}" font-size="11" fill="#ff9ab8">you step in</text><text x="${X(APART) + 10}" y="${Y(back) + (Math.abs(back - enter) < 1.2 ? (back < enter ? 16 : -8) : 4)}" font-size="11" fill="${back < enter ? '#ff9a9a' : '#8fe0a4'}">you are back</text>`;
   g += `<text x="${X(0)}" y="${Y(0) + 16}" font-size="12" text-anchor="middle" fill="#e8c24a">mouth A</text><text x="${X(APART)}" y="${Y(0) + 16}" font-size="12" text-anchor="middle" fill="#7fb6ff">mouth B</text><text x="16" y="${Y(14)}" font-size="11" text-anchor="middle" opacity="0.7" transform="rotate(-90 16 ${Y(14)})">outside date, years →</text>`;
   const net = back - enter;
@@ -253,15 +254,15 @@ if (sh.practising) {
     kicker: 'Horizons · 9',
     title: 'Wormholes',
     steps: [
-      { say: 'This chamber is different from the others: nobody has ever seen what it is about. It is here because the equations allow it, and because working out why it probably does not exist uses everything so far. The band is space; A and B are two stars 10 light-years apart. <b>Open the wormhole.</b>', until: () => open },
-      { say: 'A tunnel through, one light-year long. At year 0 a flash of light leaves A for B the ordinary way, and a ship leaves A through the throat at half the speed of light. <b>Slide time forward until the ship arrives.</b>', until: () => nowMax >= throat / pace },
+      { say: 'This chamber is different from the others: nobody has ever seen what it is about. It is here because the equations allow it, and because working out why it probably does not exist uses everything so far. ¶ The band is space, and A and B are two stars 10 light-years apart along it. <b>Open the wormhole.</b>', until: () => open },
+      { say: 'A tunnel joins A to B, one light-year long. ¶ At year 0, a flash of light leaves A for B the ordinary way. At the same moment a ship leaves A through the throat, at half the speed of light. ¶ <b>Slide time forward until the ship arrives.</b>', until: () => nowMax >= throat / pace },
       { say: 'The ship is at B, and the light that went round is nowhere near.', ask: ['Has the ship gone faster than light?', ['Yes', 'No: it never passed any light that was beside it. It took a shorter road'], 1, 'Light sent through the throat beat the ship easily. The speed limit of chamber 3 is local: it is about the light cone where you are. A wormhole would leave every light cone alone and change how the places are joined up.'] },
       { say: 'So nothing so far is broken.', ask: ['Does general relativity allow such a shape?', ['No', 'Yes, as a shape; but it also says what must be there to hold it open'], 1, 'Light rays entering a mouth converge toward the throat, and must spread again on the way out. Ordinary matter and energy only make rays converge. Holding a throat open takes something that does the opposite: negative energy, of which only the faintest traces have ever been found.'] },
       { say: 'The equations allow it. That is all that has been said so far.', ask: ['Has a wormhole ever been observed?', ['Yes', 'No'], 1, 'None, of any size. Now the deeper trouble. Suppose one existed anyway.'] },
-      { say: 'Below, a new picture: the spacetime diagram, with the two mouths 6 light-years apart. Mouth B is towed away and brought back: the travelling twin. The faint dotted lines are the throat, which joins the mouths wherever <i>their own clocks</i> agree, because the throat is short and went nowhere. <b>Lengthen the trip and watch those lines tilt.</b>', until: () => lag(trip, v) >= 3 },
+      { say: 'Below is a new picture: the spacetime diagram, with the two mouths 6 light-years apart. Mouth B is towed away and brought back, like the travelling twin. ¶ The faint dotted lines are the throat. It joins the two mouths wherever <i>their own clocks</i> show the same reading, because the throat itself is short and went nowhere. ¶ <b>Lengthen the trip and watch those lines tilt.</b>', until: () => lag(trip, v) >= 3 },
       { say: 'Mouth B\'s clock is now years behind the clocks around it; but looking through the throat, the two mouths\' clocks still agree.', ask: ['You step into B. Where and when do you come out?', ['At A, on the same outside date', 'At A, on an earlier outside date', 'At A, on a later outside date'], 1, 'The pink dashes are you, going through. You come out of A years earlier than you went in, by every calendar outside. Then you travel back to B the ordinary way, which takes at least 6 years.'] },
       { say: '<b>Now make the trip fast enough and long enough that you get back to B before you left.</b>', until: () => lag(trip, v) > APART + 0.01 },
-      { say: 'When the lag is more than the distance between the mouths, you can be standing at B to watch yourself step in.', ask: ['What do physicists make of that?', ['It shows time travel is possible', 'Most take it as a sign that something forbids such a wormhole; nobody has proved what', 'It has already been done with single particles'], 1, 'Chamber 3 said causes come before effects for everyone, because effects stay inside the light cone. A path that returns to its own past breaks that, and nothing of the kind has ever been seen. Hawking conjectured in 1992 that the laws of physics always step in. The conjecture is not proved; settling it needs a theory of gravity and quantum physics together.'] },
+      { say: 'When the lag is more than the distance between the mouths, you can be standing at B to watch yourself step in.', ask: ['What do physicists make of that?', ['It shows time travel is possible', 'Most take it as a sign that something forbids such a wormhole; nobody has proved what', 'It has already been done with single particles'], 1, 'Chamber 3 said causes come before effects for everyone, because effects stay inside the light cone. A path that returns to its own past breaks that, and nothing of the kind has ever been seen. ¶ Hawking conjectured in 1992 that the laws of physics always step in to prevent it. The conjecture is not proved, and settling it needs a theory of gravity and quantum physics together.'] },
     ],
     summary: '<b>A wormhole is a fair question put to the equations, and so far the answers are: the shape is allowed; the stuff to hold it open is not known to exist; and one that stayed open could be made into a time machine, which is the best reason to think nature says no.</b> None has been seen. Keep this chamber as the pattern for sorting any claim: measured, predicted, or only allowed.',
     frame: () =>
@@ -289,6 +290,7 @@ if (sh.practising) {
       else if (what === 'pace') pace = Number(value);
       else if (what === 'v') v = Number(value);
     },
+    key: () => [['#e8c24a', 'light; mouth A'], ['#7fb6ff', 'the ship; mouth B'], ['#b9c4ff', 'the throat'], ['#ff9ab8', 'you']],
     drawer,
   });
   sh.draw();
