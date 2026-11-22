@@ -343,6 +343,35 @@ const waterFragment = /* glsl */ `
     return col;
   }
 
+  // The night pool: a deep blue field of stars; and, leaning in, the band of the Milky Way.
+  float starHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  vec3 nightPool(vec2 p, float t, float lean) {
+    float edge = length(p);
+    vec3 col = mix(vec3(0.016, 0.035, 0.13), vec3(0.004, 0.008, 0.045), smoothstep(0.0, 1.6, edge));
+    // Stars at three sizes, each with its own slow twinkle.
+    for (int layer = 0; layer < 3; layer++) {
+      float n = 9.0 + float(layer) * 11.0;
+      vec2 cell = floor(p * n);
+      vec2 at = fract(p * n) - 0.5;
+      float h = starHash(cell + float(layer) * 17.0);
+      vec2 where = vec2(starHash(cell + 3.1), starHash(cell + 7.7)) - 0.5;
+      float d = length(at - where * 0.7);
+      float lit = step(0.72 - float(layer) * 0.08, h);
+      float twinkle = 0.65 + 0.35 * sin(t * (1.0 + h * 2.0) + h * 40.0);
+      float size = 0.11 - float(layer) * 0.025;
+      col += lit * twinkle * smoothstep(size, 0.0, d) * mix(vec3(0.75, 0.85, 1.0), vec3(1.0, 0.92, 0.78), h) * (1.1 - float(layer) * 0.25);
+    }
+    // The Milky Way: a ragged band of faint light across the pool, split by dark lanes of dust.
+    vec2 q = vec2(p.x * 0.82 + p.y * 0.57, -p.x * 0.57 + p.y * 0.82);
+    float cloud = texture2D(uNoise, q * vec2(0.09, 0.2) + 0.2).r;
+    float fine = texture2D(uNoise, q * 0.55 + 0.6).r;
+    float dust = smoothstep(0.42, 0.6, texture2D(uNoise, q * vec2(0.16, 0.5) + 0.43).r);
+    float band = exp(-pow((q.y + (cloud - 0.5) * 0.5) / 0.34, 2.0));
+    vec3 glow = mix(vec3(0.5, 0.58, 0.85), vec3(1.0, 0.9, 0.75), exp(-q.x * q.x * 1.5));
+    col += lean * band * (0.25 + 0.75 * fine) * (1.0 - 0.75 * dust * band) * glow * 0.75;
+    return col;
+  }
+
   void main() {
     float r = length(vPos) / uRadius;
     vec3 toEye = normalize(cameraPosition - vWorld);
@@ -391,6 +420,8 @@ const waterFragment = /* glsl */ `
         // soak into its surface, right out to the bank, with the water still showing through.
         vec3 ink = printPicture(p * 0.56, uTime) / vec3(0.94, 0.90, 0.79);
         col = mix(col, col * ink, smoothstep(1.95, 1.6, length(p)) * uReveal);
+      } else if (uScene > 5.5) {
+        // The night pool is painted further down, whether or not anyone is leaning in.
       } else if (uScene > 4.5) {
         // The golden pool has no window either: the whole pool is the cloth, out to the bank.
         col = mix(col, tapestryPicture(p * 0.56, uTime), smoothstep(1.95, 1.6, length(p)) * uReveal);
@@ -400,6 +431,8 @@ const waterFragment = /* glsl */ `
     }
     // The red pool has koi in it, circling just under the surface.
     if (uScene > 1.5 && uScene < 2.5) col = koi(col, vPos / uRadius, uTime);
+    // The night pool is not water-coloured at all: it is sky.
+    if (uScene > 5.5) col = mix(col, nightPool(vPos / uRadius, uTime, uReveal), smoothstep(1.95, 1.6, r) * uOpen);
     // Woken by a touch: a ring of light runs outward and the whole pool brightens.
     float wake = uPulse * (1.0 - 0.6 * uOpen);
     float ring = smoothstep(0.25, 0.0, abs(r - (1.0 - uPulse) * 1.6));
