@@ -65,11 +65,11 @@ Status: ✓ built and live · ○ not built.
 
 ### E · The cosmos
 
-| | Step | The idea | The playable (proposed) | Math it brings in |
+| | Step | The idea | The playable | Math it brings in |
 | --- | --- | --- | --- | --- |
-| ○ | 13 · Space stretching | Everything recedes from everything; no centre and no edge; redshift as stretching | A universe to run forward and back | Proportionality; the scale factor |
-| ○ | 14 · The oldest light | The cosmic microwave background, and the sound waves frozen into it | Sound waves in the early universe | Waves |
-| ○ | 15 · The Hubble tension | The distance ladder and the oldest light give different expansion rates. Unresolved; check the current state before writing | Run both measurements and watch them miss | Error bars |
+| ✓ | 13 · Space stretching (`expansion`) | Every gap grows alike, so speed goes as distance and there is no centre; light is stretched as much as space has grown; three histories, and the one the measurements pick | A field of galaxies to stretch and stand anywhere in; a wave of light; three histories of the universe's size | Proportionality; the scale factor |
+| ✓ | 14 · The oldest light (`oldest`) | A glowing fog that cleared at 370,000 years; its light now microwaves; sound ripples frozen into it as a ruler; the ruler's angle gives H0 given the standard account | The universe cooling and clearing; a ripple spreading and freezing; the expansion rate to set until the angle fits | Waves |
+| ✓ | 15 · The Hubble tension (`tension`) | What an uncertainty means; counting a gap in sigma; scatter against bias; the state of the question, taking no side. **Dated November 2026: re-check before relying on it** | A measurement to repeat; the two results as bell curves with a bias to try; eight real measurements | Error bars |
 
 ### F · The quantum
 
@@ -133,7 +133,7 @@ And two common pictures are replaced by better ones:
 - `chamber.ts` runs the steps: give it the steps, a figure built once
   (`frame`), a `paint` to bring it up to date, and the drawer.
 - Put new physics and its second-route checks in a module beside
-  `gravity.ts` (stage C's is `strong.ts`, stage D's `starlight.ts`), and call the check from the page's `expose`.
+  `gravity.ts` (stage C's is `strong.ts`, stage D's `starlight.ts`, stage E's `cosmology.ts`), and call the check from the page's `expose`.
 - Keep each instruction short: write " ¶ " between paragraphs in a step's
   text, end with the thing to do in bold, and give the figure a colour `key`
   instead of describing the colours in the prose. Use `art.ts` for stars,
@@ -144,6 +144,13 @@ And two common pictures are replaced by better ones:
 - Update the status marks in this file and the table in `README.md`.
 
 ## Known weak points to revisit
+
+- **Step 15 will go out of date.** Its figures are in `MEASURED` in
+  `cosmology.ts` and its date is `ASOF` in `tension.ts`. Search for the
+  current state before trusting it, and update both.
+- Step 14's ruler figure holds the matter and light densities fixed and varies
+  only H0, which is how the real inference works in outline but not in full.
+- Step 13 leaves out inflation, curvature and what dark matter is.
 
 - Step 11's balance figure is a cartoon (a damped spring), not a stellar
   model. Its lifetimes come from a four-piece fit and are estimates; for the
