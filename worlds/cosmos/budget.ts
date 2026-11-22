@@ -31,6 +31,17 @@ const CONCEPT: [string, string, string[], string][] = [
   ['You pour energy into a ship already moving at 24/25 of the speed of light. What changes most?', 'Its clock slows further; its speed barely rises', ['Its speed rises steadily past the speed of light', 'Nothing changes at all', 'Its clock speeds back up'], 'Near the end of the arc, a tiny change in speed is a large change in clock rate. That is why the speed of light is a limit and not a wall you hit.'],
 ];
 
+/** One question of each kind, worked through: shown until she has got one of that kind right. */
+const EXAMPLES: Record<string, string> = {
+  rate: "<p>A ship passes at <b>5/13</b> of the speed of light. How fast does its clock run?</p><ol><li>Square the speed: (5/13)² = 25/169.</li><li>Take that from 1: 1 − 25/169 = 144/169.</li><li>Take the square root: √(144/169) = <b>12/13</b>.</li></ol><p>Its clock advances 12/13 of a second for each second of yours. The shortcut: 5, 12 and 13 are the sides of a right triangle, and the speed and the clock rate are the two short sides over the long one. The triangles used here are 3-4-5, 5-12-13, 8-15-17 and 7-24-25.</p>",
+  slowest: "<p>Ships pass at 3/5, 12/13 and 7/25 of the speed of light. Whose clock is slowest?</p><ol><li>Turn the speeds into decimals to compare them: 0.6, 0.92, 0.28.</li><li>The fastest ship has the slowest clock: the one at <b>12/13</b> (its clock runs at only 5/13).</li><li>The slowest ship has the fastest clock: the one at 7/25 (its clock runs at 24/25).</li></ol>",
+  trip: "<p>A ship cruises at <b>4/5</b> of the speed of light for <b>10 years</b> by your clock. How much time passes on board?</p><ol><li>Find its clock rate. 4/5 belongs to the 3-4-5 triangle, so the rate is 3/5.</li><li>Ship's time = your time × clock rate = 10 × 3/5 = <b>6 years</b>.</li></ol>",
+  speed: "<p>You want a ship's clock to run at <b>5/13</b> of yours. How fast must it go?</p><ol><li>Find the triangle with 5 and 13 in it: 5-12-13.</li><li>The speed is the other short side over the long one: <b>12/13</b> of the speed of light.</li><li>Check: (5/13)² + (12/13)² = 25/169 + 144/169 = 1.</li></ol>",
+  lifetime: "<p>A particle lasts <b>6 microseconds</b> by its own clock and passes you at <b>4/5</b> of the speed of light. How long does it last by yours?</p><ol><li>Its clock rate: 3/5 (the 3-4-5 triangle).</li><li>Its clock is the slow one, so its 6 microseconds take <i>longer</i> on yours. Divide by the rate: 6 ÷ 3/5 = 6 × 5/3 = <b>10 microseconds</b>.</li></ol><p>Multiply by the rate to go from your time to its time; divide to go from its time to yours.</p>",
+  reach: "<p>A particle lasts <b>6 microseconds</b> by its own clock and passes you at <b>4/5</b> of the speed of light. How far does it get?</p><ol><li>First, how long it lasts by <i>your</i> clock: 6 ÷ 3/5 = 10 microseconds.</li><li>Distance = speed × your time = 4/5 × 10 = <b>8 light-microseconds</b>.</li></ol><p>Using its own 6 microseconds would give 4.8, which is too short: you are the one measuring the distance, so use your time.</p>",
+  idea: "<p>These have no arithmetic. Two rules settle nearly all of them.</p><ol><li><b>Nobody notices their own clock run slow.</b> A slow clock is always someone else's, measured from outside.</li><li><b>It is the same both ways.</b> If you find a ship's clock slow, its crew find yours slow by the same amount.</li></ol><p>For example: \"A ship's crew time their own heartbeats. What do they find?\" By rule 1, nothing unusual.</p>",
+};
+
 const KINDS: Kind[] = [
   {
     id: 'rate',
@@ -142,7 +153,7 @@ function drawer(): string {
 }
 
 if (sh.practising) {
-  runPractice(sh, 'Practice · the budget', 'How is it spending it?', 'Speeds are given as fractions of the speed of light. <b>◉</b> gives a nudge where there is one.', KINDS);
+  runPractice(sh, 'Practice · the budget', 'How is it spending it?', 'Speeds are given as fractions of the speed of light. <b>◉</b> gives a nudge where there is one.', KINDS, EXAMPLES);
 } else {
   sh.page.innerHTML =
     `<div class="kicker">Spacetime · 1</div><h1>The budget</h1><div id="top"></div>` +

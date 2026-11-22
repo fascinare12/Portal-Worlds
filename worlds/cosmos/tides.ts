@@ -91,6 +91,16 @@ const IDEAS: [string, string, string[], string][] = [
   ['Why are there two high tides a day and not one?', 'The Moon stretches the Earth along the line to it, raising one bulge beneath it and one on the far side', ['The Moon pulls the water on the near side only, and it sloshes back', 'The Sun makes the second one', 'The Earth spins twice a day'], 'The near water is pulled more than the Earth\'s centre, and the centre more than the far water. Each end is left bulging, and the Earth turns under both.'],
 ];
 
+/** One question of each kind, worked through: shown until she has got one of that kind right. */
+const EXAMPLES: Record<string, string> = {
+  surface: "<p>Surveyors find that a large triangle's angles add up to <b>190°</b>.</p><ol><li>On a flat surface they would add up to exactly 180°.</li><li>190° is too much: the triangle is fat. That happens on a surface <b>curved like a ball</b>.</li></ol><p>The full table. Ball: parallels draw together, triangles over 180°, circles too small round. Saddle: parallels spread, triangles under 180°, circles too big round.</p>",
+  drift: "<p>Picture the line each ball falls along: straight toward the planet's centre.</p><ol><li><b>Side by side:</b> two different lines, which meet at the centre. The balls drift <b>together</b>.</li><li><b>One above the other:</b> the same line, but the lower ball is nearer and pulled harder, so it gets ahead. They drift <b>apart</b>.</li></ol>",
+  walk: "<p>Two walkers start <b>80 km</b> apart on the equator and walk straight north.</p><ol><li>Distance apart = starting distance × cosine of the latitude.</li><li>At latitude 60°: 80 × ½ = <b>40 km</b>.</li><li>At the pole, latitude 90°: 80 × 0 = <b>0 km</b>.</li></ol>",
+  triangle: "<p>A triangle on a globe has angles adding up to <b>225°</b>.</p><ol><li>The excess over a flat triangle: 225 − 180 = 45°.</li><li>As a fraction of 720°: 45 ÷ 720 = <b>1/16</b> of the globe.</li></ol>",
+  tide: "<p>A falling room is moved to <b>4 times</b> as far from the planet.</p><ol><li>The tide goes as one over the <i>cube</i> of the distance.</li><li>4 × 4 × 4 = 64. The tide is <b>64 times weaker</b>.</li></ol><p>The planet's mass comes in plainly: three times the mass, three times the tide.</p>",
+  idea: "<p>The rules behind these:</p><ol><li>A straight line in a curved surface is the path of someone who never turns. Curvature shows when two such paths that start parallel do not stay parallel.</li><li>Curvature can be found from inside: by triangles, circles, or watching a neighbour.</li><li>A falling room removes weight but not the tide: stretched along the line to the planet, squeezed across it.</li></ol>",
+};
+
 const KINDS: Kind[] = [
   {
     id: 'surface',
@@ -273,7 +283,7 @@ function drawer(): string {
 }
 
 if (sh.practising) {
-  runPractice(sh, 'Practice · curved space and tides', 'Which way do they lean?', '<b>◉</b> gives a nudge where there is one.', KINDS);
+  runPractice(sh, 'Practice · curved space and tides', 'Which way do they lean?', '<b>◉</b> gives a nudge where there is one.', KINDS, EXAMPLES);
 } else {
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
   let run: Running | undefined;

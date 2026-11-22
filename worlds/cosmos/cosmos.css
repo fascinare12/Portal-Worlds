@@ -25,3 +25,5 @@ details .card { margin-top: 6px; }
 svg text { fill: #e9e6f5; font-family: Georgia, serif; }
 input[type=range] { width: 100%; accent-color: #e8c24a; }
 .track h2.group { font-weight: normal; font-size: 22px; margin: 26px 0 0; color: #b9c4ff; }
+.example ol { margin: 6px 0; padding-left: 22px; line-height: 1.55; }
+.example .card p:first-child { margin-top: 0; }

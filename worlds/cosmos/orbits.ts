@@ -35,6 +35,17 @@ const IDEAS: [string, string, string[], string][] = [
   ['Astronauts in orbit float about their cabin. How strong is the Earth\'s gravity where they are, 400 km up?', 'About nine-tenths of its strength on the ground', ['Zero', 'About a tenth of its strength on the ground', 'About half its strength on the ground'], 'They are only 400 km further from the Earth\'s centre than the ground\'s 6,371. They float because they are falling, not because gravity has gone.'],
 ];
 
+/** One question of each kind, worked through: shown until she has got one of that kind right. */
+const EXAMPLES: Record<string, string> = {
+  fate: "<p>Two numbers decide everything: <b>1</b> (the circling speed) and <b>1.41</b> (escape).</p><ol><li>0.8 times the circling speed: under 1, so it <b>dips closer in</b>.</li><li>Exactly 1: a <b>circle</b>.</li><li>1.25: between 1 and 1.41, so it <b>swings out and comes back</b>.</li><li>1.6: over 1.41, so it <b>leaves</b>.</li></ol>",
+  square: "<p>A probe moves to <b>6 times</b> as far from a planet.</p><ol><li>The pull goes as one over the square of the distance.</li><li>6 × 6 = 36. The pull is <b>1/36</b> of what it was.</li></ol><p>Moving in to 1/3 of the distance works the other way: 3 × 3 = 9 times stronger.</p>",
+  speed: "<p>A satellite moves to a circular orbit <b>36 times</b> as large.</p><ol><li>Circling speed goes as one over the square root of the size.</li><li>√36 = 6. It needs <b>1/6</b> of the speed.</li></ol><p>An orbit 1/36 the size needs 6 times the speed.</p>",
+  kepler: "<p>A body circles the Sun at <b>36 times</b> the Earth's distance. How long is its year?</p><ol><li>The rule: (years)² = (distance)³.</li><li>36³ = 46,656.</li><li>√46,656 = <b>216 years</b>.</li></ol><p>The shortcut: 36 is 6 × 6, and the answer is 6 × 6 × 6. Going backwards, 216 years is 6 × 6 × 6, so the distance is 6 × 6 = 36.</p>",
+  sweep: "<p>A probe is <b>2 units</b> from the centre at its nearest, moving at <b>12 km/s</b>. At its furthest it is <b>8 units</b> away.</p><ol><li>Speed × distance at the nearest point: 12 × 2 = 24.</li><li>It is the same at the furthest: speed × 8 = 24.</li><li>Speed = 24 ÷ 8 = <b>3 km/s</b>.</li></ol>",
+  step: "<p>Position <b>50 m</b>, velocity <b>4 m/s</b>, acceleration <b>−3 m/s each second</b>, step <b>2 seconds</b>.</p><ol><li>New position = old position + velocity × step = 50 + 4 × 2 = <b>58 m</b>. (Use the velocity from <i>before</i> the step.)</li><li>New velocity = old velocity + acceleration × step = 4 + (−3 × 2) = <b>−2 m/s</b>.</li></ol>",
+  idea: "<p>The rules behind these:</p><ol><li>An orbit is free fall with enough sideways speed to keep missing. No engine is needed, and gravity has not gone away.</li><li>On an oval, fast when near and slow when far.</li><li>A computer finds a path by small steps; smaller steps are more accurate and more work.</li></ol>",
+};
+
 const KINDS: Kind[] = [
   {
     id: 'fate',
@@ -196,7 +207,7 @@ function drawer(): string {
 }
 
 if (sh.practising) {
-  runPractice(sh, 'Practice · orbits', 'Falling, and missing', 'Engines are off throughout. <b>◉</b> gives a nudge where there is one.', KINDS);
+  runPractice(sh, 'Practice · orbits', 'Falling, and missing', 'Engines are off throughout. <b>◉</b> gives a nudge where there is one.', KINDS, EXAMPLES);
 } else {
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
   let run: Running | undefined;

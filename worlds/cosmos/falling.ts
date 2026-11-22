@@ -50,6 +50,16 @@ const IDEAS: [string, string, string[], string][] = [
 /** Nanoseconds gained in a year by a clock one metre higher, near the ground. */
 const NS_PER_M = 3.44;
 
+/** One question of each kind, worked through: shown until she has got one of that kind right. */
+const EXAMPLES: Record<string, string> = {
+  feel: "<p>One test settles all of these: <b>what would a set of scales carried along with it read?</b></p><ol><li>An astronaut in orbit: the scales float too and read nothing. <b>Free fall.</b></li><li>Someone sitting in a chair: the scales read their weight. <b>Something is pushing.</b></li></ol><p>Whether the thing is moving, or which way, does not matter. A stone at the top of its flight is still in free fall; a parachutist at a steady speed is being held up by the harness.</p>",
+  clocks: "<p>One clock on a hilltop, one in the valley.</p><ol><li>Which is higher? The hilltop one.</li><li>Higher clocks run faster. So the hilltop clock runs faster, and after a year the valley clock has counted <b>less</b> time.</li></ol><p>In a rocket with its engines on, the nose counts as \"higher\" than the tail.</p>",
+  gain: "<p>A clock gains about 3.44 billionths of a second a year for each metre it is raised. One clock is <b>30 metres</b> above another.</p><ol><li>The gain is in simple proportion to the height.</li><li>3.44 × 30 = <b>103 billionths of a second</b> a year.</li></ol>",
+  drop: "<p>A stone falls from rest for <b>3 seconds</b>, gaining 10 metres a second every second.</p><ol><li><b>Speed:</b> 10 × 3 = 30 metres a second.</li><li><b>Distance:</b> its speed grew evenly from 0 to 30, so it averaged 15. 15 × 3 = 45 metres. (The formula: ½ × 10 × 3².)</li></ol><p>Thrown <i>up</i> at 30 metres a second, it loses 10 every second, so it stops rising after 30 ÷ 10 = 3 seconds.</p>",
+  arc: "<p>A clock leaves your hand and returns <b>10 seconds</b> later. Which arc gives it the most time?</p><ol><li>The arc of most time is the one a freely thrown thing follows.</li><li>A thrown thing that returns after 10 seconds rises for 5 and falls for 5.</li><li>Falling from rest for 5 seconds covers ½ × 10 × 5² = <b>125 metres</b>. That is the peak to look for.</li></ol>",
+  idea: "<p>Three rules settle nearly all of these.</p><ol><li>In a small sealed room, standing on the ground cannot be told from being pushed by a rocket; and falling cannot be told from drifting.</li><li>Weight is the floor pushing on you. Take the floor away and you feel nothing.</li><li>Higher clocks run faster, and a freely falling thing follows the path that gives its clock the most time.</li></ol>",
+};
+
 const KINDS: Kind[] = [
   {
     id: 'feel',
@@ -239,7 +249,7 @@ function drawer(): string {
 }
 
 if (sh.practising) {
-  runPractice(sh, 'Practice · falling', 'Pushed, or free?', 'Leave the air out of it throughout. <b>◉</b> gives a nudge where there is one.', KINDS);
+  runPractice(sh, 'Practice · falling', 'Pushed, or free?', 'Leave the air out of it throughout. <b>◉</b> gives a nudge where there is one.', KINDS, EXAMPLES);
 } else {
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
   let run: Running | undefined;

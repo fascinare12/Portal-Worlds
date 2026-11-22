@@ -38,6 +38,14 @@ const NAMES = ['gold', 'blue', 'pink'];
 
 // ---- Practice ----
 
+/** One question of each kind, worked through: shown until she has got one of that kind right. */
+const EXAMPLES: Record<string, string> = {
+  ages: "<p>A twin flies out <b>12 light-years</b> and straight back at <b>12/13</b> of the speed of light. How much does each age?</p><ol><li>Time at home = distance ÷ speed. The round trip is 24 light-years: 24 ÷ 12/13 = 24 × 13/12 = <b>26 years</b>.</li><li>The traveller's clock rate at 12/13 is 5/13 (the 5-12-13 triangle).</li><li>Traveller's time = 26 × 5/13 = <b>10 years</b>.</li></ol><p>The traveller comes home 16 years the younger.</p>",
+  path: "<p>No arithmetic is needed: compare the shapes.</p><ol><li>A line straight up the page holds the most time. It is the longest path there is between the two events.</li><li>Every bend away from straight costs time, and a stretch that leans over toward the dotted light-lines counts for very little.</li><li>So for \"most\", pick the straightest line. For \"least\", pick the one that spends longest leaning hardest.</li></ol><p>If you want a number for one straight stretch: √(time² − distance²). Five years while covering 3 light-years records √(25 − 9) = 4 years.</p>",
+  flashes: "<p>A twin flies out <b>12 light-years</b> at <b>4/5</b> of the speed of light and straight back. Home sends a flash every year. How many reach the traveller on each leg?</p><ol><li>Each leg takes 12 ÷ 4/5 = 15 years at home, and 15 × 3/5 = 9 years on board.</li><li>The stretch factor at 4/5 is √((1 + 4/5) ÷ (1 − 4/5)) = √9 = 3.</li><li>Outward, flashes arrive 3 times less often: 9 ÷ 3 = <b>3 flashes</b>.</li><li>Homeward, 3 times more often: 9 × 3 = <b>27 flashes</b>.</li></ol><p>Check: 3 + 27 = 30, which is the 30 years that passed at home.</p>",
+  now: "<p>A twin leaves in year 0 and flies out <b>6 light-years</b> at <b>0.6</b> of the speed of light, then turns round.</p><ol><li>The turn happens in home's year 6 ÷ 0.6 = 10.</li><li>The traveller's \"now\" at home is out of step by speed × distance = 0.6 × 6 = 3.6 years.</li><li>Just before turning (moving away), home's \"now\" is behind: 10 − 3.6 = <b>year 6.4</b>.</li><li>Just after turning (moving toward), it is ahead: 10 + 3.6 = <b>year 13.6</b>.</li><li>The jump is twice the shift: <b>7.2 years</b>.</li></ol>",
+};
+
 const KINDS: Kind[] = [
   {
     id: 'ages',
@@ -213,7 +221,7 @@ function drawer(): string {
 }
 
 if (sh.practising) {
-  runPractice(sh, 'Practice · the twins', 'Whose clock holds more?', 'Time in years, distance in light-years, speeds as fractions of the speed of light.', KINDS);
+  runPractice(sh, 'Practice · the twins', 'Whose clock holds more?', 'Time in years, distance in light-years, speeds as fractions of the speed of light.', KINDS, EXAMPLES);
 } else {
   sh.render = () => {
     const s = STEPS[Math.min(step, STEPS.length - 1)];

@@ -16,7 +16,10 @@ keep. Read it before building the next one, and update it after.
    the evidence that it is measured; "the math underneath", folded away, which
    rebuilds one piece of mathematics at the point an idea first needs it;
    "go deeper" links, each fetched on the day it was added; and generated
-   practice with harder kinds opening as easier ones are got right.
+   practice with harder kinds opening as easier ones are got right. Every
+   kind of practice question has a worked example (`EXAMPLES` in the page's
+   file), shown open until one of that kind has been got right, and again
+   after a miss.
 4. **Every rule a practice question relies on is checked by a second,
    independent route** (`checkPhysics` in `physics.ts`, `checkGravity` in
    `gravity.ts`), and `checkKinds` makes each kind of question many times to
