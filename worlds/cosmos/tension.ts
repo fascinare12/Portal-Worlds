@@ -265,6 +265,7 @@ if (sh.practising) {
     },
     key: () => [['#e8c24a', 'the distance ladder'], ['#7fb6ff', 'the oldest light and the sound ruler'], ['#8fe0a4', 'the truth, in the first figure; independent methods, in the last']],
     drawer,
+    next: ['amplitudes', 'On to the quantum'],
   });
   sh.draw();
 }

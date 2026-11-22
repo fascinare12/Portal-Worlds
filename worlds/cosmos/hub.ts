@@ -9,7 +9,7 @@ const read = (key: string) => {
     return null;
   }
 };
-for (const name of ['budget', 'twins', 'cones', 'falling', 'tides', 'orbits', 'horizons', 'holes', 'wormholes', 'light', 'stars', 'ladder', 'expansion', 'oldest', 'tension']) {
+for (const name of ['budget', 'twins', 'cones', 'falling', 'tides', 'orbits', 'horizons', 'holes', 'wormholes', 'light', 'stars', 'ladder', 'expansion', 'oldest', 'tension', 'amplitudes', 'decoherence']) {
   const kept = read(`portal-worlds-cosmos-${name}-v1`);
   const tick = document.querySelector<HTMLElement>(`[data-tick="${name}"]`);
   if (tick && kept?.chapter) tick.textContent = '✓ done';

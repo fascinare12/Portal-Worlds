@@ -73,10 +73,10 @@ Status: ✓ built and live · ○ not built.
 
 ### F · The quantum
 
-| | Step | The idea | The playable (proposed) | Math it brings in |
+| | Step | The idea | The playable | Math it brings in |
 | --- | --- | --- | --- | --- |
-| ○ | 16 · A number on every possibility | Amplitudes add before they are squared; interference. An amplitude is not a place and not a dimension | Two paths that cancel | Complex numbers |
-| ○ | 17 · Why the world looks definite | Decoherence: caused by a system's entanglement with its surroundings; how fast it is. Not caused by, and not coupled to, the expansion of the universe. Say plainly that it does not by itself settle the measurement problem | A thing, and the air around it | Probability |
+| ✓ | 16 · A number on every possibility (`amplitudes`) | Each way has an arrow; for ways that end in exactly the same situation, add the arrows and square. So ways can cancel. An amplitude is a number on a possibility: not a place, not a dimension | Two ways to a detector, with their arrows, and a way to block; two slits and a screen, particles sent one at a time, with a record that can be switched on | Complex numbers |
+| ✓ | 17 · Why the world looks definite (`decoherence`) | Any record kept by the surroundings ends interference; no observer needed; almost instant for large things; caused by contact with surroundings and not by the expansion of the universe; does not by itself settle the measurement problem | One bounce and what it gives away, on the budget's arrow; how long a molecule or a dust grain lasts in four surroundings | Probability |
 
 ### G · The edges
 
@@ -133,7 +133,7 @@ And two common pictures are replaced by better ones:
 - `chamber.ts` runs the steps: give it the steps, a figure built once
   (`frame`), a `paint` to bring it up to date, and the drawer.
 - Put new physics and its second-route checks in a module beside
-  `gravity.ts` (stage C's is `strong.ts`, stage D's `starlight.ts`, stage E's `cosmology.ts`), and call the check from the page's `expose`.
+  `gravity.ts` (stage C's is `strong.ts`, stage D's `starlight.ts`, stage E's `cosmology.ts`, stage F's `quantum.ts`), and call the check from the page's `expose`.
 - Keep each instruction short: write " ¶ " between paragraphs in a step's
   text, end with the thing to do in bold, and give the figure a colour `key`
   instead of describing the colours in the prose. Use `art.ts` for stars,
@@ -144,6 +144,11 @@ And two common pictures are replaced by better ones:
 - Update the status marks in this file and the table in `README.md`.
 
 ## Known weak points to revisit
+
+- Stage F has no spin, no entanglement experiments (Bell) and no
+  Schrödinger equation. Step 17's survey of interpretations is four
+  sentences. Step 19 will need entanglement; add it there or in a new step.
+- Step 17's times are order-of-magnitude figures from one review's table.
 
 - **Step 15 will go out of date.** Its figures are in `MEASURED` in
   `cosmology.ts` and its date is `ASOF` in `tension.ts`. Search for the

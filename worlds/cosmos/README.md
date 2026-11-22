@@ -41,6 +41,8 @@ appealing.
 | 13 · Space stretching | `expansion.html`: a field of galaxies to stretch and to stand anywhere in; a wave of light stretched on its way; three histories of the universe's size | Proportionality; the scale factor |
 | 14 · The oldest light | `oldest.html`: the universe cooling until it clears; a ripple of sound spreading and freezing; the expansion rate set until the ruler's angle fits | Waves |
 | 15 · The Hubble tension | `tension.html`: a measurement to repeat; the two results as bell curves, with a hidden bias to try; eight real measurements | Error bars |
+| 16 · A number on every possibility | `amplitudes.html`: two ways to a detector with their arrows added tip to tail; two slits and a screen, particles sent one at a time | Complex numbers |
+| 17 · Why the world looks definite | `decoherence.html`: one bounce and how much it gives away; how long a large molecule or a dust grain keeps its interference in four surroundings | Probability |
 
 The whole plan, nineteen steps in seven stages, with what each unbuilt step
 is meant to hold and how to add one, is in [`PLAN.md`](PLAN.md). The map
@@ -151,6 +153,24 @@ DESI figure (from memory). The two readings of the tension quoted are from
 abstracts fetched from arXiv: a review by Cai and Wang (2026) and an analysis
 by Pantos and Perivolaropoulos (2026). Several of these are preprints.
 
+For steps 16 and 17 the checks are `checkQuantum()` in `quantum.ts`: that a
+quarter-turn done twice is a half-turn (i × i = −1) and that multiplying arrows
+adds their turns; the two-way chance by arrows against the cosine formula;
+that interference moves probability about the screen and makes none; and, for
+decoherence, a particle and the thing that bounced off it written out in full,
+with the contrast of the pattern found by direct calculation and the best
+possible telling-apart found by trying every way of looking. Their squares add
+to one, as claimed. The particles sent at the screen are checked to pile up
+where the rule says.
+
+Quoted in steps 16 and 17 and where checked: the decoherence times (read from
+table 1 of Schlosshauer's 2019 review, fetched as a PDF); the 2026 sodium
+cluster experiment (ScienceAlert's report of the Nature paper, fetched; found
+by web search); the state of collapse-model tests (a search summary of a 2025
+review). From memory and not re-fetched: Young, Merli and colleagues,
+Tonomura, Born, de Broglie, Zeh, Zurek, Haroche's 1996 experiment, the Vienna
+gas and heat experiments, Englert's relation.
+
 ## Files
 
 - `physics.ts`: the arithmetic of special relativity, and its checks.
@@ -159,8 +179,9 @@ by Pantos and Perivolaropoulos (2026). Several of these are preprints.
 - `art.ts`: shared drawing pieces (stars, shaded planet, black hole, glows). Decoration only.
 - `starlight.ts`: glowing bodies and spectral lines, stars by mass, and distances, with their checks.
 - `cosmology.ts`: the expanding universe, the sound ruler and its angle, uncertainty, and the measured values of H0, with their checks.
+- `quantum.ts`: arrows that add and multiply, two ways and two slits, records and how long interference lasts, with their checks.
 - `chamber.ts`: what a chamber's page does, shared by steps 3 onward.
-- `budget.ts`, `twins.ts`, `cones.ts`, `falling.ts`, `tides.ts`, `orbits.ts`, `horizons.ts`, `holes.ts`, `wormholes.ts`, `light.ts`, `stars.ts`, `ladder.ts`, `expansion.ts`, `oldest.ts`, `tension.ts` (each with its `.html`): the chambers and practice.
+- `budget.ts`, `twins.ts`, `cones.ts`, `falling.ts`, `tides.ts`, `orbits.ts`, `horizons.ts`, `holes.ts`, `wormholes.ts`, `light.ts`, `stars.ts`, `ladder.ts`, `expansion.ts`, `oldest.ts`, `tension.ts`, `amplitudes.ts`, `decoherence.ts` (each with its `.html`): the chambers and practice.
 - `PLAN.md`: the full plan.
 - `index.html`, `hub.ts`: the map. `cosmos.css`: the night colours.
 - The page shell and practice runner are shared with the Spire
