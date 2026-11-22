@@ -32,6 +32,9 @@ appealing.
 | 4 · Falling is the straight line | `falling.html`: four sealed rooms with a dropped ball and a beam of light; a clock raised to any height; a clock thrown and caught | Acceleration (the second derivative) |
 | 5 · Curved space and tides | `tides.html`: walkers on a plain, a globe and a saddle; a ring of loose balls in a falling lift | Curvature as an equation; the inverse cube |
 | 6 · Orbits | `orbits.html`: Newton's cannon, with every path found by stepping | The inverse square; stepping a differential equation |
+| 7 · Horizons | `horizons.html`: a ship under steady thrust on the spacetime diagram; a message from home whose sending time is slid past the last moment it can ever arrive | Exponentials and logarithms |
+| 8 · Black holes | `holes.html`: a ship hovering at any height, shown on the budget's arrow; a dropped beacon with its own clock and a far watcher's; three real masses | Limits |
+| 9 · Wormholes | `wormholes.html`: light going round against a ship going through; one mouth taken on the twins' journey until it makes a time machine | None new |
 
 The whole plan, nineteen steps in seven stages, with what each unbuilt step
 is meant to hold and how to add one, is in [`PLAN.md`](PLAN.md). The map
@@ -78,12 +81,36 @@ Wheeler's sentence, Einstein's "happiest thought". The Feynman Lectures
 links could not be fetched by script (the site turns scripts away), so those
 three chapter references are unconfirmed.
 
+For steps 7 to 9 the checks are `checkStrong()` in `strong.ts`: the ship's
+clock against the length of its path; its thrust against steady growth of
+momentum; each message's arrival against the ship's actual position, and late
+messages against stepping the chase directly, with engines on and cut; the
+horizon radius against the Sun's known 2.95 km; the hovering clock against the
+budget; the fall and what the watcher sees against stepping the fall; tides
+at the horizon against the inverse square of the mass; and the wormhole
+mouth's lag against the twins' path rule.
+
+Quoted in steps 7 to 9 and where checked: S2's 16-year orbit, its speed of
+nearly 3% of light and the reddening (the European Southern Observatory's
+2018 release); 4.3 million and 6.5 billion Suns (Wikipedia, citing the
+GRAVITY and Event Horizon Telescope collaborations); the 2019 and 2022 images
+(ESO; EHT-Japan); the 2020 Nobel citation (nobelprize.org); Einstein and
+Rosen 1935, Fuller and Wheeler 1962, Morris and Thorne 1988, Hawking's
+conjecture (Wikipedia); Davies and Unruh (Wikipedia). From memory and not
+re-fetched: the masses and distance of the first gravitational-wave source,
+Michell's 1783 paper, the 1992 date of Hawking's conjecture, and the
+rough size of the negative mass a wormhole needs (computed as c² × radius ÷ G,
+an order of magnitude only). All sources fetched were European, Japanese or
+American institutions writing in English or Japanese; none disagreed on any
+figure used.
+
 ## Files
 
 - `physics.ts`: the arithmetic of special relativity, and its checks.
 - `gravity.ts`: light cones, clocks and height, curved surfaces, tides and orbits, and their checks.
+- `strong.ts`: the thrusting ship, the black hole and the wormhole mouth, and their checks.
 - `chamber.ts`: what a chamber's page does, shared by steps 3 onward.
-- `budget.ts`, `twins.ts`, `cones.ts`, `falling.ts`, `tides.ts`, `orbits.ts` (each with its `.html`): the chambers and practice.
+- `budget.ts`, `twins.ts`, `cones.ts`, `falling.ts`, `tides.ts`, `orbits.ts`, `horizons.ts`, `holes.ts`, `wormholes.ts` (each with its `.html`): the chambers and practice.
 - `PLAN.md`: the full plan.
 - `index.html`, `hub.ts`: the map. `cosmos.css`: the night colours.
 - The page shell and practice runner are shared with the Spire
