@@ -235,7 +235,7 @@ if (sh.practising) {
         ? `<p><b>A clock measures the length of its own path through spacetime, and the straight path is the longest.</b> Every puzzle about who ages how much comes down to drawing the lines and measuring them.</p>`
         : `<p>${s.say}</p>${s.ask ? `<p><b>${s.ask[0]}</b></p><div class="reasons">${s.ask[1].map((o, i) => `<button data-do="answer" data-v="${i}">${o}</button>`).join('')}</div>` : ''}`) +
       `</div><div class="card">${diagram()}<div class="bar">${TRIPS.map((t, i) => `<button class="chip${trip === i ? ' gold' : ' pale'}" data-do="trip" data-v="${i}">${t.name}: ${t.L} light-years at ${t.v}</button>`).join('')}</div><div class="bar">${toggles}</div></div>` +
-      (done ? `${drawer()}<div class="bar"><a class="chip gold" href="./twins.html?practice">Practise ▶</a><a class="chip pale" href="./index.html">Back to the map</a></div>` : '');
+      (done ? `${drawer()}<div class="bar"><a class="chip gold" href="./twins.html?practice">Practise ▶</a><a class="chip" href="./cones.html">On to light cones ▶</a><a class="chip pale" href="./index.html">Back to the map</a></div>` : '');
   };
   const advance = () => {
     const s = STEPS[step];

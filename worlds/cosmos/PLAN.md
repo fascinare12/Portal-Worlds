@@ -1,0 +1,145 @@
+# The Night Sky: the full plan
+
+Nineteen steps in seven stages. This file is the working plan: what is built,
+what each remaining step is meant to hold, and the rules any new step must
+keep. Read it before building the next one, and update it after.
+
+## The rules
+
+1. **Nothing wrong on purpose.** Everything is standard physics. Where
+   something is unsettled, the page says so, and says who disagrees. Personal
+   constructions that do not match the physics are left out and replaced by
+   the correct step (see "What was replaced" below).
+2. **The goal is accurate intuition that transfers.** Each chamber asks for a
+   prediction before it shows the answer.
+3. **The shape of a step:** a chamber to play, ending in the proper terms and
+   the evidence that it is measured; "the math underneath", folded away, which
+   rebuilds one piece of mathematics at the point an idea first needs it;
+   "go deeper" links, each fetched on the day it was added; and generated
+   practice with harder kinds opening as easier ones are got right.
+4. **Every rule a practice question relies on is checked by a second,
+   independent route** (`checkPhysics` in `physics.ts`, `checkGravity` in
+   `gravity.ts`), and `checkKinds` makes each kind of question many times to
+   see that it is well formed.
+5. **Free services only**, and it deploys as static pages with the rest of
+   the site.
+
+## The map
+
+Status: ✓ built and live · ○ not built.
+
+### A · Flat spacetime
+
+| | Step | The idea | The playable | Math it brings in |
+| --- | --- | --- | --- | --- |
+| ✓ | 1 · The budget (`budget`) | Speed through space is paid for out of speed through time | An arrow of fixed length, and two clocks | A rate of change (first derivative) |
+| ✓ | 2 · The twins (`twins`) | A clock measures the length of its own path; the straight path is the longest | A spacetime diagram with layers | Adding up small pieces (first integral) |
+| ✓ | 3 · Light cones (`cones`) | What can affect what; order in time is a fact only inside the cone; why nothing outruns light | Five events, and a slider for the observer's speed | Slopes and graphs; the interval |
+
+### B · Gravity
+
+| | Step | The idea | The playable | Math it brings in |
+| --- | --- | --- | --- | --- |
+| ✓ | 4 · Falling is the straight line (`falling`) | The equivalence principle; light bends; higher clocks run faster; free fall is the path of most time | Four rooms; a clock raised; a clock thrown and caught | Acceleration (second derivative) |
+| ✓ | 5 · Curved space and tides (`tides`) | Curvature is parallel straight paths that do not stay parallel; tides are the curvature of spacetime | Walkers on a plain, a globe and a saddle; a ring of balls in a falling lift | Curvature as an equation; inverse-cube |
+| ✓ | 6 · Orbits (`orbits`) | Falling and missing; circle, oval, escape | Newton's cannon, with the path found by stepping | Inverse-square; stepping a differential equation |
+
+### C · Horizons
+
+| | Step | The idea | The playable (proposed) | Math it brings in |
+| --- | --- | --- | --- | --- |
+| ○ | 7 · Horizons | A steadily accelerating traveller has a region they can never see or hear from (Rindler horizon). The Unruh effect belongs here, stated as predicted and not yet measured directly | The twins' diagram with a curved (hyperbolic) worldline; send signals and see which arrive | Exponentials; hyperbolas |
+| ○ | 8 · Black holes | The same horizon, made by gravity. Falling in takes finite time on your own clock; watched from far away you never quite arrive. Last stable orbit; tides at the horizon are gentle for big holes | Drop a clock in; orbits from step 6 with the relativistic correction | Limits |
+| ○ | 9 · Wormholes | Allowed by the equations, never observed, and would need matter of a kind not known to exist in bulk. Clearly marked speculative | Two mouths and a shortcut on an embedding picture | None new |
+
+### D · Light and stars
+
+| | Step | The idea | The playable (proposed) | Math it brings in |
+| --- | --- | --- | --- | --- |
+| ○ | 10 · Light as messenger | Colour gives temperature (blackbody); lines give ingredients; shifted lines give speed | A spectrum to tune | Logarithms; powers of ten |
+| ○ | 11 · The life of a star | Gravity against pressure; fusion; mass decides lifetime and ending (white dwarf, neutron star, black hole). May need to split in two | Build stars of different mass | Balance and feedback |
+| ○ | 12 · The distance ladder | Parallax, standard candles (Cepheids, type Ia supernovae), redshift | Measuring rung by rung | Small angles; inverse-square for brightness |
+
+### E · The cosmos
+
+| | Step | The idea | The playable (proposed) | Math it brings in |
+| --- | --- | --- | --- | --- |
+| ○ | 13 · Space stretching | Everything recedes from everything; no centre and no edge; redshift as stretching | A universe to run forward and back | Proportionality; the scale factor |
+| ○ | 14 · The oldest light | The cosmic microwave background, and the sound waves frozen into it | Sound waves in the early universe | Waves |
+| ○ | 15 · The Hubble tension | The distance ladder and the oldest light give different expansion rates. Unresolved; check the current state before writing | Run both measurements and watch them miss | Error bars |
+
+### F · The quantum
+
+| | Step | The idea | The playable (proposed) | Math it brings in |
+| --- | --- | --- | --- | --- |
+| ○ | 16 · A number on every possibility | Amplitudes add before they are squared; interference. An amplitude is not a place and not a dimension | Two paths that cancel | Complex numbers |
+| ○ | 17 · Why the world looks definite | Decoherence: caused by a system's entanglement with its surroundings; how fast it is. Not caused by, and not coupled to, the expansion of the universe. Say plainly that it does not by itself settle the measurement problem | A thing, and the air around it | Probability |
+
+### G · The edges
+
+| | Step | The idea | The playable (proposed) | Math it brings in |
+| --- | --- | --- | --- | --- |
+| ○ | 18 · What a dimension does | Gravity, orbits and waves change with the number of directions (no stable orbits in four space dimensions). Tesseracts as geometry. Extra dimensions are a proposal with no evidence so far | The same orbit in two, three and four dimensions | Power laws |
+| ○ | 19 · Information and black holes | Hawking radiation, black hole entropy, the information paradox, the Page curve, holography. Frontier: mark what is established, what is predicted and untested, and what is argued over | Counting what goes in and what comes out | Entropy |
+
+## Order
+
+A, B and C run in sequence. After C, D → E is one line and F is another; either
+can come first. G needs both. Steps 7 and 8 lean on step 3 (light cones) and
+steps 4 to 6.
+
+## Where the learner's own questions land
+
+- Hubble tension: step 15.
+- Rindler space and the Unruh effect: step 7.
+- Wormholes: step 9.
+- Tesseracts: step 18.
+- Holographic principle, information paradox, Page curve: step 19.
+
+## What was replaced
+
+Three earlier personal constructions are not in the world, because they do
+not match the physics:
+
+- "Amplitude as a fifth dimension" → step 16 (what an amplitude is).
+- "Decoherence coupled to cosmological expansion" → step 17.
+- "A stack of emerging dimensions" → step 18.
+
+And two common pictures are replaced by better ones:
+
+- The rubber sheet (trampoline) → steps 4 and 5.
+- "Speed through spacetime" is kept (step 1): it is correct, as the fixed
+  size of the four-velocity.
+
+## The mathematics, in the order it arrives
+
+1. Pythagoras; a rate of change (derivative).
+2. Adding up small pieces (integral).
+3. Slope; graphs.
+4. Acceleration (second derivative).
+5. An equation for a rate of change of a rate of change; cosine and its saddle twin.
+6. Inverse-square; stepping a differential equation.
+7. Exponentials. 8. Limits. 10. Logarithms. 12. Small angles.
+14. Waves. 15. Error bars. 16. Complex numbers. 17. Probability. 19. Entropy.
+
+## Building the next step
+
+- New page `name.html` (copy any chamber's) and `name.ts`; add it to
+  `vite.config.ts` as `cosmosName`, to the list in `hub.ts`, and turn its
+  card on in `index.html`.
+- `chamber.ts` runs the steps: give it the steps, a figure built once
+  (`frame`), a `paint` to bring it up to date, and the drawer.
+- Put new physics and its second-route checks in `gravity.ts` or a new
+  module beside it, and call the check from the page's `expose`.
+- Give the previous chamber a "next" link.
+- Fetch every link before adding it. Note in the README anything quoted that
+  could not be confirmed.
+- Update the status marks in this file and the table in `README.md`.
+
+## Known weak points to revisit
+
+- Practice in steps 1 and 2 is arithmetic-heavy.
+- The saddle in step 5 is a sketch, not a true constant-curvature surface.
+- Step 4's thrown clock tries only arcs of one shape in the chamber (the
+  check tries others).
+- Links rot; re-fetch them now and then.
