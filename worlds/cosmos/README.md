@@ -19,7 +19,8 @@ appealing.
 - **go deeper**: links to a text, a video and a course, each opened and
   checked on the day it was added;
 - **practice**: generated questions, with harder kinds opening as easier ones
-  are got right.
+  are got right. Each kind comes with a worked example, open until one of
+  that kind has been got right and again after a miss.
 
 ## Built so far
 

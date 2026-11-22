@@ -53,6 +53,16 @@ function sketch(t: number, x: number): string {
 
 const SPANS: [number, number][] = [[5, 3], [5, 4], [10, 6], [10, 8], [13, 5], [13, 12], [17, 8], [17, 15], [25, 7], [25, 24]];
 
+/** One question of each kind, worked through: shown until she has got one of that kind right. */
+const EXAMPLES: Record<string, string> = {
+  zone: "<p>A star <b>5 light-years</b> away will flare <b>3 years from now</b>. Where is the flare?</p><ol><li>Light needs 5 years to cross the gap.</li><li>Compare with the time there is: 3 years. Less than 5.</li><li>Not enough time for anything to cross: the flare is <b>elsewhere</b>.</li></ol><p>Had it been 8 years from now: more than 5, so in your future. Had it flared 8 years ago: in your past. Exactly 5: on the light cone.</p>",
+  see: "<p>A star <b>30 light-years</b> away explodes in <b>2010</b>. When can we know?</p><ol><li>The light takes 30 years to arrive.</li><li>2010 + 30 = <b>2040</b>.</li></ol><p>The other way round: if we <i>see</i> it in 2040, it happened in 2040 − 30 = 2010.</p>",
+  slope: "<p>A line runs from the white dot to a point <b>2 squares across</b> and <b>5 squares up</b>.</p><ol><li>Across is distance: 2 light-years. Up is time: 5 years.</li><li>Speed = distance ÷ time = <b>2/5</b> of the speed of light.</li></ol><p>If it ran 5 across and only 2 up, that would be 5 ÷ 2 = 2.5 times the speed of light. The line would lean over further than the dotted light-line, and nothing can follow it.</p>",
+  interval: "<p>Two events are <b>13 years</b> apart in time and <b>5 light-years</b> apart in space.</p><ol><li>Square each: 13² = 169, 5² = 25.</li><li>Time's square minus distance's square: 169 − 25 = 144.</li><li>Square root: √144 = <b>12 years</b> on a clock carried between them.</li></ol><p>Swap them, 5 years and 13 light-years, and step 2 gives 25 − 169, a negative number. That means nothing can make the trip.</p>",
+  order: "<p>A star <b>10 light-years</b> away will flare <b>4 years from now</b>. A ship passes you, heading for the star at <b>3/5</b> of the speed of light.</p><ol><li>The pilot's \"now\" at the star is ahead of yours by speed × distance = 3/5 × 10 = 6 years.</li><li>The flare is only 4 years ahead of your now.</li><li>4 is less than 6, so for the pilot the flare has <b>already happened</b>.</li></ol><p>Had the flare been 6 years ahead: at this moment, for the pilot. 8 years ahead: still to come.</p>",
+  agree: "<p>One event happens <b>7 years</b> after another, <b>4 light-years</b> away.</p><ol><li>Could light get from the first to the second? It needs 4 years and has 7.</li><li>Yes: so the first could have caused the second, and <b>everyone agrees</b> on the order.</li></ol><p>Turn it round, 4 years after and 7 light-years away: light cannot make it, neither can have caused the other, and the order depends on who is asking.</p>",
+};
+
 const KINDS: Kind[] = [
   {
     id: 'zone',
@@ -218,7 +228,7 @@ function drawer(): string {
 }
 
 if (sh.practising) {
-  runPractice(sh, 'Practice · light cones', 'What can reach what?', 'Time in years, distance in light-years. <b>◉</b> gives a nudge where there is one.', KINDS);
+  runPractice(sh, 'Practice · light cones', 'What can reach what?', 'Time in years, distance in light-years. <b>◉</b> gives a nudge where there is one.', KINDS, EXAMPLES);
 } else {
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
   runChamber({

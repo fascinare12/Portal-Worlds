@@ -103,12 +103,17 @@ export interface Kind {
   make: (rand: () => number, skin: Skin) => Asked;
 }
 
-export function runPractice(sh: Shell, kicker: string, title: string, intro: string, kinds: Kind[]): void {
+/**
+ * `examples` gives, for any kind of question, one of that kind already worked through. It is shown open
+ * until she has got one of the kind right, and again after a miss; after that it is folded away.
+ */
+export function runPractice(sh: Shell, kicker: string, title: string, intro: string, kinds: Kind[], examples: Record<string, string> = {}): void {
   let asked: Asked | null = null;
   let kind: Kind | null = null;
   let answered = -1;
   let last = '';
   let skin: Skin = 'stones';
+  let exampleOpen = false;
   const stat = (k: Kind) => (sh.kept.practice[k.id] ??= { seen: 0, right: 0 });
   const rightsAt = (level: number) => kinds.filter((k) => k.level === level).reduce((n, k) => n + stat(k).right, 0);
   const next = () => {
@@ -124,6 +129,7 @@ export function runPractice(sh: Shell, kicker: string, title: string, intro: str
     asked = kind.make(seeded(Math.floor(Math.random() * 1e9)), skin);
     answered = -1;
     sh.above = false;
+    exampleOpen = stat(kind).right === 0;
     stat(kind).seen++;
     sh.keep();
     sh.draw();
@@ -135,6 +141,7 @@ export function runPractice(sh: Shell, kicker: string, title: string, intro: str
     const right = answered === asked.right;
     sh.page.innerHTML =
       `<div class="kicker">${kicker}</div><h1>${title}</h1><p class="soft">${total} solved${sh.kept.streak > 1 ? ` · ${sh.kept.streak} in a row` : ''}. ${intro}</p>` +
+      (kind && examples[kind.id] ? `<details class="example"${exampleOpen ? ' open' : ''}><summary>A worked example of this kind</summary><div class="card book">${examples[kind.id]}</div></details>` : '') +
       `<div class="card">${asked.show}${sh.above && asked.outside ? `<div class="label">From outside</div>${asked.outside}` : ''}</div>` +
       `<div class="card"><p><b>${asked.ask}</b></p><div class="reasons">${asked.options
         .map((o, i) => `<button data-do="pick" data-v="${i}"${done ? ' disabled' : ''} style="${done && i === asked!.right ? 'outline:3px solid #2f7d4f' : done && i === answered ? 'outline:3px solid #a23a3a' : ''}">${o}</button>`)
@@ -150,14 +157,17 @@ export function runPractice(sh: Shell, kicker: string, title: string, intro: str
         stat(kind).right++;
         sh.kept.streak++;
         sh.sound.chime();
-      } else sh.kept.streak = 0;
+      } else {
+        sh.kept.streak = 0;
+        exampleOpen = true;
+      }
       sh.keep();
       sh.draw();
     }
   });
   (window as unknown as { spire: Record<string, unknown> }).spire = {
     ...((window as unknown as { spire?: Record<string, unknown> }).spire ?? {}),
-    state: () => ({ kind: kind?.id, right: asked?.right, options: asked?.options.length, answered }),
+    state: () => ({ example: !!(kind && examples[kind.id]), kind: kind?.id, right: asked?.right, options: asked?.options.length, answered }),
   };
   next();
 }
