@@ -36,6 +36,7 @@ in `vite.config.ts`, and set `world: '<name>'` on a pool in
 | The Tapestry | `worlds/tapestry/` | wool gold; shows soldiers being embroidered on linen |
 | The Spire | `worlds/canon/` | white; a band with one side turns in it, with ants walking round |
 | The Night Sky | `worlds/cosmos/` | dark blue; a field of stars, and the Milky Way when you lean in; shooting stars leave it now and then |
+| The Painted Cave | `worlds/cave/` | ochre red; a woolly mammoth wades out of it now and then, walks a turn round the bank, and goes back in |
 
 ## The folk of the wood
 

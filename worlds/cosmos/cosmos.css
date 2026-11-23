@@ -48,3 +48,7 @@ svg text { paint-order: stroke; stroke: #0b0e22; stroke-width: 3.5px; stroke-lin
 .key:empty { display: none; }
 .key span { display: inline-flex; align-items: center; gap: 6px; }
 .key i { width: 18px; height: 5px; border-radius: 3px; display: inline-block; }
+
+.stepno i.open { cursor: pointer; height: 6px; border-block: 9px solid transparent; background-clip: padding-box; box-sizing: content-box; }
+.stepno i.open:hover { filter: brightness(1.5); }
+.hop { background: rgba(255, 255, 255, 0.12); color: #e9e6f5; border: 0; border-radius: 12px; font: inherit; font-size: 12px; padding: 3px 9px; cursor: pointer; }

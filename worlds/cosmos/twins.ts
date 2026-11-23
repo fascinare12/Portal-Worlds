@@ -1,6 +1,6 @@
 import { Shell, checkKinds, choices, numbers, pickOne, runPractice, shuffled } from '../canon/shell';
 import type { Kind } from '../canon/shell';
-import { answered, paras, question, saidBox, stepLine } from './chamber';
+import { answered, clearMissed, onward, paras, question, saidBox, stepLine } from './chamber';
 import './cosmos.css';
 import { PACES, along, beta, checkPhysics, doppler, frac, rate, tidy } from './physics';
 
@@ -135,6 +135,7 @@ const TRIPS = [
 let trip = 0;
 const layer = { birthdays: false, home: false, ship: false, now: false };
 let step = 0;
+let reached = 0;
 let said = '';
 
 const STEPS: { say: string; ask?: [string, string[], number, string]; until?: () => boolean; show?: (keyof typeof layer)[] }[] = [
@@ -239,10 +240,10 @@ if (sh.practising) {
       .join('');
     sh.page.innerHTML =
       `<div class="kicker">Spacetime · 2</div><h1>The twins</h1>` +
-      `<div class="card">${stepLine(step, STEPS.length)}${saidBox(said)}` +
+      `<div class="card">${stepLine(step, STEPS.length, (reached = Math.max(reached, step, sh.kept.chapter ? STEPS.length : 0)))}${saidBox(said)}` +
       (done
         ? `<p><b>A clock measures the length of its own path through spacetime, and the straight path is the longest.</b> Every puzzle about who ages how much comes down to drawing the lines and measuring them.</p>`
-        : `${paras(s.say)}${s.ask ? question(s.ask) : ''}`) +
+        : `${paras(s.say)}${s.ask ? question(s.ask) : ''}${onward(s)}`) +
       `</div><div class="card">${diagram()}<div class="bar">${TRIPS.map((t, i) => `<button class="chip${trip === i ? ' gold' : ' pale'}" data-do="trip" data-v="${i}">${t.name}: ${t.L} light-years at ${t.v}</button>`).join('')}</div><div class="bar">${toggles}</div><div class="key"><span><i style="background:#e8c24a"></i>home, and its flashes</span><span><i style="background:#7fb6ff"></i>the traveller, and theirs</span><span><i style="background:#7d83a8"></i>the traveller's "now"</span><span><i style="background:#ff9ab8"></i>years of home jumped at the turn</span></div></div>` +
       (done ? `${drawer()}<div class="bar"><a class="chip gold" href="./twins.html?practice">Practise ▶</a><a class="chip" href="./cones.html">On to light cones ▶</a><a class="chip pale" href="./index.html">Back to the map</a></div>` : '');
   };
@@ -255,6 +256,14 @@ if (sh.practising) {
     }
   };
   sh.on((what, value) => {
+    if (what === 'goto' || what === 'onward') {
+      step = what === 'onward' ? step + 1 : Math.max(0, Math.min(reached, Number(value)));
+      said = '';
+      clearMissed();
+      if (step >= STEPS.length) sh.finish();
+      sh.draw();
+      return;
+    }
     if (what === 'layer') layer[value as keyof typeof layer] = !layer[value as keyof typeof layer];
     else if (what === 'trip') trip = Number(value);
     else if (what === 'answer') {

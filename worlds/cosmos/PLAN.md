@@ -149,6 +149,12 @@ And two common pictures are replaced by better ones:
 
 ## Known weak points to revisit
 
+- Going back: any step already reached can be returned to from the row of
+  marks at the top of a chamber, and a chamber finished before is open
+  throughout. Progress is kept in the browser, so another browser or device
+  starts afresh. A practice question that is missed is put aside and asked
+  again a few questions later.
+
 - **Rechecked on 23 November 2026.** Every Hubble-constant figure in step 15
   except the SH0ES one was confirmed against its paper's abstract or the
   observatory's own page; one unconfirmable figure was replaced. Three sources

@@ -14,6 +14,8 @@ export interface Kept {
   chapter: boolean;
   practice: Record<string, { seen: number; right: number }>;
   streak: number;
+  /** Questions she missed, to be asked again: the kind, the number it was made from, and how it was dressed. */
+  again?: [string, number, string][];
 }
 
 export class Shell {
@@ -117,6 +119,9 @@ export function runPractice(sh: Shell, kicker: string, title: string, intro: str
   /** The answers she has tried and found wrong on this question; and whether she asked to be shown. */
   let misses = new Set<number>();
   let shown = false;
+  let seed = 0;
+  let sinceMiss = 0;
+  let comeback = false;
   const stat = (k: Kind) => (sh.kept.practice[k.id] ??= { seen: 0, right: 0 });
   const rightsAt = (level: number) => kinds.filter((k) => k.level === level).reduce((n, k) => n + stat(k).right, 0);
   const next = () => {
@@ -127,9 +132,25 @@ export function runPractice(sh: Shell, kicker: string, title: string, intro: str
     const least = Math.min(...open.map((k) => stat(k).right));
     const pool = open.filter((k) => stat(k).right <= least + 1);
     kind = kinds.find((k) => k.id === sh.params.get('kind')) ?? pool[Math.floor(Math.random() * pool.length)];
-    last = kind.id;
     skin = SKINS[(SKINS.indexOf(skin) + 1 + Math.floor(Math.random() * 2)) % 3];
-    asked = kind.make(seeded(Math.floor(Math.random() * 1e9)), skin);
+    seed = Math.floor(Math.random() * 1e9);
+    // One she missed before comes round again: not at once, but after a few others.
+    const queue = (sh.kept.again ??= []);
+    sinceMiss++;
+    comeback = false;
+    if (queue.length && !sh.params.get('kind') && (sinceMiss >= 3 || queue.length >= 4)) {
+      const [id, was, dressed] = queue.shift()!;
+      const k = kinds.find((x) => x.id === id);
+      if (k) {
+        kind = k;
+        seed = was;
+        skin = dressed as Skin;
+        comeback = true;
+        sinceMiss = 0;
+      }
+    }
+    last = kind.id;
+    asked = kind.make(seeded(seed), skin);
     answered = -1;
     misses = new Set();
     shown = false;
@@ -148,7 +169,7 @@ export function runPractice(sh: Shell, kicker: string, title: string, intro: str
       `<div class="kicker">${kicker}</div><h1>${title}</h1><p class="soft">${total} solved${sh.kept.streak > 1 ? ` · ${sh.kept.streak} in a row` : ''}. ${intro}</p>` +
       (kind && examples[kind.id] ? `<details class="example"${exampleOpen ? ' open' : ''}><summary>A worked example of this kind</summary><div class="card book">${examples[kind.id]}</div></details>` : '') +
       `<div class="card">${asked.show}${sh.above && asked.outside ? `<div class="label">From outside</div>${asked.outside}` : ''}</div>` +
-      `<div class="card"><p><b>${asked.ask}</b></p><div class="reasons">${asked.options
+      `<div class="card">${comeback ? '<div class="label">One you missed before</div>' : ''}<p><b>${asked.ask}</b></p><div class="reasons">${asked.options
         .map((o, i) => `<button data-do="pick" data-v="${i}"${done || misses.has(i) ? ' disabled' : ''} style="${done && i === asked!.right ? 'outline:3px solid #2f7d4f' : misses.has(i) ? 'outline:2px solid #a23a3a;opacity:0.5;text-decoration:line-through' : ''}">${o}</button>`)
         .join('')}</div>` +
       (!done && misses.size ? `<p class="bad"><b>Not that one.</b> It is crossed off: have another go.</p><div class="bar"><button class="chip pale" data-do="show">Show me the answer</button></div>` : '') +
@@ -171,6 +192,11 @@ export function runPractice(sh: Shell, kicker: string, title: string, intro: str
         }
         sh.sound.chime();
       } else {
+        // The first miss on a question puts it in the queue to be asked again later.
+        if (!misses.size) {
+          (sh.kept.again ??= []).push([kind.id, seed, skin]);
+          sinceMiss = 0;
+        }
         misses.add(Number(value));
         sh.kept.streak = 0;
         exampleOpen = true;
@@ -181,7 +207,7 @@ export function runPractice(sh: Shell, kicker: string, title: string, intro: str
   });
   (window as unknown as { spire: Record<string, unknown> }).spire = {
     ...((window as unknown as { spire?: Record<string, unknown> }).spire ?? {}),
-    state: () => ({ example: !!(kind && examples[kind.id]), kind: kind?.id, right: asked?.right, options: asked?.options.length, answered }),
+    state: () => ({ comeback, queued: sh.kept.again?.length ?? 0, example: !!(kind && examples[kind.id]), kind: kind?.id, right: asked?.right, options: asked?.options.length, answered }),
   };
   next();
 }
