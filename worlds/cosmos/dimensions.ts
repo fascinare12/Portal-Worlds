@@ -238,7 +238,7 @@ if (sh.practising) {
   run = runChamber({
     sh,
     file: 'dimensions',
-    kicker: 'The edges · 18',
+    kicker: 'The edges · 19',
     title: 'What a dimension does',
     steps: [
       { say: 'A dimension is a direction: one more number needed to say where something is. Space has three. This chamber asks what difference the number makes. ¶ Something at the centre sends out a force, evenly, in every direction there is. The gold lines carry it; the blue surface catches all of it. <b>Move the surface out to twice the distance.</b>', until: () => furthest >= 2 },

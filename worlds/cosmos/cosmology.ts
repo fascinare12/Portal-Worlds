@@ -127,7 +127,7 @@ export const MEASURED: { name: string; how: string; year: number; value: number;
   { name: 'Colliding neutron stars, heard and seen', how: 'LIGO and Virgo', year: 2017, value: 70, minus: 8, plus: 12, family: 'other' },
   { name: 'The oldest light', how: 'Planck satellite', year: 2018, value: 67.4, minus: 0.5, plus: 0.5, family: 'early' },
   { name: 'The oldest light: three telescopes combined', how: 'Planck, ACT and SPT', year: 2025, value: 67.2, minus: 0.4, plus: 0.4, family: 'early' },
-  { name: 'The sound ruler in the spread of galaxies', how: 'DESI survey', year: 2025, value: 68.5, minus: 0.6, plus: 0.6, family: 'early' },
+  { name: 'The oldest light with the sound ruler in galaxies', how: 'ACT, Planck and DESI', year: 2025, value: 68.4, minus: 0.3, plus: 0.3, family: 'early' },
 ];
 
 // ---- The checks ----
