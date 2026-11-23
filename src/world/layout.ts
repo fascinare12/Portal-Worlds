@@ -59,6 +59,12 @@ function makePools(): Pool[] {
       p.world = 'cosmos';
       p.scene = 6;
     }
+    if (i === 7) {
+      // The eighth doorway, the red-brown of ochre: a painted cave, and a mystery to be worked out round its fire.
+      p.open = true;
+      p.color = 0xb0472b;
+      p.world = 'cave';
+    }
     if (i % 3 === 0) {
       p.open = true;
       p.color = OPEN_COLORS[c++ % OPEN_COLORS.length];

@@ -76,12 +76,19 @@ export function answered(ask: [string, string[], number, string], value: number)
 }
 
 /** How far through the chamber she is. */
-export const stepLine = (step: number, of: number) => `<div class="stepno">${step >= of ? 'Done' : `Step ${step + 1} of ${of}`}<span>${Array.from({ length: of }, (_, i) => `<i class="${i < step ? 'past' : i === step ? 'here' : ''}"></i>`).join('')}</span></div>`;
+export const stepLine = (step: number, of: number, reached = step) =>
+  `<div class="stepno">${step > 0 ? `<button class="hop" data-do="goto" data-v="${step - 1}" aria-label="Back a step">◀</button>` : ''}${step >= of ? 'Done' : `Step ${step + 1} of ${of}`}<span>${Array.from({ length: of }, (_, i) => `<i class="${i < step ? 'past' : i === step ? 'here' : ''}${i <= reached ? ' open' : ''}"${i <= reached ? ` data-do="goto" data-v="${i}"` : ''}></i>`).join('')}</span>${step < reached ? `<button class="hop" data-do="goto" data-v="${reached}" aria-label="Forward to where I was">▶▶</button>` : ''}</div>`;
+/** Forget which answers were crossed off: for when she moves to another step. */
+export const clearMissed = () => missed.clear();
+/** On a step that asks for something to be done, and it has been done already: a way to carry on. */
+export const onward = (s: Step) => (!s.ask && s.until?.() ? `<div class="bar"><button class="chip gold" data-do="onward">Carry on ▶</button></div>` : '');
 
 export function runChamber(c: Chamber): Running {
   const { sh } = c;
   let step = 0;
   let said = '';
+  // How far she has got: any step up to here can be gone back to. A chamber finished before is open throughout.
+  let reached = sh.kept.chapter ? c.steps.length : 0;
   sh.page.innerHTML = `<div class="kicker">${c.kicker}</div><h1>${c.title}</h1><div id="top"></div><div class="card" id="figure">${c.frame()}<div id="key" class="key"></div></div><div id="rest"></div>`;
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
   const running: Running = {
@@ -97,8 +104,8 @@ export function runChamber(c: Chamber): Running {
     const s = c.steps[Math.min(step, c.steps.length - 1)];
     const done = step >= c.steps.length;
     $('top').innerHTML =
-      `<div class="card">${stepLine(step, c.steps.length)}${saidBox(said)}` +
-      (done ? paras(c.summary) : `${paras(s.say)}${s.ask ? question(s.ask) : ''}`) +
+      `<div class="card">${stepLine(step, c.steps.length, (reached = Math.max(reached, step)))}${saidBox(said)}` +
+      (done ? paras(c.summary) : `${paras(s.say)}${s.ask ? question(s.ask) : ''}${onward(s)}`) +
       `</div>`;
     $('rest').innerHTML = done ? `${c.drawer()}<div class="bar"><a class="chip gold" href="./${c.file}.html?practice">Practise ▶</a>${c.next ? `<a class="chip" href="./${c.next[0]}.html">${c.next[1]} ▶</a>` : ''}<a class="chip pale" href="./index.html">Back to the map</a></div>` : '';
     $('key').innerHTML = (c.key?.() ?? []).map(([colour, words]) => `<span><i style="background:${colour}"></i>${words}</span>`).join('');
@@ -122,6 +129,14 @@ export function runChamber(c: Chamber): Running {
     advance();
   });
   sh.on((what, value) => {
+    if (what === 'goto' || what === 'onward') {
+      step = what === 'onward' ? step + 1 : Math.max(0, Math.min(reached, Number(value)));
+      said = '';
+      missed.clear();
+      if (step >= c.steps.length) sh.finish();
+      sh.draw();
+      return;
+    }
     if (what === 'answer') {
       const s = c.steps[step];
       if (!s?.ask) return;

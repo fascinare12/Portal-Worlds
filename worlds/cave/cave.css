@@ -1,0 +1,91 @@
+/* The Painted Cave: rock, firelight, and mineral paint. */
+html, body { margin: 0; min-height: 100%; }
+body {
+  background-color: #2b221b;
+  background-size: 420px 420px;
+  color: #eadcc4;
+  font-family: 'Trebuchet MS', 'Gill Sans', 'Segoe UI', sans-serif;
+  font-size: 17px;
+  line-height: 1.45;
+  --tx: 50vw;
+  --ty: 30vh;
+}
+/* The torch: light where the finger is, dark everywhere else, and never quite steady. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background: radial-gradient(circle 46vmax at var(--tx) var(--ty), rgba(255, 190, 110, 0.10), rgba(20, 12, 6, 0.18) 38%, rgba(8, 5, 3, 0.74) 100%);
+  animation: flicker 3.1s infinite;
+}
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  18% { opacity: 0.93; }
+  33% { opacity: 1; }
+  47% { opacity: 0.9; }
+  62% { opacity: 0.98; }
+  81% { opacity: 0.94; }
+}
+#home { position: fixed; top: 12px; left: 12px; width: 44px; height: 44px; border-radius: 50%; border: 0; z-index: 9; cursor: pointer; background: radial-gradient(circle, #fff 0%, #8fd49a 45%, #4f9a5c 100%); box-shadow: 0 0 14px #8fd49a; }
+main { position: relative; z-index: 6; }
+.wall { max-width: 760px; margin: 0 auto; padding: 62px 14px 60px; }
+h1 { font-weight: normal; font-size: 40px; letter-spacing: 0.04em; margin: 0 0 6px; color: #e9b65a; text-shadow: 0 2px 0 #1a120c; text-align: center; }
+h2 { font-weight: normal; font-size: 24px; margin: 18px 0 8px; color: #e9b65a; }
+h3 { font-weight: normal; font-size: 15px; letter-spacing: 0.1em; text-transform: uppercase; margin: 14px 0 6px; color: #cdb48d; }
+.tale { text-align: center; font-size: 20px; margin: 6px 0; }
+.quiet { color: #b9a688; font-size: 15px; margin: 4px 0 8px; }
+.head { display: flex; align-items: center; gap: 12px; }
+.head h2 { margin: 0; }
+.panel { background: rgba(18, 12, 8, 0.46); border: 1px solid rgba(233, 182, 90, 0.16); border-radius: 14px; padding: 10px 14px 14px; margin: 12px 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; margin: 6px 0; }
+.row.hand { justify-content: flex-start; }
+.mark { display: block; }
+.who { display: inline-block; vertical-align: middle; }
+.token { display: inline-flex; flex-direction: column; align-items: center; }
+.token small, .pick small, .alcove small { font-size: 12px; color: #d8c6a6; letter-spacing: 0.02em; }
+.stone { font: inherit; color: #eadcc4; background: rgba(120, 96, 72, 0.5); border: 1px solid rgba(240, 220, 190, 0.22); border-radius: 12px; padding: 9px 14px; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255, 240, 210, 0.12), 0 2px 6px rgba(0, 0, 0, 0.4); }
+.stone[disabled] { opacity: 0.4; cursor: default; }
+.stone.lit { background: rgba(233, 182, 90, 0.34); border-color: #e9b65a; box-shadow: 0 0 14px rgba(233, 182, 90, 0.5); }
+.stone.go { background: #a4412a; border-color: #d98a5a; font-size: 18px; padding: 12px 18px; }
+.stone.go[disabled] { background: rgba(120, 96, 72, 0.5); border-color: rgba(240, 220, 190, 0.22); }
+.pick { display: inline-flex; flex-direction: column; align-items: center; padding: 6px 7px 4px; }
+/* The six walls, in a ring round the fire. */
+.ring { position: relative; width: min(100%, 400px); aspect-ratio: 1; margin: 6px auto 4px; }
+.fire { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px; border-radius: 50%; background: radial-gradient(circle, #fff3c4 0%, #f2a03a 38%, #b0472b 70%, rgba(176, 71, 43, 0) 100%); animation: flicker 1.3s infinite; }
+.alcove { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; font: inherit; color: inherit; background: rgba(120, 96, 72, 0.45); border: 1px solid rgba(240, 220, 190, 0.22); border-radius: 14px; padding: 5px 6px 3px; cursor: pointer; }
+.alcove.far { opacity: 0.32; cursor: default; }
+.alcove.lit { background: rgba(233, 182, 90, 0.34); border-color: #e9b65a; box-shadow: 0 0 16px rgba(233, 182, 90, 0.55); }
+.stand { min-height: 16px; display: flex; gap: 2px; }
+/* What has happened round the fire. */
+.news { list-style: none; margin: 0; padding: 0; }
+.news li { padding: 6px 0; border-top: 1px solid rgba(233, 182, 90, 0.12); }
+.news li:first-child { border-top: 0; }
+.asked { display: inline-flex; vertical-align: middle; gap: 2px; margin: 0 4px; }
+/* The tablet. */
+.tablet { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.tablet > div { display: flex; flex-direction: column; gap: 5px; }
+.cell { display: grid; grid-template-columns: 40px 1fr; align-items: center; column-gap: 6px; text-align: left; font: inherit; font-size: 14px; color: #eadcc4; background: rgba(120, 96, 72, 0.32); border: 1px solid rgba(240, 220, 190, 0.16); border-radius: 10px; padding: 3px 6px; cursor: pointer; position: relative; min-height: 34px; }
+.cell em { grid-column: 2; font-style: normal; font-size: 11px; color: #b9a688; line-height: 1; }
+.cell .mark { grid-row: span 2; }
+.cell.fixed { cursor: default; }
+.cell.n1 { opacity: 0.5; }
+.cell.n1::after { content: ''; position: absolute; left: 6%; right: 6%; top: 50%; border-top: 3px solid #b0472b; transform: rotate(-7deg); }
+.cell.n2 { border-color: #e9b65a; box-shadow: 0 0 0 2px #e9b65a inset; }
+.shown .token small { font-size: 16px; }
+/* The screen that shows nothing. */
+.pass { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 20px; font-size: 22px; }
+.pass .big { filter: drop-shadow(0 0 18px rgba(233, 182, 90, 0.35)); }
+/* The sealed wall, lit at the end. */
+.sealed { position: relative; max-width: 420px; aspect-ratio: 4 / 3; margin: 14px auto; border-radius: 18px; background: radial-gradient(ellipse at 50% 60%, rgba(255, 196, 120, 0.22), rgba(10, 6, 4, 0.55) 78%); border: 1px solid rgba(233, 182, 90, 0.3); overflow: hidden; }
+.sealed .moonlit { position: absolute; right: 4%; top: 2%; }
+.sealed .scene { position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%); }
+.sealed .ground { position: absolute; left: 4%; bottom: 0; opacity: 0.9; }
+.how { margin-top: 18px; background: rgba(18, 12, 8, 0.46); border-radius: 14px; padding: 8px 14px; }
+.how summary { cursor: pointer; color: #e9b65a; }
+@media (max-width: 520px) {
+  .tablet { grid-template-columns: 1fr; }
+  .tablet > div { display: grid; grid-template-columns: 1fr 1fr; }
+  h1 { font-size: 30px; }
+}

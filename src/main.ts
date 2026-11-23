@@ -6,6 +6,7 @@ import { createAtmosphere } from './world/atmosphere';
 import { daylight, updateDaylight } from './world/daylight';
 import { createFox } from './world/creatures/fox';
 import { createJelly } from './world/creatures/jelly';
+import { createMammoth } from './world/creatures/mammoth';
 import { createMeteors } from './world/creatures/meteor';
 import { createMobius } from './world/creatures/mobius';
 import { createPaper } from './world/creatures/paper';
@@ -57,6 +58,10 @@ if (mobius) scene.add(mobius.group);
 const nightIndex = pools.findIndex((p) => p.world === 'cosmos');
 const meteors = nightIndex >= 0 ? createMeteors(pools[nightIndex], () => poolsView.stir(nightIndex)) : null;
 if (meteors) scene.add(meteors.group);
+
+const caveIndex = pools.findIndex((p) => p.world === 'cave');
+const mammoth = caveIndex >= 0 ? createMammoth(pools[caveIndex], () => poolsView.stir(caveIndex)) : null;
+if (mammoth) scene.add(mammoth.group);
 
 const rig = new CameraRig(canvas, terrain.mesh);
 
@@ -206,6 +211,7 @@ renderer.setAnimationLoop(() => {
   paper.update(dt);
   mobius?.update(dt);
   meteors?.update(dt);
+  mammoth?.update(dt);
   folk.update(dt);
   terrain.update(time, poolsView.glow);
   atmosphere.update(time, rig.zoom, window.innerHeight);

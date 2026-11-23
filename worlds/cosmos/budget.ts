@@ -1,6 +1,6 @@
 import { Shell, checkKinds, choices, pickOne, runPractice, shuffled } from '../canon/shell';
 import type { Kind } from '../canon/shell';
-import { answered, paras, question, saidBox, stepLine } from './chamber';
+import { answered, clearMissed, onward, paras, question, saidBox, stepLine } from './chamber';
 import './cosmos.css';
 import { PACES, beta, boosted, checkPhysics, frac, gamma, rate, tidy } from './physics';
 
@@ -115,6 +115,7 @@ const KINDS: Kind[] = [
 
 let v = 0;
 let step = 0;
+let reached = 0;
 let said = '';
 let home = 0;
 let ship = 0;
@@ -187,10 +188,10 @@ if (sh.practising) {
     const s = STEPS[Math.min(step, STEPS.length - 1)];
     const done = step >= STEPS.length;
     $('top').innerHTML =
-      `<div class="card">${stepLine(step, STEPS.length)}${saidBox(said)}` +
+      `<div class="card">${stepLine(step, STEPS.length, (reached = Math.max(reached, step, sh.kept.chapter ? STEPS.length : 0)))}${saidBox(said)}` +
       (done
         ? `<p><b>That is the whole idea.</b> One fixed budget; speed through space is paid for out of speed through time. Everything else in relativity has to live with it.</p>`
-        : `${paras(s.say)}${s.ask ? question(s.ask) : ''}`) +
+        : `${paras(s.say)}${s.ask ? question(s.ask) : ''}${onward(s)}`) +
       `</div>`;
     $('rest').innerHTML = done ? `${drawer()}<div class="bar"><a class="chip gold" href="./budget.html?practice">Practise ▶</a><a class="chip" href="./twins.html">On to the twins ▶</a><a class="chip pale" href="./index.html">Back to the map</a></div>` : '';
   };
@@ -209,6 +210,14 @@ if (sh.practising) {
     advance();
   });
   sh.on((what, value) => {
+    if (what === 'goto' || what === 'onward') {
+      step = what === 'onward' ? step + 1 : Math.max(0, Math.min(reached, Number(value)));
+      said = '';
+      clearMissed();
+      if (step >= STEPS.length) sh.finish();
+      sh.draw();
+      return;
+    }
     if (what === 'set') {
       v = Number(value);
       slider.value = value;
