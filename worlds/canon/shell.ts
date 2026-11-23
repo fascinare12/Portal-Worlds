@@ -114,6 +114,9 @@ export function runPractice(sh: Shell, kicker: string, title: string, intro: str
   let last = '';
   let skin: Skin = 'stones';
   let exampleOpen = false;
+  /** The answers she has tried and found wrong on this question; and whether she asked to be shown. */
+  let misses = new Set<number>();
+  let shown = false;
   const stat = (k: Kind) => (sh.kept.practice[k.id] ??= { seen: 0, right: 0 });
   const rightsAt = (level: number) => kinds.filter((k) => k.level === level).reduce((n, k) => n + stat(k).right, 0);
   const next = () => {
@@ -128,6 +131,8 @@ export function runPractice(sh: Shell, kicker: string, title: string, intro: str
     skin = SKINS[(SKINS.indexOf(skin) + 1 + Math.floor(Math.random() * 2)) % 3];
     asked = kind.make(seeded(Math.floor(Math.random() * 1e9)), skin);
     answered = -1;
+    misses = new Set();
+    shown = false;
     sh.above = false;
     exampleOpen = stat(kind).right === 0;
     stat(kind).seen++;
@@ -144,20 +149,29 @@ export function runPractice(sh: Shell, kicker: string, title: string, intro: str
       (kind && examples[kind.id] ? `<details class="example"${exampleOpen ? ' open' : ''}><summary>A worked example of this kind</summary><div class="card book">${examples[kind.id]}</div></details>` : '') +
       `<div class="card">${asked.show}${sh.above && asked.outside ? `<div class="label">From outside</div>${asked.outside}` : ''}</div>` +
       `<div class="card"><p><b>${asked.ask}</b></p><div class="reasons">${asked.options
-        .map((o, i) => `<button data-do="pick" data-v="${i}"${done ? ' disabled' : ''} style="${done && i === asked!.right ? 'outline:3px solid #2f7d4f' : done && i === answered ? 'outline:3px solid #a23a3a' : ''}">${o}</button>`)
+        .map((o, i) => `<button data-do="pick" data-v="${i}"${done || misses.has(i) ? ' disabled' : ''} style="${done && i === asked!.right ? 'outline:3px solid #2f7d4f' : misses.has(i) ? 'outline:2px solid #a23a3a;opacity:0.5;text-decoration:line-through' : ''}">${o}</button>`)
         .join('')}</div>` +
-      (done ? `<p class="${right ? 'good' : 'bad'}"><b>${right ? 'Yes.' : 'Not that one.'}</b> ${asked.why}</p><div class="bar"><button class="chip gold" data-do="next">Another ▶</button><a class="chip pale" href="./index.html">Back to the map</a></div>` : '') +
+      (!done && misses.size ? `<p class="bad"><b>Not that one.</b> It is crossed off: have another go.</p><div class="bar"><button class="chip pale" data-do="show">Show me the answer</button></div>` : '') +
+      (done ? `<p class="${right && !shown ? 'good' : 'bad'}"><b>${shown ? 'Here it is.' : misses.size ? 'Yes, this time.' : 'Yes.'}</b> ${asked.why}</p><div class="bar"><button class="chip gold" data-do="next">Another ▶</button><a class="chip pale" href="./index.html">Back to the map</a></div>` : '') +
       `</div>`;
   };
   sh.on((what, value) => {
     if (what === 'next') next();
-    else if (what === 'pick' && asked && kind && answered < 0) {
-      answered = Number(value);
-      if (answered === asked.right) {
-        stat(kind).right++;
-        sh.kept.streak++;
+    else if (what === 'show' && asked && answered < 0) {
+      answered = asked.right;
+      shown = true;
+      sh.draw();
+    } else if (what === 'pick' && asked && kind && answered < 0) {
+      if (Number(value) === asked.right) {
+        answered = asked.right;
+        // Only a first-time right answer counts toward opening harder kinds.
+        if (!misses.size) {
+          stat(kind).right++;
+          sh.kept.streak++;
+        }
         sh.sound.chime();
       } else {
+        misses.add(Number(value));
         sh.kept.streak = 0;
         exampleOpen = true;
       }

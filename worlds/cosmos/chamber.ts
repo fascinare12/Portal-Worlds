@@ -57,6 +57,24 @@ export function saidBox(said: string): string {
   const cut = said.indexOf('.') + 1;
   return `<div class="said ${yes ? 'good' : 'bad'}"><p><b>${said.slice(0, cut)}</b>${said.slice(cut).split(' ¶ ').join('</p><p>')}</p></div>`;
 }
+/** The answers already tried and found wrong, for the question now showing. */
+const missed = new Set<number>();
+/** A question and its answers: the ones tried and found wrong are crossed off, and the rest can still be chosen. */
+export const question = (ask: [string, string[], number, string]) =>
+  `<p><b>${ask[0]}</b></p><div class="reasons">${ask[1].map((o, i) => `<button data-do="answer" data-v="${i}"${missed.has(i) ? ' disabled style="opacity:0.45;text-decoration:line-through"' : ''}>${o}</button>`).join('')}</div>`;
+/**
+ * An answer is given. Right: what to say, and the chamber may move on. Wrong: nothing is given away;
+ * that answer is crossed off, and she tries again.
+ */
+export function answered(ask: [string, string[], number, string], value: number): { right: boolean; said: string } {
+  if (value === ask[2]) {
+    missed.clear();
+    return { right: true, said: `Yes. ${ask[3]}` };
+  }
+  missed.add(value);
+  return { right: false, said: 'Not quite. That one is crossed off: have another go.' };
+}
+
 /** How far through the chamber she is. */
 export const stepLine = (step: number, of: number) => `<div class="stepno">${step >= of ? 'Done' : `Step ${step + 1} of ${of}`}<span>${Array.from({ length: of }, (_, i) => `<i class="${i < step ? 'past' : i === step ? 'here' : ''}"></i>`).join('')}</span></div>`;
 
@@ -80,7 +98,7 @@ export function runChamber(c: Chamber): Running {
     const done = step >= c.steps.length;
     $('top').innerHTML =
       `<div class="card">${stepLine(step, c.steps.length)}${saidBox(said)}` +
-      (done ? paras(c.summary) : `${paras(s.say)}${s.ask ? `<p><b>${s.ask[0]}</b></p><div class="reasons">${s.ask[1].map((o, i) => `<button data-do="answer" data-v="${i}">${o}</button>`).join('')}</div>` : ''}`) +
+      (done ? paras(c.summary) : `${paras(s.say)}${s.ask ? question(s.ask) : ''}`) +
       `</div>`;
     $('rest').innerHTML = done ? `${c.drawer()}<div class="bar"><a class="chip gold" href="./${c.file}.html?practice">Practise ▶</a>${c.next ? `<a class="chip" href="./${c.next[0]}.html">${c.next[1]} ▶</a>` : ''}<a class="chip pale" href="./index.html">Back to the map</a></div>` : '';
     $('key').innerHTML = (c.key?.() ?? []).map(([colour, words]) => `<span><i style="background:${colour}"></i>${words}</span>`).join('');
@@ -107,9 +125,12 @@ export function runChamber(c: Chamber): Running {
     if (what === 'answer') {
       const s = c.steps[step];
       if (!s?.ask) return;
-      said = `${Number(value) === s.ask[2] ? 'Yes.' : 'Not quite.'} ${s.ask[3]}`;
-      step++;
-      if (step >= c.steps.length) sh.finish();
+      const got = answered(s.ask, Number(value));
+      said = got.said;
+      if (got.right) {
+        step++;
+        if (step >= c.steps.length) sh.finish();
+      }
       sh.draw();
       document.getElementById('top')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } else {
