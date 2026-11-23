@@ -18,7 +18,7 @@ export interface Pool {
   open: boolean;
   /** The world this pool leads to, once that world exists: the folder name under worlds/. */
   world?: string;
-  /** The picture seen when looking into the pool: 1 = a pyramid being built, 2 = kanji being sprayed on a wall, 3 = fish circling in dark water, 4 = a woodblock print being made, 5 = soldiers being embroidered on linen, 6 = a field of stars and the Milky Way. */
+  /** The picture seen when looking into the pool: 1 = a pyramid being built, 2 = kanji being sprayed on a wall, 3 = fish circling in dark water, 4 = a woodblock print being made, 5 = soldiers being embroidered on linen, 6 = a field of stars and the Milky Way, 7 = a rock wall on which hands are stencilled and a beast is drawn. */
   scene?: number;
 }
 
@@ -64,6 +64,7 @@ function makePools(): Pool[] {
       p.open = true;
       p.color = 0xb0472b;
       p.world = 'cave';
+      p.scene = 7;
     }
     if (i % 3 === 0) {
       p.open = true;
