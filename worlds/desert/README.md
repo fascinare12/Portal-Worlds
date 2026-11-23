@@ -106,3 +106,11 @@ got: level, facts known, and questions asked.
 
 Progress and builds are kept in the browser on each device. Nothing is sent
 anywhere, so a child's progress on one device does not appear on another.
+
+## Building it again
+
+A finished blueprint can be celebrated as often as it is built. Taking any
+piece of it out with the rubber un-finishes it (the visitors leave), and
+putting the last piece back brings the fireworks again. The ⟲ button, tapped
+twice, takes every block off the plot and hands them all back to the tray, so
+the whole thing can be rebuilt without earning the blocks a second time.
