@@ -53,9 +53,13 @@ let actions: Record<string, (value: string) => void> = {};
 
 /** Put up a screen: its markup, and what its buttons do. */
 function screen(html: string, handlers: Record<string, (value: string) => void>): void {
+  // The same screen drawn again (a mark made, a wall chosen) stays where it was
+  // scrolled to. Only a new screen starts from the top.
+  const same = Object.keys(handlers).sort().join() === Object.keys(actions).sort().join();
+  const y = window.scrollY;
   app.innerHTML = html;
   actions = handlers;
-  window.scrollTo(0, 0);
+  window.scrollTo(0, same ? y : 0);
 }
 app.addEventListener('click', (e) => {
   const el = (e.target as HTMLElement).closest<HTMLElement>('[data-do]');

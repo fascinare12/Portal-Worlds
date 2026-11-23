@@ -372,6 +372,68 @@ const waterFragment = /* glsl */ `
     return col;
   }
 
+  // The ochre pool: a wall of rock. Hands are stencilled on it one after another, in blown red
+  // pigment, and a beast is drawn across the middle in charcoal, a stroke at a time. Then it all
+  // fades and begins again.
+  float caveSeg(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+    return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0));
+  }
+  // How far p is from a hand laid flat, fingers spread, pointing up.
+  float caveHand(vec2 p) {
+    float d = length(p - vec2(0.0, -0.05)) - 0.115;
+    d = min(d, caveSeg(p, vec2(-0.085, 0.03), vec2(-0.125, 0.19)) - 0.026);
+    d = min(d, caveSeg(p, vec2(-0.035, 0.05), vec2(-0.045, 0.255)) - 0.028);
+    d = min(d, caveSeg(p, vec2(0.02, 0.05), vec2(0.03, 0.265)) - 0.028);
+    d = min(d, caveSeg(p, vec2(0.07, 0.03), vec2(0.1, 0.215)) - 0.026);
+    d = min(d, caveSeg(p, vec2(0.1, -0.06), vec2(0.215, 0.02)) - 0.03);
+    return d;
+  }
+  vec3 cavePool(vec2 p, float t) {
+    float grain = texture2D(uNoise, p * 0.9 + 0.3).r;
+    float blotch = texture2D(uNoise, p * 0.16 + 0.7).r;
+    vec3 col = mix(vec3(0.20, 0.15, 0.11), vec3(0.42, 0.33, 0.25), blotch) * (0.82 + 0.36 * grain);
+    float cycle = 46.0;
+    float now = mod(t, cycle);
+    float fade = 1.0 - smoothstep(cycle - 5.0, cycle - 0.5, now);
+    // Seven hands, each in its own place and at its own slant, one every few seconds.
+    for (int i = 0; i < 7; i++) {
+      float f = float(i);
+      float a = f * 2.4 + 0.6;
+      vec2 at = vec2(cos(a), sin(a)) * (0.72 + 0.34 * starHash(vec2(f, 3.0)));
+      float turn = (starHash(vec2(f, 9.0)) - 0.5) * 1.6 + a - 1.57;
+      vec2 q = p - at;
+      q = vec2(q.x * cos(turn) + q.y * sin(turn), -q.x * sin(turn) + q.y * cos(turn)) * (0.62 + 0.2 * starHash(vec2(f, 5.0)));
+      float d = caveHand(q);
+      float shown = smoothstep(0.0, 2.2, now - 2.0 - f * 3.4) * fade;
+      // Pigment blown round the hand: thick at its edge, thinning outward, and none where the hand lay.
+      float spray = smoothstep(0.0, 0.012, d) * exp(-d * 9.0) * (0.55 + 0.6 * grain);
+      vec3 pigment = mix(vec3(0.62, 0.20, 0.10), vec3(0.78, 0.50, 0.18), step(0.6, starHash(vec2(f, 1.0))));
+      col = mix(col, pigment, clamp(spray * shown, 0.0, 0.92));
+    }
+    // The beast: a line that runs from rump to tail by way of back, horn, muzzle, belly and legs.
+    float drawn = clamp((now - 6.0) / 24.0, 0.0, 1.0) * 13.0;
+    float ink = 0.0;
+    vec2 pts[14];
+    pts[0] = vec2(-0.56, 0.02); pts[1] = vec2(-0.44, 0.2); pts[2] = vec2(-0.12, 0.3); pts[3] = vec2(0.14, 0.24);
+    pts[4] = vec2(0.34, 0.3); pts[5] = vec2(0.5, 0.42); pts[6] = vec2(0.44, 0.22); pts[7] = vec2(0.6, 0.08);
+    pts[8] = vec2(0.5, -0.02); pts[9] = vec2(0.3, -0.06); pts[10] = vec2(0.28, -0.36); pts[11] = vec2(0.18, -0.1);
+    pts[12] = vec2(-0.36, -0.12); pts[13] = vec2(-0.42, -0.38);
+    for (int i = 0; i < 13; i++) {
+      float part = clamp(drawn - float(i), 0.0, 1.0);
+      if (part > 0.0) {
+        vec2 a = pts[i];
+        vec2 b = mix(a, pts[i + 1], part);
+        ink = max(ink, smoothstep(0.034, 0.012, caveSeg(p, a, b)) * (0.6 + 0.5 * grain));
+      }
+    }
+    // Its eye, last of all.
+    ink = max(ink, smoothstep(0.03, 0.012, length(p - vec2(0.46, 0.14))) * step(12.5, drawn));
+    col = mix(col, vec3(0.07, 0.05, 0.04), clamp(ink * fade, 0.0, 0.9));
+    return col;
+  }
+
   void main() {
     float r = length(vPos) / uRadius;
     vec3 toEye = normalize(cameraPosition - vWorld);
@@ -421,7 +483,7 @@ const waterFragment = /* glsl */ `
         vec3 ink = printPicture(p * 0.56, uTime) / vec3(0.94, 0.90, 0.79);
         col = mix(col, col * ink, smoothstep(1.95, 1.6, length(p)) * uReveal);
       } else if (uScene > 5.5) {
-        // The night pool is painted further down, whether or not anyone is leaning in.
+        // The night pool and the cave's are painted further down, whether or not anyone is leaning in.
       } else if (uScene > 4.5) {
         // The golden pool has no window either: the whole pool is the cloth, out to the bank.
         col = mix(col, tapestryPicture(p * 0.56, uTime), smoothstep(1.95, 1.6, length(p)) * uReveal);
@@ -432,7 +494,9 @@ const waterFragment = /* glsl */ `
     // The red pool has koi in it, circling just under the surface.
     if (uScene > 1.5 && uScene < 2.5) col = koi(col, vPos / uRadius, uTime);
     // The night pool is not water-coloured at all: it is sky.
-    if (uScene > 5.5) col = mix(col, nightPool(vPos / uRadius, uTime, uReveal), smoothstep(1.95, 1.6, r) * uOpen);
+    if (uScene > 5.5 && uScene < 6.5) col = mix(col, nightPool(vPos / uRadius, uTime, uReveal), smoothstep(1.95, 1.6, r) * uOpen);
+    // Nor is the ochre pool: it is a wall of rock, being painted.
+    if (uScene > 6.5) col = mix(col, cavePool(vec2(vPos.x, vPos.y) / uRadius, uTime), smoothstep(1.95, 1.6, r) * uOpen);
     // Woken by a touch: a ring of light runs outward and the whole pool brightens.
     float wake = uPulse * (1.0 - 0.6 * uOpen);
     float ring = smoothstep(0.25, 0.0, abs(r - (1.0 - uPulse) * 1.6));
