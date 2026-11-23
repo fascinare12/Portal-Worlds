@@ -80,10 +80,12 @@ Status: ✓ built and live · ○ not built.
 
 ### G · The edges
 
-| | Step | The idea | The playable (proposed) | Math it brings in |
+| | Step | The idea | The playable | Math it brings in |
 | --- | --- | --- | --- | --- |
-| ○ | 18 · What a dimension does | Gravity, orbits and waves change with the number of directions (no stable orbits in four space dimensions). Tesseracts as geometry. Extra dimensions are a proposal with no evidence so far | The same orbit in two, three and four dimensions | Power laws |
-| ○ | 19 · Information and black holes | Hawking radiation, black hole entropy, the information paradox, the Page curve, holography. Frontier: mark what is established, what is predicted and untested, and what is argued over | Counting what goes in and what comes out | Entropy |
+| ✓ | 18 · What a dimension does (`dimensions`) | A dimension is a direction; forces thin as 1/r^(D−1); orbits and atoms last only in three or fewer; a tesseract is sound mathematics; extra directions of real space are proposed and not found | A force spreading in 2, 3 and 4 directions; an orbit in each; a tesseract to turn, with a table of counts | Power laws whose exponent counts directions |
+| ✓ | 19 · Information and black holes (`information`) | Entropy as a count; a black hole's entropy goes as its area; so it should glow and evaporate; the glow seems to destroy information; the Page curve. Sorted throughout into observed, predicted, argued over. **Dated November 2026** | Twenty coins; a black hole of four masses by the numbers; the two entropy curves | Entropy |
+
+All nineteen steps are built.
 
 ## Order
 
@@ -133,7 +135,7 @@ And two common pictures are replaced by better ones:
 - `chamber.ts` runs the steps: give it the steps, a figure built once
   (`frame`), a `paint` to bring it up to date, and the drawer.
 - Put new physics and its second-route checks in a module beside
-  `gravity.ts` (stage C's is `strong.ts`, stage D's `starlight.ts`, stage E's `cosmology.ts`, stage F's `quantum.ts`), and call the check from the page's `expose`.
+  `gravity.ts` (stage C's is `strong.ts`, stage D's `starlight.ts`, stage E's `cosmology.ts`, stage F's `quantum.ts`, stage G's `edges.ts`), and call the check from the page's `expose`.
 - Keep each instruction short: write " ¶ " between paragraphs in a step's
   text, end with the thing to do in bold, and give the figure a colour `key`
   instead of describing the colours in the prose. Use `art.ts` for stars,
@@ -144,6 +146,13 @@ And two common pictures are replaced by better ones:
 - Update the status marks in this file and the table in `README.md`.
 
 ## Known weak points to revisit
+
+- **Step 19 will go out of date**, like step 15. Its date is `ASOF` in
+  `information.ts`. Entanglement is named there but never given a chamber of
+  its own (Bell's theorem); that is the largest gap in the whole map.
+- Step 19 leaves out firewalls, complementarity, ER = EPR beyond one practice
+  item, and how the 2019 calculations work.
+- Step 18's tesseract is one fixed view with one turn.
 
 - Stage F has no spin, no entanglement experiments (Bell) and no
   Schrödinger equation. Step 17's survey of interpretations is four

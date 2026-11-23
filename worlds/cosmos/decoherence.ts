@@ -270,6 +270,7 @@ if (sh.practising) {
     },
     key: () => [['#ff9ab8', 'what the bounce gives away'], ['#e8c24a', 'what is left of the bands'], ['#ff9a9a', 'when the interference is lost']],
     drawer,
+    next: ['dimensions', 'On to the edges'],
   });
   sh.draw();
 }

@@ -43,9 +43,11 @@ appealing.
 | 15 · The Hubble tension | `tension.html`: a measurement to repeat; the two results as bell curves, with a hidden bias to try; eight real measurements | Error bars |
 | 16 · A number on every possibility | `amplitudes.html`: two ways to a detector with their arrows added tip to tail; two slits and a screen, particles sent one at a time | Complex numbers |
 | 17 · Why the world looks definite | `decoherence.html`: one bounce and how much it gives away; how long a large molecule or a dust grain keeps its interference in four surroundings | Probability |
+| 18 · What a dimension does | `dimensions.html`: a force spreading in two, three and four directions; an orbit in each; a four-dimensional cube to turn | Power laws that count directions |
+| 19 · Information and black holes | `information.html`: twenty coins and their arrangements; a black hole of four masses, by the numbers; the entropy of its radiation by two reckonings | Entropy |
 
-The whole plan, nineteen steps in seven stages, with what each unbuilt step
-is meant to hold and how to add one, is in [`PLAN.md`](PLAN.md). The map
+All nineteen steps are built. The whole plan, with the rules, the known weak
+points and how to add or revise a step, is in [`PLAN.md`](PLAN.md). The map
 (`index.html`) shows all nineteen.
 
 ## How the physics is checked
@@ -171,6 +173,25 @@ review). From memory and not re-fetched: Young, Merli and colleagues,
 Tonomura, Born, de Broglie, Zeh, Zurek, Haroche's 1996 experiment, the Vienna
 gas and heat experiments, Englert's relation.
 
+For steps 18 and 19 the checks are `checkEdges()` in `edges.ts`: that what
+spreads from a point is not used up, in two, three and four directions, with
+the four-dimensional surface found by adding up slices; orbits nudged from a
+circle, by stepping, against the balance of forces; the pieces of a cube in
+one to four directions counted by listing them; a black hole of the Sun's
+mass against the textbook temperature, lifetime and entropy, the last by two
+routes; and Page's curve against random states made and measured directly.
+
+Step 19 is dated November 2026 and was written after web searches that
+month. Where its facts came from: the 2025 area-law test (the arXiv listing
+of the LIGO, Virgo and KAGRA paper, fetched for its title; the masses and the
+confirmation from a search summary); that the information question is still
+open (a search summary of an article in the American Physical Society's
+*Physics*, November 2026, which could not be fetched); the short-range limit
+on gravity (a search summary; the 2026 review's abstract was fetched). From
+memory and not re-fetched: Bekenstein, Hawking, Page, Maldacena and their
+dates, the 2019–2020 calculations, the laboratory stand-ins, Ehrenfest, the
+Sun's own entropy.
+
 ## Files
 
 - `physics.ts`: the arithmetic of special relativity, and its checks.
@@ -180,8 +201,9 @@ gas and heat experiments, Englert's relation.
 - `starlight.ts`: glowing bodies and spectral lines, stars by mass, and distances, with their checks.
 - `cosmology.ts`: the expanding universe, the sound ruler and its angle, uncertainty, and the measured values of H0, with their checks.
 - `quantum.ts`: arrows that add and multiply, two ways and two slits, records and how long interference lasts, with their checks.
+- `edges.ts`: forces and orbits in any number of directions, the counting of cubes, and a black hole's entropy, glow, lifetime and Page curve, with their checks.
 - `chamber.ts`: what a chamber's page does, shared by steps 3 onward.
-- `budget.ts`, `twins.ts`, `cones.ts`, `falling.ts`, `tides.ts`, `orbits.ts`, `horizons.ts`, `holes.ts`, `wormholes.ts`, `light.ts`, `stars.ts`, `ladder.ts`, `expansion.ts`, `oldest.ts`, `tension.ts`, `amplitudes.ts`, `decoherence.ts` (each with its `.html`): the chambers and practice.
+- `budget.ts`, `twins.ts`, `cones.ts`, `falling.ts`, `tides.ts`, `orbits.ts`, `horizons.ts`, `holes.ts`, `wormholes.ts`, `light.ts`, `stars.ts`, `ladder.ts`, `expansion.ts`, `oldest.ts`, `tension.ts`, `amplitudes.ts`, `decoherence.ts`, `dimensions.ts`, `information.ts` (each with its `.html`): the chambers and practice.
 - `PLAN.md`: the full plan.
 - `index.html`, `hub.ts`: the map. `cosmos.css`: the night colours.
 - The page shell and practice runner are shared with the Spire

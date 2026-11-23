@@ -34,6 +34,8 @@ export default defineConfig({
         cosmosTension: resolve(__dirname, 'worlds/cosmos/tension.html'),
         cosmosAmplitudes: resolve(__dirname, 'worlds/cosmos/amplitudes.html'),
         cosmosDecoherence: resolve(__dirname, 'worlds/cosmos/decoherence.html'),
+        cosmosDimensions: resolve(__dirname, 'worlds/cosmos/dimensions.html'),
+        cosmosInformation: resolve(__dirname, 'worlds/cosmos/information.html'),
         canon: resolve(__dirname, 'worlds/canon/index.html'),
         canonCanon: resolve(__dirname, 'worlds/canon/canon.html'),
         canonRules: resolve(__dirname, 'worlds/canon/rules.html'),
