@@ -125,3 +125,60 @@ export function checkQuantum(): string[] {
   if (!(LASTS.grain.air < LASTS.grain.warm && LASTS.grain.warm < LASTS.grain.vacuum && LASTS.grain.vacuum < LASTS.grain.oldest && LASTS.molecule.oldest > LASTS.grain.oldest)) wrong.push('the table of times');
   return wrong;
 }
+
+// ---- Two things that share one state ----
+
+/**
+ * Two photons made together so that their polarisations match. Each meets a filter set at some
+ * angle (in degrees). The chance that they do the same thing: both pass, or both are stopped.
+ */
+export const agree = (degreesApart: number) => Math.cos((degreesApart * Math.PI) / 180) ** 2;
+/** The three settings each filter can be turned to, in degrees. */
+export const SETTINGS = [0, 60, 120];
+/**
+ * Suppose instead each pair left with instructions: for each of the three settings, pass (true) or
+ * stop. How often two such photons do the same thing, over the six ways the settings can differ.
+ */
+export function planAgrees(plan: boolean[]): number {
+  let same = 0;
+  for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) if (a !== b && plan[a] === plan[b]) same++;
+  return same / 6;
+}
+
+export function checkEntangled(): string[] {
+  const wrong: string[] = [];
+  const close = (a: number, b: number, tol = 1e-9) => Math.abs(a - b) <= tol;
+  // The shared state, written out: an arrow of 1/√2 for "both upright" and for "both level", none for the mixed cases.
+  // A filter at angle t passes a photon with arrow (cos t, sin t) against (upright, level), and stops (−sin t, cos t).
+  const both = (a: number, b: number) => {
+    const ra = (a * Math.PI) / 180;
+    const rb = (b * Math.PI) / 180;
+    const ends: [number[], number[]] = [[Math.cos(ra), Math.sin(ra)], [-Math.sin(ra), Math.cos(ra)]];
+    const ends2: [number[], number[]] = [[Math.cos(rb), Math.sin(rb)], [-Math.sin(rb), Math.cos(rb)]];
+    // The chance of each of the four outcomes: (first passes or stops) × (second passes or stops).
+    return ends.map((x) => ends2.map((y) => ((x[0] * y[0] + x[1] * y[1]) / Math.SQRT2) ** 2));
+  };
+  for (const a of [0, 17, 60, 120]) for (const b of [0, 33, 60, 120, 150]) {
+    const p = both(a, b);
+    if (!close(p[0][0] + p[1][1], agree(a - b))) wrong.push(`agreeing at ${a}, ${b}`);
+    if (!close(p[0][0] + p[0][1] + p[1][0] + p[1][1], 1)) wrong.push('the chances do not add to one');
+    // What one side sees does not depend on the other side's setting: no message can be sent.
+    if (!close(p[0][0] + p[0][1], 0.5) || !close(p[0][0] + p[1][0], 0.5)) wrong.push(`one side alone at ${a}, ${b}`);
+  }
+  if (!close(agree(0), 1) || !close(agree(60), 0.25) || !close(agree(120), 0.25) || !close(agree(90), 0)) wrong.push('the settings in the chamber');
+  // Every possible set of instructions, tried: none agrees less than a third of the time when settings differ.
+  let least = 1;
+  for (let i = 0; i < 8; i++) least = Math.min(least, planAgrees([!!(i & 1), !!(i & 2), !!(i & 4)]));
+  if (!close(least, 1 / 3)) wrong.push(`the best instructions can do: ${least}`);
+  if (!(agree(60) < least)) wrong.push('the quantum result should fall below every set of instructions');
+  // The same thing in the form physicists test (Clauser, Horne, Shimony and Holt): instructions cannot beat 2; these photons reach 2√2.
+  let best = 0;
+  for (let i = 0; i < 16; i++) {
+    const [a0, a1, b0, b1] = [0, 1, 2, 3].map((k) => (i & (1 << k) ? 1 : -1));
+    best = Math.max(best, Math.abs(a0 * b0 + a0 * b1 + a1 * b0 - a1 * b1));
+  }
+  const tie = (a: number, b: number) => 2 * agree(a - b) - 1;
+  const quantum = tie(0, 22.5) + tie(0, -22.5) + tie(45, 22.5) - tie(45, -22.5);
+  if (best !== 2 || !close(quantum, 2 * Math.SQRT2)) wrong.push(`the bound of 2: ${best}, and the photons' ${quantum}`);
+  return wrong;
+}

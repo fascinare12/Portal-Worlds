@@ -43,10 +43,11 @@ appealing.
 | 15 · The Hubble tension | `tension.html`: a measurement to repeat; the two results as bell curves, with a hidden bias to try; eight real measurements | Error bars |
 | 16 · A number on every possibility | `amplitudes.html`: two ways to a detector with their arrows added tip to tail; two slits and a screen, particles sent one at a time | Complex numbers |
 | 17 · Why the world looks definite | `decoherence.html`: one bounce and how much it gives away; how long a large molecule or a dust grain keeps its interference in four surroundings | Probability |
-| 18 · What a dimension does | `dimensions.html`: a force spreading in two, three and four directions; an orbit in each; a four-dimensional cube to turn | Power laws that count directions |
-| 19 · Information and black holes | `information.html`: twenty coins and their arrangements; a black hole of four masses, by the numbers; the entropy of its radiation by two reckonings | Entropy |
+| 18 · Two things, one state | `entangled.html`: a source and two detectors with three-way dials, and a tally; a set of instructions to write, which cannot be made to fit | A bound from counting cases |
+| 19 · What a dimension does | `dimensions.html`: a force spreading in two, three and four directions; an orbit in each; a four-dimensional cube to turn | Power laws that count directions |
+| 20 · Information and black holes | `information.html`: twenty coins and their arrangements; a black hole of four masses, by the numbers; the entropy of its radiation by two reckonings | Entropy |
 
-All nineteen steps are built. The whole plan, with the rules, the known weak
+All twenty steps are built. The whole plan, with the rules, the known weak
 points and how to add or revise a step, is in [`PLAN.md`](PLAN.md). The map
 (`index.html`) shows all nineteen.
 
@@ -192,6 +193,28 @@ memory and not re-fetched: Bekenstein, Hawking, Page, Maldacena and their
 dates, the 2019–2020 calculations, the laboratory stand-ins, Ehrenfest, the
 Sun's own entropy.
 
+Step 18's checks are `checkEntangled()` in `quantum.ts`: the shared state
+written out and every outcome's chance computed from it, against the cos² rule;
+that what one side sees does not depend on the other's setting; every one of
+the eight instruction sets tried, none matching less than a third of the time;
+and the same result in the four-setting form laboratories use, where
+instructions cannot exceed 2 and these photons reach 2√2.
+
+**Recheck, 23 November 2026.** Confirmed against the papers' own abstracts on
+arXiv or the observatory's page: the H0 Distance Network's 73.50 ± 0.81
+(published 10 April 2026); the three-telescope figure of 67.19 ± 0.38; Planck's
+67.4 ± 0.5 and its angle; the red-giant ladder's 70.39 with its three
+uncertainties; the lensing figure of 71.1; the neutron-star figure of 70 +12 −8;
+and the 2025 merger's masses, 33.6 and 32.2 Suns (the page had said "about 33
+and 32" and now says "about 34 and 32"). The galaxy-survey figure of 68.5 ± 0.6
+could not be found in its paper's abstract and was replaced by 68.4 ± 0.3, from
+the Atacama Cosmology Telescope's paper combining that survey with the oldest
+light. Still resting on a search summary only: the SH0ES figure of 73.49 ± 0.93.
+Not opened at all, because the sites turn away automated readers: the *Physics*
+article on the information paradox, and the Feynman Lectures pages (their
+chapter titles for volume I chapter 7, volume II chapter 42 and "Quantum
+Behavior" were confirmed from Wikipedia's list; volume I chapter 9 was not).
+
 ## Files
 
 - `physics.ts`: the arithmetic of special relativity, and its checks.
@@ -203,7 +226,7 @@ Sun's own entropy.
 - `quantum.ts`: arrows that add and multiply, two ways and two slits, records and how long interference lasts, with their checks.
 - `edges.ts`: forces and orbits in any number of directions, the counting of cubes, and a black hole's entropy, glow, lifetime and Page curve, with their checks.
 - `chamber.ts`: what a chamber's page does, shared by steps 3 onward.
-- `budget.ts`, `twins.ts`, `cones.ts`, `falling.ts`, `tides.ts`, `orbits.ts`, `horizons.ts`, `holes.ts`, `wormholes.ts`, `light.ts`, `stars.ts`, `ladder.ts`, `expansion.ts`, `oldest.ts`, `tension.ts`, `amplitudes.ts`, `decoherence.ts`, `dimensions.ts`, `information.ts` (each with its `.html`): the chambers and practice.
+- `budget.ts`, `twins.ts`, `cones.ts`, `falling.ts`, `tides.ts`, `orbits.ts`, `horizons.ts`, `holes.ts`, `wormholes.ts`, `light.ts`, `stars.ts`, `ladder.ts`, `expansion.ts`, `oldest.ts`, `tension.ts`, `amplitudes.ts`, `decoherence.ts`, `entangled.ts`, `dimensions.ts`, `information.ts` (each with its `.html`): the chambers and practice.
 - `PLAN.md`: the full plan.
 - `index.html`, `hub.ts`: the map. `cosmos.css`: the night colours.
 - The page shell and practice runner are shared with the Spire

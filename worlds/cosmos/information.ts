@@ -219,9 +219,9 @@ function drawer(): string {
       <li>The clash between that glow's randomness and the rule that quantum physics never destroys information is the <b>black hole information paradox</b>.</li>
       <li>The curve the radiation's entropy must follow if information is kept is the <b>Page curve</b>, and the turning point the <b>Page time</b>.</li>
       <li>That the most a region can hold goes as its surface, and the proposal that a region can be fully described on its boundary, is the <b>holographic principle</b>.</li>
-      <li>When what is found of one thing is tied to what is found of another, however far apart, they are <b>entangled</b>.</li>
+      <li>When two things share one state, with neither having its own, they are <b>entangled</b> (chamber 18). The uncertainty a part has on that account is its <b>entanglement entropy</b>, and it is this that the two curves plot.</li>
     </ul>
-    <p><b>Observed.</b> Entanglement, many times over. The second law, always. And one black hole result: when two merge, the final horizon's area is at least the sum of the two before, as Hawking proved it must be in 1971. Gravitational-wave signals have confirmed it, most sharply one recorded in January 2025, from two holes of about 33 and 32 Suns.</p>
+    <p><b>Observed.</b> Entanglement, many times over. The second law, always. And one black hole result: when two merge, the final horizon's area is at least the sum of the two before, as Hawking proved it must be in 1971. Gravitational-wave signals have confirmed it, most sharply one recorded in January 2025, from two holes of about 34 and 32 Suns.</p>
     <p><b>Predicted, not observed.</b> That a black hole has entropy (Bekenstein, 1972) in proportion to its area, and a temperature, and glows (Hawking, 1974). Several independent lines of calculation agree. For a hole of the Sun's mass the glow is at 60 billionths of a degree, and no instrument could find it against the sky. Laboratory stand-ins, in which sound in a flowing fluid meets a "horizon", have shown effects of the same form; how much they establish is disputed.</p>
     <p><b>Argued over, as of ${ASOF}.</b> Whether, and how, information gets out. Most physicists now expect that it does. In 2019 and 2020, calculations using gravity's own equations reproduced the turn-over of the Page curve in simplified models, which was the first real progress in decades. They do not show how the information escapes; some physicists question the method; other answers, such as a small remnant left behind, are still defended. An article in the American Physical Society's magazine <i>Physics</i> in November 2026, looking back over a half century of proposed solutions, says the fate of the information remains a mystery.</p>
     <p><b>Also argued over.</b> The holographic principle has one exact example (Maldacena, 1997): a universe with gravity, of a shape unlike ours, is equivalent to a theory without gravity living on its boundary, with one direction fewer. In that example a direction of space is not fundamental but arises from something else. Whether anything like it is true of our own universe is not known.</p></div>
@@ -233,7 +233,7 @@ function drawer(): string {
       <p><b>A black hole's three numbers.</b> For a mass M:</p>
       <div class="eq">S ∝ M² &nbsp;&nbsp;&nbsp;&nbsp; T ∝ 1 / M &nbsp;&nbsp;&nbsp;&nbsp; lifetime ∝ M³</div>
       <p>The first because the horizon's radius goes as M and entropy as its area. In full, S = A ÷ 4 in units of the Planck length squared, and the temperature is T = ħc³ ÷ (8π G M k). That one formula contains the constants of quantum physics (ħ), relativity (c), gravity (G) and heat (k), which is why it is taken as a clue to how they fit together.</p>
-      <p><b>The two curves.</b> Model the black hole as N switches, given up one at a time. If the radiation is random, as Hawking found, its entropy after n switches is n bits, rising to N. If the whole process keeps information, the radiation and what remains are two parts of one definite state, and each part's entropy can be no more than the size of the smaller: about n for the first half and N − n for the second. This page uses Page's exact formula, and checks it by making random states and working out the entropy directly.</p>
+      <p><b>The two curves.</b> Model the black hole as N switches, given up one at a time. If the radiation is random, as Hawking found, its entropy after n switches is n bits, rising to N. If the whole process keeps information, the radiation and what remains are two entangled parts of one exactly known state, as the two photons of chamber 18 were; and each part's entropy can be no more than the size of the smaller: about n for the first half and N − n for the second. This page uses Page's exact formula, and checks it by making random states and working out the entropy directly.</p>
     </div></details>
     <details><summary>Go deeper</summary><div class="card"><ul class="links">
       <li>Read: <a href="https://www.quantamagazine.org/the-most-famous-paradox-in-physics-nears-its-end-20201029/" target="_blank" rel="noopener">George Musser, "The Most Famous Paradox in Physics Nears Its End" (Quanta Magazine, 2020)</a>. The best plain account of the 2019 calculations. Its title is more confident than the field is.</li>
@@ -255,7 +255,7 @@ if (sh.practising) {
   run = runChamber({
     sh,
     file: 'information',
-    kicker: 'The edges · 19',
+    kicker: 'The edges · 20',
     title: 'Information and black holes',
     steps: [
       { say: 'This is the last chamber, and the one furthest from anything measured. Almost nothing in it has been observed, and its central question is open as of ' + ASOF + '. It will say at each step which is which. ¶ It starts with a count. Twenty coins, and all you are told is how many are heads. <b>Slide the number of heads to ten.</b>', until: () => reachedHalf },

@@ -1,6 +1,6 @@
 # The Night Sky: the full plan
 
-Nineteen steps in seven stages. This file is the working plan: what is built,
+Twenty steps in seven stages. This file is the working plan: what is built,
 what each remaining step is meant to hold, and the rules any new step must
 keep. Read it before building the next one, and update it after.
 
@@ -78,14 +78,16 @@ Status: ✓ built and live · ○ not built.
 | ✓ | 16 · A number on every possibility (`amplitudes`) | Each way has an arrow; for ways that end in exactly the same situation, add the arrows and square. So ways can cancel. An amplitude is a number on a possibility: not a place, not a dimension | Two ways to a detector, with their arrows, and a way to block; two slits and a screen, particles sent one at a time, with a record that can be switched on | Complex numbers |
 | ✓ | 17 · Why the world looks definite (`decoherence`) | Any record kept by the surroundings ends interference; no observer needed; almost instant for large things; caused by contact with surroundings and not by the expansion of the universe; does not by itself settle the measurement problem | One bounce and what it gives away, on the budget's arrow; how long a molecule or a dust grain lasts in four surroundings | Probability |
 
+| ✓ | 18 · Two things, one state (`entangled`) | Entanglement: a shared state with no state for either part; results that match in a way no pre-set instructions can (Bell's theorem, in Mermin's three-setting form); no signalling; a record kept by the surroundings is this same thing; the whole known and the parts random | A source and two detectors with three-way dials and a running tally; a set of instructions to write and fail to make work | A bound from counting cases |
+
 ### G · The edges
 
 | | Step | The idea | The playable | Math it brings in |
 | --- | --- | --- | --- | --- |
-| ✓ | 18 · What a dimension does (`dimensions`) | A dimension is a direction; forces thin as 1/r^(D−1); orbits and atoms last only in three or fewer; a tesseract is sound mathematics; extra directions of real space are proposed and not found | A force spreading in 2, 3 and 4 directions; an orbit in each; a tesseract to turn, with a table of counts | Power laws whose exponent counts directions |
-| ✓ | 19 · Information and black holes (`information`) | Entropy as a count; a black hole's entropy goes as its area; so it should glow and evaporate; the glow seems to destroy information; the Page curve. Sorted throughout into observed, predicted, argued over. **Dated November 2026** | Twenty coins; a black hole of four masses by the numbers; the two entropy curves | Entropy |
+| ✓ | 19 · What a dimension does (`dimensions`) | A dimension is a direction; forces thin as 1/r^(D−1); orbits and atoms last only in three or fewer; a tesseract is sound mathematics; extra directions of real space are proposed and not found | A force spreading in 2, 3 and 4 directions; an orbit in each; a tesseract to turn, with a table of counts | Power laws whose exponent counts directions |
+| ✓ | 20 · Information and black holes (`information`) | Entropy as a count; a black hole's entropy goes as its area; so it should glow and evaporate; the glow seems to destroy information; the Page curve. Sorted throughout into observed, predicted, argued over. **Dated November 2026** | Twenty coins; a black hole of four masses by the numbers; the two entropy curves | Entropy |
 
-All nineteen steps are built.
+All twenty steps are built. Step 18 was added after the first nineteen, so the two steps of stage G were renumbered from 18 and 19 to 19 and 20.
 
 ## Order
 
@@ -147,9 +149,17 @@ And two common pictures are replaced by better ones:
 
 ## Known weak points to revisit
 
+- **Rechecked on 23 November 2026.** Every Hubble-constant figure in step 15
+  except the SH0ES one was confirmed against its paper's abstract or the
+  observatory's own page; one unconfirmable figure was replaced. Three sources
+  could not be opened at all (they turn away automated readers): the *Physics*
+  article cited in step 20, and the Feynman Lectures pages linked in steps 4,
+  5, 6 and 16, whose chapter titles were confirmed from Wikipedia instead.
+- Step 18 teaches Bell's theorem by counting. It does not derive cos², show
+  the laboratory (four-setting) form, or cover what entanglement is used for.
+
 - **Step 19 will go out of date**, like step 15. Its date is `ASOF` in
-  `information.ts`. Entanglement is named there but never given a chamber of
-  its own (Bell's theorem); that is the largest gap in the whole map.
+  `information.ts`. Entanglement now has its own chamber (step 18).
 - Step 19 leaves out firewalls, complementarity, ER = EPR beyond one practice
   item, and how the 2019 calculations work.
 - Step 18's tesseract is one fixed view with one turn.
