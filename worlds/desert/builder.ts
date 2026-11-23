@@ -560,6 +560,30 @@ export class Builder {
     });
   }
 
+  /**
+   * A finished blueprint with a piece taken out is not finished any more: the
+   * visitors go, and putting the last piece back brings the celebration again.
+   */
+  private unfinish(): void {
+    if (!this.done || !this.planOn) return;
+    if (this.plan.every((c) => this.blocks.has(keyOf(c.x, c.y, c.z)))) return;
+    this.done = false;
+    this.welcome(false, false);
+  }
+
+  /** Takes every block off the plot and hands them all back, ready to build again. */
+  clearPlot(): void {
+    if (this.party >= 0) return; // not in the middle of the fireworks
+    for (const t of this.blocks.values()) this.stock[typeOf(t)]++;
+    this.blocks.clear();
+    this.pops.clear();
+    this.done = false;
+    this.welcome(false, false);
+    this.refresh();
+    sound.remove();
+    this.events.changed();
+  }
+
   /** What to store so this build can be picked up again later. */
   save(): BuildSave {
     const blocks: BuildSave['blocks'] = [];
@@ -710,6 +734,7 @@ export class Builder {
       if (this.erasing) {
         this.blocks.delete(k);
         this.stock[type]++;
+        this.unfinish();
         this.refresh();
         sound.remove();
         this.events.changed();

@@ -233,6 +233,9 @@ what.hidden = report.hidden = panel.hidden = top.hidden = palette.hidden = true;
   what.append(row, style, back);
 }
 
+// For checking the world from the browser's console, and from tests.
+(window as unknown as { desert: unknown }).desert = { builder };
+
 function start(m: Mode): void {
   mode = m;
   const old = saved.builds[child]?.[m.id];
@@ -280,8 +283,10 @@ function drawTop(): void {
       setTimeout(() => clear.classList.remove('warn'), 2500);
       return;
     }
-    delete saved.builds[child]?.[mode.id];
-    start(mode);
+    // The blocks come back to the tray, so the whole thing can be built again
+    // (and celebrated again) without earning them a second time.
+    builder.clearPlot();
+    drawTop();
   };
   left.append(back, home);
   right.append(rub, clear);
