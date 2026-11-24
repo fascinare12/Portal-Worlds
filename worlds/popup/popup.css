@@ -1,0 +1,92 @@
+/* The Pop-up Book: cream paper, cut edges, soft shadow. */
+html, body { margin: 0; height: 100%; }
+body { display: grid; grid-template-columns: 1fr 340px; background: #2f4650; color: #3a2e22; font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif; font-size: 16px; line-height: 1.4; overflow: hidden; }
+#stage { position: relative; min-width: 0; min-height: 0; }
+#view { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+#home { position: absolute; top: 12px; left: 12px; width: 44px; height: 44px; border-radius: 50%; border: 0; z-index: 3; cursor: pointer; background: radial-gradient(circle, #fff 0%, #8fd49a 45%, #4f9a5c 100%); box-shadow: 0 0 14px #8fd49a; }
+
+/* Anything made of paper: cream, a thin shadow, a slightly uneven cut. */
+#banner, #side, .card, #caption p { background: #f4ead6; box-shadow: 0 3px 0 rgba(40, 28, 16, 0.18), 0 8px 22px rgba(0, 0, 0, 0.28); }
+#banner { position: absolute; top: 12px; left: 68px; right: 12px; max-width: 640px; margin: 0 auto; padding: 8px 14px; border-radius: 4px 9px 5px 8px; z-index: 2; }
+#banner p { margin: 2px 0; }
+.line { font-size: 17px; }
+.need { font-family: 'Trebuchet MS', 'Gill Sans', sans-serif; font-size: 15px; color: #7a5a2a; }
+.need b { display: inline-block; width: 1.3em; height: 1.3em; line-height: 1.3em; text-align: center; border-radius: 50%; background: #e2d2ae; margin-right: 4px; }
+.need.met { color: #2f7a46; }
+.need.met b { background: #58994f; color: #fff; }
+.hint { font-family: 'Trebuchet MS', 'Gill Sans', sans-serif; font-size: 14px; color: #8a4a2a; }
+
+#shut { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; background: rgba(244, 234, 214, 0.92); font-family: 'Trebuchet MS', sans-serif; font-size: 13px; z-index: 2; width: min(80%, 380px); }
+#shut input { flex: 1; accent-color: #b9523f; height: 28px; }
+#caption { position: absolute; left: 0; right: 0; top: 14px; display: flex; justify-content: center; pointer-events: none; z-index: 2; padding: 0 16px; }
+#caption p { margin: 0; max-width: 620px; padding: 10px 18px; font-size: 19px; border-radius: 4px 9px 5px 8px; }
+#stop { display: none; position: absolute; right: 12px; bottom: 12px; z-index: 3; }
+.reading #stop { display: block; }
+.reading #banner, .reading #shut, .reading #side { display: none; }
+.reading { grid-template-columns: 1fr; }
+
+/* The side: the tray of pieces, or the piece in hand. */
+#side { position: relative; z-index: 2; padding: 12px; overflow-y: auto; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; }
+button { font: inherit; font-family: 'Trebuchet MS', 'Gill Sans', sans-serif; font-size: 15px; color: #3a2e22; background: #fffaf0; border: 1px solid #cdbb96; border-radius: 5px 9px 6px 8px; padding: 8px 12px; cursor: pointer; box-shadow: 0 2px 0 rgba(40, 28, 16, 0.16); }
+button:active { transform: translateY(1px); box-shadow: none; }
+button[disabled] { opacity: 0.4; cursor: default; }
+button.go { background: #58994f; border-color: #3f7d4a; color: #fff; }
+button.warn { color: #a23a2e; }
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-family: 'Trebuchet MS', sans-serif; }
+.nav button { min-width: 52px; font-size: 17px; }
+.fault { margin: 0; padding: 8px 10px; border-left: 5px solid #d9342b; background: #fbe3dc; color: #7a231c; font-family: 'Trebuchet MS', sans-serif; font-size: 15px; border-radius: 3px; }
+.fault:empty { display: none; }
+.tray { display: flex; flex-direction: column; gap: 7px; }
+.tray button { display: grid; grid-template-columns: 46px 1fr; column-gap: 10px; align-items: center; text-align: left; padding: 7px 10px; }
+.tray svg { grid-row: span 2; width: 46px; height: 46px; }
+.tray b { font-size: 16px; }
+.tray small { font-size: 13px; color: #6d5a42; line-height: 1.25; }
+.row { display: flex; flex-wrap: wrap; gap: 7px; }
+.tip { margin: 0; font-family: 'Trebuchet MS', sans-serif; font-size: 13px; color: #7d6a50; }
+.edit h3 { margin: 0 0 6px; font-weight: normal; font-size: 20px; }
+.edit h3 small { font-family: 'Trebuchet MS', sans-serif; font-size: 14px; color: #7d6a50; margin-left: 6px; }
+.arts { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 6px; margin-bottom: 8px; }
+.arts button { aspect-ratio: 1; padding: 0; background-color: #e9dcc0; background-size: 86%; background-position: center; background-repeat: no-repeat; }
+.arts button.on { outline: 3px solid #2f7fd0; outline-offset: 1px; }
+.edit label { display: block; font-family: 'Trebuchet MS', sans-serif; font-size: 14px; color: #5a4632; margin: 4px 0; }
+.edit input[type='range'] { display: block; width: 100%; height: 30px; accent-color: #b9523f; }
+
+/* The front cover. */
+#cover { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(34, 52, 60, 0.82); }
+#cover[hidden] { display: none; }
+.card { max-width: 440px; padding: 22px 24px 24px; border-radius: 5px 12px 7px 10px; text-align: center; }
+.card h1 { margin: 0 0 6px; font-weight: normal; font-size: 38px; color: #8a3340; }
+.card p { margin: 0 0 14px; }
+.card button { display: block; width: 100%; margin-top: 10px; padding: 12px; text-align: left; }
+.card button b { display: block; font-size: 19px; font-family: Georgia, serif; }
+.card button small { color: #6d5a42; }
+
+/* A narrow screen: the book above, the tray below. */
+@media (max-aspect-ratio: 1/1) {
+  body { grid-template-columns: 1fr; grid-template-rows: 54dvh 1fr; }
+  .tray { display: grid; grid-template-columns: repeat(5, 1fr); }
+  .tray button { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: 6px 2px; }
+  .tray svg { grid-row: auto; width: 38px; height: 38px; }
+  .tray b { font-size: 13px; }
+  .tray small { display: none; }
+  .line { font-size: 15px; }
+  #banner { top: 8px; padding: 6px 10px; }
+}
+
+/* On paper: nothing but the sheets. */
+#print { display: none; }
+@media print {
+  @page { size: landscape; margin: 1cm; }
+  html, body { height: auto; overflow: visible; background: #fff; display: block; }
+  #stage, #side, #cover { display: none !important; }
+  #print { display: block; color: #000; font-family: sans-serif; font-size: 11pt; }
+  .sheet { break-inside: avoid; page-break-inside: avoid; margin: 0 0 0.6cm; }
+  figure.sheet { display: inline-block; vertical-align: top; margin-right: 0.5cm; }
+  figcaption { font-size: 9pt; color: #444; margin-bottom: 0.1cm; }
+  header.sheet { break-after: page; page-break-after: always; }
+  header h1 { font-size: 22pt; margin: 0 0 0.3cm; }
+  .k { display: inline-block; width: 1.2cm; height: 0; vertical-align: middle; border-top: 1.5pt solid #222; }
+  .k.fold { border-top-style: dashed; }
+  .k.glue { height: 0.35cm; border: 0.5pt solid #888; background: #d9d4c8; }
+  .notes { font-size: 10pt; }
+}

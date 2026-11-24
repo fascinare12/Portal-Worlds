@@ -66,6 +66,12 @@ function makePools(): Pool[] {
       p.world = 'cave';
       p.scene = 7;
     }
+    if (i === 10) {
+      // The ninth doorway, the cream of paper: a pop-up book to build, open, and print.
+      p.open = true;
+      p.color = 0xf1e2c2;
+      p.world = 'popup';
+    }
     if (i % 3 === 0) {
       p.open = true;
       p.color = OPEN_COLORS[c++ % OPEN_COLORS.length];

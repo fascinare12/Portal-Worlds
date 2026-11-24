@@ -17,6 +17,7 @@ export default defineConfig({
         print: resolve(__dirname, 'worlds/print/index.html'),
         tapestry: resolve(__dirname, 'worlds/tapestry/index.html'),
         cave: resolve(__dirname, 'worlds/cave/index.html'),
+        popup: resolve(__dirname, 'worlds/popup/index.html'),
         cosmos: resolve(__dirname, 'worlds/cosmos/index.html'),
         cosmosBudget: resolve(__dirname, 'worlds/cosmos/budget.html'),
         cosmosTwins: resolve(__dirname, 'worlds/cosmos/twins.html'),
