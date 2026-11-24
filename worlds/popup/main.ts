@@ -139,6 +139,13 @@ function matOf(art: string): THREE.Material {
   return m;
 }
 
+/** The line a V-fold or a platform can slide along, shown while one is in hand. */
+const guide = new THREE.Mesh(new THREE.PlaneGeometry(0.22, L), new THREE.MeshBasicMaterial({ color: 0x2f7fd0, transparent: true, opacity: 0.7, depthTest: false }));
+guide.rotation.x = -Math.PI / 2;
+guide.position.y = 0.02;
+guide.renderOrder = 4;
+scene.add(guide);
+
 interface Made {
   meshes: THREE.Mesh[];
   edge: THREE.LineSegments;
@@ -190,6 +197,8 @@ function rebuild(): void {
 function place(): void {
   const alpha = tilt(open);
   for (const { side, half } of halves) half.rotation.z = side * alpha;
+  const inHand = spread().pieces[selected];
+  guide.visible = !!inHand && (inHand.kind === 'vfold' || inHand.kind === 'platform') && open > 0.97;
   spread().pieces.forEach((piece, i) => {
     const m = made[i];
     if (!m) return;
@@ -319,6 +328,7 @@ function draw(): void {
         ? `<div class="edit"><h3>${KIND_NAME[sel.kind]}${stands(sel) ? ` <small>${heightOf(sel).toFixed(1)} cm tall</small>` : ''}</h3>
           <div class="arts">${Object.entries(ART).map(([id, a]) => `<button data-do="art" data-v="${id}" class="${sel.art === id ? 'on' : ''}" style="background-image:url(${urlOf(id)})" aria-label="${a.name}"></button>`).join('')}</div>
           ${SLIDERS[sel.kind].map(([key, name, lo, hi]) => `<label>${name}<input type="range" data-key="${key}" min="${lo}" max="${hi}" step="0.25" value="${sel[key]}"></label>`).join('')}
+          <p class="tip">${sel.kind === 'vfold' || sel.kind === 'platform' ? `A ${KIND_NAME[sel.kind].toLowerCase()} sits on the fold in the middle of the book. Drag it, or tap the page, to slide it along the blue line.` : 'Drag it, or tap the page, to move it.'}</p>
           <div class="row">${sel.kind === 'vfold' ? '<button data-do="flip">Turn it round</button>' : ''}<button data-do="copy">Another like it</button><button data-do="delete" class="warn">Take it off</button><button data-do="done">Done</button></div></div>`
         : `<div class="tray">${KINDS.map((k) => `<button data-do="add" data-v="${k}"><svg viewBox="0 0 40 40">${ICONS[k]}</svg><b>${KIND_NAME[k]}</b><small>${KIND_SAYS[k]}</small></button>`).join('')}</div>
           <div class="row menu"><button data-do="read">▶ Read the book</button><button data-do="print">Print it</button>${visiting ? '<button data-do="mine">Keep it as mine</button>' : mode === 'free' ? '<button data-do="link">Copy a link</button>' : ''}${mode === 'free' && !visiting && book().length > 1 ? '<button data-do="unpage" class="warn">Tear out this page</button>' : ''}<button data-do="cover">Front cover</button></div>
@@ -433,9 +443,17 @@ const flat = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 let drag: { index: number; x: number; z: number; px: number; pz: number; moved: boolean } | null = null;
 let look: { x: number; y: number } | null = null;
 let downAt = { x: 0, y: 0 };
-function aim(e: PointerEvent): void {
+function aim(e: { clientX: number; clientY: number }): void {
   const r = canvas.getBoundingClientRect();
   ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+}
+/** Puts a piece at a place on the open spread, as far as its kind allows. */
+function moveTo(piece: Piece, x: number, z: number): void {
+  const snap = (v: number) => Math.round(v * 4) / 4;
+  piece.z = snap(Math.max(-L / 2, Math.min(L / 2, z)));
+  // Only what is glued to one page, or a tent, can go across: a V-fold and a platform sit on the spine.
+  if (piece.kind === 'tent') piece.x = snap(Math.max(-piece.reach + 0.5, Math.min(piece.reach - 0.5, x)));
+  else if (!stands(piece)) piece.x = snap(Math.max(-W, Math.min(W, x)));
 }
 canvas.addEventListener('pointerdown', (e) => {
   canvas.setPointerCapture(e.pointerId);
@@ -461,12 +479,7 @@ canvas.addEventListener('pointermove', (e) => {
     aim(e);
     const p = new THREE.Vector3();
     if (!ray.ray.intersectPlane(flat, p)) return;
-    const piece = spread().pieces[drag.index];
-    const snap = (v: number) => Math.round(v * 4) / 4;
-    piece.z = snap(Math.max(-L / 2, Math.min(L / 2, drag.z + p.z - drag.pz)));
-    // Only what is glued to one page, or a tent, can go across: a V-fold and a platform sit on the spine.
-    if (piece.kind === 'tent') piece.x = snap(Math.max(-piece.reach + 0.5, Math.min(piece.reach - 0.5, drag.x + p.x - drag.px)));
-    else if (!stands(piece)) piece.x = snap(Math.max(-W, Math.min(W, drag.x + p.x - drag.px)));
+    moveTo(spread().pieces[drag.index], drag.x + p.x - drag.px, drag.z + p.z - drag.pz);
     faults = problems(spread());
   } else if (look) {
     azimuth = Math.max(-1.3, Math.min(1.3, azimuth - (e.clientX - look.x) * 0.006));
@@ -480,9 +493,14 @@ canvas.addEventListener('pointerup', () => {
     // A tap on a flap lifts it, or lets it down.
     if (!drag.moved && piece?.kind === 'flap' && open > 0.97) lifts[drag.index].want = lifts[drag.index].want ? 0 : 2.3;
     if (drag.moved) changed();
-  } else if (look && Math.hypot(downAt.x - look.x, downAt.y - look.y) < 4 && selected >= 0) {
-    selected = -1;
-    draw();
+  } else if (look && Math.hypot(downAt.x - look.x, downAt.y - look.y) < 6 && selected >= 0 && open > 0.97 && !reading) {
+    // A tap on the page puts the piece in hand there.
+    aim({ clientX: downAt.x, clientY: downAt.y });
+    const p = new THREE.Vector3();
+    if (ray.ray.intersectPlane(flat, p) && Math.abs(p.x) <= W + 1 && Math.abs(p.z) <= L / 2 + 1) {
+      moveTo(spread().pieces[selected], p.x, p.z);
+      changed();
+    }
   }
   drag = null;
   look = null;
