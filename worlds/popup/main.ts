@@ -356,8 +356,13 @@ function draw(): void {
   const sel = pieces[selected];
   const fault = selected >= 0 ? faults[selected] : faults.find(Boolean) ? 'Something is edged in red. Tap it to see what is wrong.' : null;
   side.innerHTML = `
-    <div class="nav"><button data-do="prev"${at === 0 ? ' disabled' : ''} aria-label="The page before">◀</button><span>Spread ${at + 1} of ${book().length}</span>
-      <button data-do="next" class="${story && state.ok ? 'go' : ''}"${canNext ? '' : ' disabled'}>${story && last ? 'The end ▶' : !story && last ? '＋ page' : '▶'}</button></div>
+    ${
+      sel || pending
+        ? // With a piece in hand or the pictures open, the top corner goes back out of that, never to another page.
+          `<div class="nav"><button data-do="${sel ? 'done' : 'cancel'}" class="go">◀ ${sel && pending ? 'Back to the pictures' : 'Back to the pieces'}</button><span>Spread ${at + 1}</span></div>`
+        : `<div class="nav"><button data-do="prev"${at === 0 ? ' disabled' : ''}>◀ Page before</button><span>${at + 1} of ${book().length}</span>
+      <button data-do="next" class="${story && state.ok ? 'go' : ''}"${canNext ? '' : ' disabled'}>${story && last ? 'The end ▶' : !story && last ? '＋ New page' : 'Next page ▶'}</button></div>`
+    }
     ${fault ? `<p class="fault">${fault}</p>` : ''}
     ${
       sel

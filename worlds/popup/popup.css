@@ -33,7 +33,7 @@ button[disabled] { opacity: 0.4; cursor: default; }
 button.go { background: #58994f; border-color: #3f7d4a; color: #fff; }
 button.warn { color: #a23a2e; }
 .nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-family: 'Trebuchet MS', sans-serif; }
-.nav button { min-width: 52px; font-size: 17px; }
+.nav button { min-width: 52px; font-size: 15px; white-space: nowrap; }
 .fault { margin: 0; padding: 8px 10px; border-left: 5px solid #d9342b; background: #fbe3dc; color: #7a231c; font-family: 'Trebuchet MS', sans-serif; font-size: 15px; border-radius: 3px; }
 .fault:empty { display: none; }
 .tray { display: flex; flex-direction: column; gap: 7px; }
