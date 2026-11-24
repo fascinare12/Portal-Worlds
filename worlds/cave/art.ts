@@ -82,10 +82,33 @@ const SIGN: Record<string, string> = {
   zigzag: line('M18 48 L32 22 L46 48 L60 22 L74 48 L86 26', '#7fa3b4', 5),
 };
 
-/** A drawing of a token, at a given width. */
-export function draw(token: number, width = 64): string {
-  const inner = token < 6 ? BEASTS[token] : token < 12 ? PLACES[token - 6] : moon(token - 12);
-  return `<svg viewBox="0 0 100 70" width="${width}" height="${width * 0.7}" class="mark"><g filter="url(#pigment)">${inner}</g></svg>`;
+/** The legs on the far side of a beast, darker, drawn before the body so that it stands in front of them. */
+const FAR = [
+  [[36, 58], [54, 58]],
+  [[40, 59], [54, 59]],
+  [[40, 58], [54, 58]],
+  [[38, 58], [56, 58]],
+  [[38, 59], [53, 59]],
+  [[50, 59], [63, 59]],
+].map((legs) => legs.map(([x, y]) => `<path d="M${x} 42 L${x + 1} ${y} L${x + 7} ${y} L${x + 7} 42Z" fill="#3a2a20" stroke="${CHARCOAL}" stroke-width="1.6" stroke-linejoin="round"/>`).join(''));
+/** A few more strokes on each beast, over the body: the lie of the coat, a shoulder, a stripe. */
+const COAT = [
+  line('M40 30 l-2 9 M48 29 l-2 10 M56 29 l-1 9', CHARCOAL, 1.5) + line('M28 30 Q44 27 60 29', '#8a6424', 1.6),
+  line('M36 24 Q50 17 62 24', CHARCOAL, 1.8) + line('M24 60 l-2 2 M27 61 l-1 2 M64 60 l-2 2 M67 61 l-1 2', CHARCOAL, 1.4) + line('M30 40 Q44 46 58 42', '#7a2c1a', 1.6),
+  line('M58 23 l-3 6 M62 21 l-3 7 M66 20 l-2 6', CHARCOAL, 1.6),
+  line('M60 30 l-4 5 M64 32 l-4 6 M68 34 l-3 5', CHARCOAL, 1.5) + line('M30 31 Q44 29 58 31', '#5d5146', 1.6),
+  line('M22 30 Q40 24 60 27', '#7a2c1a', 1.8),
+  line('M30 22 Q42 14 52 12', CHARCOAL, 1.8) + line('M56 13 l-1 6 M61 14 l0 6 M66 16 l1 6', CHARCOAL, 1.5),
+];
+
+/**
+ * A drawing of a token, at a given width. With `paint` it is put on a stroke
+ * at a time, as if by a hand, starting `delay` seconds from now.
+ */
+export function draw(token: number, width = 64, paint = false, delay = 0): string {
+  const inner = token < 6 ? FAR[token] + BEASTS[token] + COAT[token] : token < 12 ? PLACES[token - 6] : moon(token - 12);
+  const marks = paint ? inner.replace(/<(path|circle|ellipse) /g, '<$1 pathLength="1" ') : inner;
+  return `<svg viewBox="0 0 100 70" width="${width}" height="${width * 0.7}" class="mark${paint ? ' painting' : ''}"${paint ? ` style="--d:${delay}s"` : ''}><g filter="url(#pigment)">${marks}</g></svg>`;
 }
 /** A player's sign. */
 export const sign = (name: string, width = 34) => `<svg viewBox="12 4 76 64" width="${width}" height="${(width * 64) / 76}" class="mark"><g filter="url(#${name === 'hand' ? 'blown' : 'pigment'})">${SIGN[name]}</g></svg>`;

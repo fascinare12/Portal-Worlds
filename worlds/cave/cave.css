@@ -51,41 +51,140 @@ h3 { font-weight: normal; font-size: 15px; letter-spacing: 0.1em; text-transform
 .stone.go { background: #a4412a; border-color: #d98a5a; font-size: 18px; padding: 12px 18px; }
 .stone.go[disabled] { background: rgba(120, 96, 72, 0.5); border-color: rgba(240, 220, 190, 0.22); }
 .pick { display: inline-flex; flex-direction: column; align-items: center; padding: 6px 7px 4px; }
+/* ---- The board: the cave above, the beasts and moons below, all on one screen. ---- */
+.play { max-width: 780px; margin: 0 auto; min-height: 100dvh; box-sizing: border-box; padding: 8px 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.play .head { padding-left: 54px; min-height: 44px; }
+.play .head h2 { font-size: 22px; }
+.scene { display: flex; flex-direction: column; align-items: center; }
+.scene .head { align-self: stretch; }
+.table { display: flex; flex-direction: column; gap: 6px; }
+.table .row { margin: 2px 0; }
+
 /* The six walls, in a ring round the fire. */
-.ring { position: relative; width: min(100%, 400px); aspect-ratio: 1; margin: 6px auto 4px; }
-.fire { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px; border-radius: 50%; background: radial-gradient(circle, #fff3c4 0%, #f2a03a 38%, #b0472b 70%, rgba(176, 71, 43, 0) 100%); animation: flicker 1.3s infinite; }
-.alcove { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; font: inherit; color: inherit; background: rgba(120, 96, 72, 0.45); border: 1px solid rgba(240, 220, 190, 0.22); border-radius: 14px; padding: 5px 6px 3px; cursor: pointer; }
-.alcove.far { opacity: 0.32; cursor: default; }
-.alcove.lit { background: rgba(233, 182, 90, 0.34); border-color: #e9b65a; box-shadow: 0 0 16px rgba(233, 182, 90, 0.55); }
-.stand { min-height: 16px; display: flex; gap: 2px; }
-/* What has happened round the fire. */
-.news { list-style: none; margin: 0; padding: 0; }
-.news li { padding: 6px 0; border-top: 1px solid rgba(233, 182, 90, 0.12); }
-.news li:first-child { border-top: 0; }
-.asked { display: inline-flex; vertical-align: middle; gap: 2px; margin: 0 4px; }
-/* The tablet. */
-.tablet { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.tablet > div { display: flex; flex-direction: column; gap: 5px; }
-.cell { display: grid; grid-template-columns: 40px 1fr; align-items: center; column-gap: 6px; text-align: left; font: inherit; font-size: 14px; color: #eadcc4; background: rgba(120, 96, 72, 0.32); border: 1px solid rgba(240, 220, 190, 0.16); border-radius: 10px; padding: 3px 6px; cursor: pointer; position: relative; min-height: 34px; }
-.cell em { grid-column: 2; font-style: normal; font-size: 11px; color: #b9a688; line-height: 1; }
-.cell .mark { grid-row: span 2; }
-.cell.fixed { cursor: default; }
-.cell.n1 { opacity: 0.5; }
-.cell.n1::after { content: ''; position: absolute; left: 6%; right: 6%; top: 50%; border-top: 3px solid #b0472b; transform: rotate(-7deg); }
-.cell.n2 { border-color: #e9b65a; box-shadow: 0 0 0 2px #e9b65a inset; }
-.shown .token small { font-size: 16px; }
+.ring { position: relative; width: min(100%, 44dvh, 520px); aspect-ratio: 1; margin: 0 auto; }
+.ring.small { width: min(72%, 30dvh, 340px); }
+.glow { position: absolute; inset: 4%; border-radius: 50%; background: radial-gradient(circle, rgba(255, 176, 84, 0.42) 0%, rgba(214, 110, 44, 0.18) 34%, rgba(176, 71, 43, 0) 68%); animation: breathe 2.3s infinite ease-in-out; }
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  27% { transform: scale(1.05); opacity: 1; }
+  52% { transform: scale(0.96); opacity: 0.78; }
+  74% { transform: scale(1.03); opacity: 0.95; }
+}
+/* The fire: three tongues of flame, each moving to its own time. */
+.fire { position: absolute; left: 50%; top: 50%; width: 15%; aspect-ratio: 1; transform: translate(-50%, -60%); }
+.fire i { position: absolute; left: 50%; bottom: 0; width: 62%; height: 100%; margin-left: -31%; border-radius: 50% 50% 50% 50% / 68% 68% 32% 32%; transform-origin: 50% 100%; animation: lick 0.9s infinite ease-in-out; }
+.fire i:nth-child(1) { background: radial-gradient(ellipse at 50% 80%, #f7c35a, #c9552c 70%, rgba(176, 71, 43, 0)); }
+.fire i:nth-child(2) { width: 44%; margin-left: -34%; height: 78%; background: radial-gradient(ellipse at 50% 80%, #ffe9a6, #f2a03a 75%, rgba(242, 160, 58, 0)); animation-duration: 0.7s; animation-delay: -0.3s; }
+.fire i:nth-child(3) { width: 34%; margin-left: -4%; height: 60%; background: radial-gradient(ellipse at 50% 80%, #fff7d6, #f7c35a 80%, rgba(247, 195, 90, 0)); animation-duration: 0.55s; animation-delay: -0.1s; }
+@keyframes lick {
+  0%, 100% { transform: scaleY(1) skewX(0deg); }
+  30% { transform: scaleY(1.16) skewX(5deg); }
+  60% { transform: scaleY(0.9) skewX(-6deg); }
+  80% { transform: scaleY(1.08) skewX(3deg); }
+}
+/* The logs under it. */
+.fire::after { content: ''; position: absolute; left: -10%; right: -10%; bottom: -8%; height: 16%; border-radius: 40%; background: linear-gradient(90deg, #1c130d, #4a2f1e 50%, #1c130d); box-shadow: 0 0 10px #f2a03a; }
+.byfire { position: absolute; left: 50%; top: 60%; transform: translateX(-50%); display: flex; gap: 2px; }
+.stand { position: absolute; left: 50%; bottom: -12px; transform: translateX(-50%); display: flex; gap: 1px; filter: drop-shadow(0 0 4px #000); }
+
+/* One of the eighteen: a drawing on a slab of rock. */
+.cell { position: relative; display: flex; flex-direction: column; align-items: center; font: inherit; color: inherit; padding: 4px 3px 3px; cursor: pointer; background: linear-gradient(180deg, rgba(150, 122, 92, 0.5), rgba(86, 66, 50, 0.5)); border: 1px solid rgba(240, 220, 190, 0.2); border-radius: 26% 30% 22% 28% / 22% 20% 26% 24%; box-shadow: inset 0 1px 0 rgba(255, 240, 210, 0.14), 0 2px 6px rgba(0, 0, 0, 0.45); min-width: 0; }
+.cell .mark { width: 100%; height: auto; max-width: 110px; }
+.cell small { font-size: clamp(10px, 2.6vw, 13px); line-height: 1.1; color: #e2d2b4; white-space: nowrap; }
+.cell .tag { position: absolute; top: -4px; right: -3px; z-index: 2; border-radius: 50%; background: rgba(20, 13, 9, 0.85); padding: 2px; line-height: 0; }
+.cell .tag:empty { display: none; }
+.ember { display: block; width: 11px; height: 13px; border-radius: 50% 50% 50% 50% / 68% 68% 32% 32%; background: radial-gradient(ellipse at 50% 80%, #ffe9a6, #f2a03a 70%, #b0472b); }
+.pips { display: flex; gap: 1px; min-height: 12px; align-items: center; }
+.pips s, .key s { position: relative; display: inline-flex; text-decoration: none; opacity: 0.9; }
+.pips s::after, .key s::after { content: ''; position: absolute; left: -1px; right: -1px; top: 50%; border-top: 2px solid #d9603c; transform: rotate(-38deg); }
+.key s { vertical-align: middle; margin: 0 3px; }
+/* Crossed off: the drawing fades, and an ochre stroke goes through it. */
+.cell.n1 .mark, .cell.n1 small { opacity: 0.3; }
+.cell.n1::before { content: ''; position: absolute; left: 10%; right: 10%; top: 40%; border-top: 4px solid #b0472b; border-radius: 3px; transform: rotate(-24deg); z-index: 1; }
+.cell.fixed { background: linear-gradient(180deg, rgba(70, 54, 42, 0.5), rgba(44, 34, 26, 0.5)); }
+/* Ringed as a suspect. */
+.cell.n2 { box-shadow: 0 0 0 3px #cf9a3c, 0 2px 6px rgba(0, 0, 0, 0.45); }
+/* Chosen for the question. */
+.cell.lit { background: linear-gradient(180deg, rgba(246, 200, 110, 0.5), rgba(190, 120, 60, 0.42)); border-color: #f1c16a; box-shadow: 0 0 16px rgba(241, 193, 106, 0.7); }
+.cell.lit.n2 { box-shadow: 0 0 0 3px #cf9a3c, 0 0 16px rgba(241, 193, 106, 0.7); }
+.marking .cell.fixed { cursor: default; }
+
+/* A wall: one of the six, standing in the ring, lit on the side that faces the fire. */
+.alcove { position: absolute; width: 29%; transform: translate(-50%, -50%); background: linear-gradient(var(--a, 180deg), rgba(255, 184, 96, 0.4), rgba(110, 84, 62, 0.55) 55%, rgba(46, 34, 26, 0.6)); }
+.alcove.far { opacity: 0.3; cursor: default; }
+.alcove.show { display: flex; flex-direction: column; align-items: center; padding: 4px 3px; border: 1px solid rgba(240, 220, 190, 0.2); border-radius: 26% 30% 22% 28% / 22% 20% 26% 24%; box-sizing: border-box; opacity: 0.5; }
+.alcove.show .mark { width: 100%; height: auto; }
+.alcove.show.lit { opacity: 1; border-color: #f1c16a; box-shadow: 0 0 16px rgba(241, 193, 106, 0.7); }
+
+.grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.grid + .grid { margin-top: 6px; }
+
+/* The question as it is put together. */
+.question { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.question em { font-style: normal; color: #b9a688; font-size: 14px; }
+.slot { display: inline-flex; align-items: center; justify-content: center; width: 62px; height: 46px; border: 1px dashed rgba(233, 182, 90, 0.4); border-radius: 10px; color: #8f7f66; font-size: 13px; }
+.slot.full { border-style: solid; border-color: #e9b65a; background: rgba(233, 182, 90, 0.14); }
+.say { text-align: center; margin: 0; min-height: 2.6em; }
+.key { text-align: center; margin: 2px 0 0; font-size: 13px; }
+.switch { display: flex; justify-content: center; }
+.switch button { font: inherit; font-size: 15px; color: #cdb48d; background: rgba(60, 46, 36, 0.6); border: 1px solid rgba(240, 220, 190, 0.22); padding: 6px 16px; cursor: pointer; }
+.switch button:first-child { border-radius: 12px 0 0 12px; }
+.switch button:last-child { border-radius: 0 12px 12px 0; border-left: 0; }
+.switch button.on { background: rgba(233, 182, 90, 0.34); color: #fff3d6; border-color: #e9b65a; }
+
+/* A question played out by the fire. */
+.told { justify-content: center; }
+.telling { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.telling .head { padding-left: 0; }
+.telling p { margin: 2px 0; }
+.asked3 { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.asked3 .token small { font-size: 14px; }
+.asked3 .mark { width: clamp(84px, 24vw, 150px); height: auto; }
+.reveal .mark { width: clamp(150px, 40vw, 240px); height: auto; }
+.answers { display: flex; gap: 18px; justify-content: center; }
+.ans { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 15px; opacity: 0; animation: arrive 0.5s ease-out forwards; animation-delay: var(--d, 0s); }
+.ans.none .mark { filter: grayscale(0.8) brightness(0.6); }
+.ans.none span { color: #b9a688; }
+.ans.shows .mark { filter: drop-shadow(0 0 12px #f1c16a); }
+.ans.shows span { color: #f6d28a; font-weight: bold; }
+.ans.unasked { animation-name: arrive-dim; }
+.ans.unasked span { color: #7d6f5c; }
+.reveal { opacity: 0; animation: arrive 0.6s ease-out forwards; animation-delay: var(--d, 0s); display: flex; flex-direction: column; align-items: center; }
+@keyframes arrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes arrive-dim { from { opacity: 0; } to { opacity: 0.35; } }
+.big.dark { filter: grayscale(1) brightness(0.5); }
+
+/* A drawing being put on the rock, a stroke at a time. */
+.painting g > * { stroke-dasharray: 1; stroke-dashoffset: 1; fill-opacity: 0; animation: stroke 0.7s ease-out forwards, fillin 0.5s ease-out forwards; animation-delay: calc(var(--d, 0s) + var(--i, 0) * 0.13s), calc(var(--d, 0s) + var(--i, 0) * 0.13s + 0.45s); }
+.painting g > :nth-child(2) { --i: 1; } .painting g > :nth-child(3) { --i: 2; } .painting g > :nth-child(4) { --i: 3; }
+.painting g > :nth-child(5) { --i: 4; } .painting g > :nth-child(6) { --i: 5; } .painting g > :nth-child(7) { --i: 6; }
+.painting g > :nth-child(8) { --i: 7; } .painting g > :nth-child(9) { --i: 8; } .painting g > :nth-child(10) { --i: 9; }
+.painting g > :nth-child(n + 11) { --i: 10; }
+@keyframes stroke { to { stroke-dashoffset: 0; } }
+@keyframes fillin { to { fill-opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .painting g > *, .ans, .reveal { animation-duration: 0.01s; animation-delay: 0s; }
+}
+
 /* The screen that shows nothing. */
 .pass { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 20px; font-size: 22px; }
 .pass .big { filter: drop-shadow(0 0 18px rgba(233, 182, 90, 0.35)); }
-/* The sealed wall, lit at the end. */
-.sealed { position: relative; max-width: 420px; aspect-ratio: 4 / 3; margin: 14px auto; border-radius: 18px; background: radial-gradient(ellipse at 50% 60%, rgba(255, 196, 120, 0.22), rgba(10, 6, 4, 0.55) 78%); border: 1px solid rgba(233, 182, 90, 0.3); overflow: hidden; }
-.sealed .moonlit { position: absolute; right: 4%; top: 2%; }
-.sealed .scene { position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%); }
-.sealed .ground { position: absolute; left: 4%; bottom: 0; opacity: 0.9; }
+/* The sealed wall, lit at the end: the place, the moon over it, and the beast. */
+.sealed { position: relative; max-width: 560px; aspect-ratio: 4 / 3; margin: 14px auto; border-radius: 22px; background: radial-gradient(ellipse at 50% 62%, rgba(255, 196, 120, 0.3), rgba(10, 6, 4, 0.55) 80%); border: 1px solid rgba(233, 182, 90, 0.3); overflow: hidden; }
+.sealed .mark { width: 100%; height: auto; }
+.sealed .moonlit { position: absolute; right: 4%; top: 2%; width: 27%; }
+.sealed .beast { position: absolute; left: 50%; top: 50%; width: 58%; transform: translate(-50%, -50%); }
+.sealed .ground { position: absolute; left: 3%; bottom: 0; width: 41%; opacity: 0.9; }
 .how { margin-top: 18px; background: rgba(18, 12, 8, 0.46); border-radius: 14px; padding: 8px 14px; }
 .how summary { cursor: pointer; color: #e9b65a; }
 @media (max-width: 520px) {
-  .tablet { grid-template-columns: 1fr; }
-  .tablet > div { display: grid; grid-template-columns: 1fr 1fr; }
   h1 { font-size: 30px; }
+  .grid { gap: 4px; }
+  .slot { width: 52px; height: 40px; }
+}
+/* A wide screen: the cave on one side, the tablet on the other. */
+@media (min-aspect-ratio: 5/4) and (min-width: 820px) {
+  .play { max-width: 1180px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 22px; }
+  .ring { width: min(100%, 78dvh, 560px); }
+  .ring.small { width: min(90%, 60dvh, 420px); }
 }

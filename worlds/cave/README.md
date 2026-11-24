@@ -60,13 +60,32 @@ A browser test has played whole games with one, two, three and four people,
 and confirmed that the pass screen never contains a token, a tablet or the
 news.
 
+## The screens
+
+A turn is one screen, made to fit a phone without scrolling. Above is the
+cave: six walls in a ring round the fire, each lit on the side facing it, with
+every player's sign where she stands. Below are the beasts and the moons. The
+eighteen drawings appear once each, and they are at once the tablet and the
+things to ask about. A switch says whether a tap **chooses** (for the question)
+or **marks** (cross off, then ring as a suspect).
+
+Each drawing also carries what the tablet knows for certain, kept by itself:
+a small sign in the corner for whose it is (her own, by the fire, or whoever
+showed it to her), and beneath it the struck-through signs of players who had
+nothing when it was asked about. It records; it does not conclude.
+
+Every question is played out by the fire: the three drawings are painted on,
+then each player in turn has nothing or shows one, and the asker alone is
+shown which. Before a person's turn, the questions asked since she last looked
+are played one at a time, with a way to skip.
+
 ## The look
 
 Rock, firelight, and mineral paint, in the real palette of cave painting: red
 and yellow ochre, charcoal, manganese black, white calcite. Every drawing is a
 few strokes put through a filter that makes its edges wander and its colour
-patchy, as paint sits on stone. The rock is made on the page. A pool of
-torchlight follows the finger.
+patchy, as paint sits on stone, and can be put on a stroke at a time. The rock
+is made on the page. A pool of torchlight follows the finger.
 
 The drawings are this world's own. They borrow the general vocabulary of
 cave art (animals in profile, hands, dots, signs) and copy no particular
