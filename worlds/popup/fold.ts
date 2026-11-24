@@ -54,6 +54,8 @@ export interface Piece {
   reach: number;
   /** V-fold: opening towards the reader, where otherwise its point is towards the reader. */
   flip: boolean;
+  /** Double V: what is drawn on the small fold inside. Without it, the same as the big one. */
+  art2?: string;
 }
 export interface Spread {
   pieces: Piece[];
@@ -67,6 +69,8 @@ export interface Quad {
   uv: [number, number, number, number];
   /** False for legs and supports, which are plain paper. */
   art: boolean;
+  /** Part of a double V's inner fold, which has a picture of its own. */
+  inner?: boolean;
 }
 
 export const STANDS: Kind[] = ['vfold', 'tent', 'platform', 'stand', 'double'];
@@ -229,7 +233,7 @@ export function quads(piece: Piece, open: number, lift = 0): Quad[] {
     const from: V3 = add([0, 0, piece.z], first.crease, small.up);
     // To the second fold, the first one's crease is the spine and its wings are the pages.
     const second = vOn(from, first.crease, first.glueL, first.glueR, add(first.glueL, first.glueR), beta, small.w, small.h);
-    return [...first.quads, ...second.quads];
+    return [...first.quads, ...second.quads.map((q) => ({ ...q, inner: true }))];
   }
   if (piece.kind === 'slide') {
     // A picture on a strip, in a track on one page. `lift` is how far it has been pulled: 0 to 2.3, as for a flap.

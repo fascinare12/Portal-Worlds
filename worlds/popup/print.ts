@@ -100,7 +100,7 @@ function net(p: Piece, name: string): { svg: string; w: number; h: number; note:
   if (p.kind === 'double') {
     const small = inner(p);
     const first = net({ ...p, kind: 'vfold', flip: !p.flip }, name)!;
-    const second = net({ ...p, kind: 'vfold', w: small.w, h: small.h, flip: true }, name + 'x')!;
+    const second = net({ ...p, kind: 'vfold', art: p.art2 ?? p.art, w: small.w, h: small.h, flip: true }, name + 'x')!;
     return {
       svg: first.svg + `<g transform="translate(${n(first.w + 0.4)} 0)">${second.svg}</g>`,
       w: first.w + second.w + 0.4,

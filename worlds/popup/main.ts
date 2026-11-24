@@ -76,13 +76,13 @@ const own = (): Own => saved.own![Math.min(ownAt, saved.own!.length - 1)];
 const KINDS: Kind[] = ['vfold', 'tent', 'platform', 'flap', 'sticker', 'stand', 'double', 'slide'];
 const TRAY: Kind[] = ['vfold', 'stand', 'double', 'tent', 'platform', 'flap', 'slide', 'sticker'];
 const r2 = (v: number) => Math.round(v * 100) / 100;
-const pack = (spreads: Spread[]) => btoa(JSON.stringify(spreads.map((s) => s.pieces.map((p) => [KINDS.indexOf(p.kind), p.art, r2(p.x), r2(p.z), r2(p.w), r2(p.h), r2(p.angle), r2(p.reach), p.flip ? 1 : 0])))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const pack = (spreads: Spread[]) => btoa(JSON.stringify(spreads.map((s) => s.pieces.map((p) => [KINDS.indexOf(p.kind), p.art, r2(p.x), r2(p.z), r2(p.w), r2(p.h), r2(p.angle), r2(p.reach), p.flip ? 1 : 0, ...(p.art2 ? [p.art2] : [])])))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 function unpack(text: string): Spread[] | null {
   try {
     const rows = JSON.parse(atob(text.replace(/-/g, '+').replace(/_/g, '/'))) as (number | string)[][][];
     const num = (v: unknown, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number(v) || 0));
     return rows.slice(0, 24).map((row) => ({
-      pieces: row.slice(0, 40).map((a) => ({ kind: KINDS[Number(a[0])] ?? 'sticker', art: ART[String(a[1])] ? String(a[1]) : 'plain', x: num(a[2], -W, W), z: num(a[3], -L, L), w: num(a[4], 0.5, 20), h: num(a[5], 0.5, 20), angle: num(a[6], 30, 70), reach: num(a[7], 1, W), flip: !!a[8] })),
+      pieces: row.slice(0, 40).map((a) => ({ kind: KINDS[Number(a[0])] ?? 'sticker', art: ART[String(a[1])] ? String(a[1]) : 'plain', x: num(a[2], -W, W), z: num(a[3], -L, L), w: num(a[4], 0.5, 20), h: num(a[5], 0.5, 20), angle: num(a[6], 30, 70), reach: num(a[7], 1, W), flip: !!a[8], ...(a[9] && ART[String(a[9])] ? { art2: String(a[9]) } : {}) })),
     }));
   } catch {
     return null;
@@ -281,7 +281,7 @@ function rebuild(): void {
       const [u0, v0, u1, v1] = q.uv;
       g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([u0, v0, u1, v0, u1, v1, u0, v1]), 2));
       g.setIndex([0, 1, 2, 0, 2, 3]);
-      const mesh = new THREE.Mesh(g, q.art ? matOf(piece.art) : plain);
+      const mesh = new THREE.Mesh(g, q.art ? matOf(q.inner ? (piece.art2 ?? piece.art) : piece.art) : plain);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       mesh.userData.index = index;
@@ -425,6 +425,9 @@ function artList(): [string, (typeof ART)[string]][] {
   return [...first.map((id): [string, (typeof ART)[string]] => [id, ART[id]]), ...all.filter(([id]) => !first.includes(id))];
 }
 
+/** Pictures that look right as a smaller copy of themselves, one in front of the other. */
+const LAYERS = ['tree', 'pine', 'bush', 'hill', 'beanstalk', 'palm', 'flower', 'cloud', 'web', 'hair'];
+
 /** What the story asks of this spread, and whether it has it yet. */
 function need(): { ok: boolean; hint: string } {
   if (mode !== 'story' || visiting || at < 0) return { ok: true, hint: '' };
@@ -490,8 +493,12 @@ function draw(): void {
     ${
       sel
         ? `<div class="edit"><h3>${KIND_NAME[sel.kind]}${stands(sel) ? ` <small>${heightOf(sel).toFixed(1)} cm tall</small>` : ''}</h3>
-          <p class="say">This one is picked. Tap a picture to change it.</p>
-          <div class="arts">${artList().map(([id, a]) => `<button data-do="art" data-v="${id}" class="${sel.art === id ? 'on' : ''}" style="background-image:url(${urlOf(id)})" aria-label="${a.name}"></button>`).join('')}</div>
+          ${
+            sel.kind === 'double'
+              ? `<p class="say">A double V has two pictures: one on the big fold, and one on the small fold inside it.</p><div class="switch"><button class="${inside ? '' : 'on'}" data-do="which" data-v="0">The big fold</button><button class="${inside ? 'on' : ''}" data-do="which" data-v="1">The small one inside</button></div>`
+              : '<p class="say">This one is picked. Tap a picture to change it.</p>'
+          }
+          <div class="arts">${artList().map(([id, a]) => `<button data-do="art" data-v="${id}" class="${(sel.kind === 'double' && inside ? (sel.art2 ?? sel.art) : sel.art) === id ? 'on' : ''}" style="background-image:url(${urlOf(id)})" aria-label="${a.name}"></button>`).join('')}</div>
           ${SLIDERS[sel.kind].map(([key, name, lo, hi]) => `<label>${name}<input type="range" data-key="${key}" min="${lo}" max="${hi}" step="0.25" value="${sel[key]}"></label>`).join('')}
           <p class="tip">${sel.kind === 'vfold' || sel.kind === 'platform' || sel.kind === 'double' ? `A ${KIND_NAME[sel.kind].toLowerCase()} sits on the fold in the middle of the book. Drag it to slide it along the blue line.` : sel.kind === 'flap' ? 'Tap the flap again to lift it or let it down. Drag it to move it.' : 'Drag it to move it.'}</p>
           <div class="row nudge"><span>Move it</span><button data-do="nudge" data-v="0,-1" aria-label="Further back">▲ back</button><button data-do="nudge" data-v="0,1" aria-label="Nearer">▼ nearer</button>${sel.kind === 'vfold' || sel.kind === 'platform' || sel.kind === 'double' ? '' : '<button data-do="nudge" data-v="-1,0" aria-label="Left">◀</button><button data-do="nudge" data-v="1,0" aria-label="Right">▶</button>'}</div>
@@ -535,6 +542,8 @@ side.addEventListener('change', (e) => {
 });
 
 let armed = '';
+/** For a double V in hand: whether a picture tapped goes on the small fold inside, or the big one. */
+let inside = false;
 /** A piece being chosen, before it is on the page: first its kind, then what is on it, then where. */
 let pending: { kind: Kind } | null = null;
 side.addEventListener('click', (e) => {
@@ -549,6 +558,9 @@ side.addEventListener('click', (e) => {
   } else if (what === 'choose' && pending) {
     // One tap, one piece: it goes straight into the book, at a place where it works.
     const piece = fresh(pending.kind, v);
+    // A double V of something leafy looks right with the same again inside it. Of anything else
+    // (a house, a pig) a small copy inside looks wrong, so it starts with a bush in front instead.
+    if (piece.kind === 'double' && !LAYERS.includes(v) && !ART[v]?.paper) piece.art2 = 'bush';
     // It goes in the first free place: where it shuts, hits nothing, and does not lie on another of its kind.
     const lying = !stands(piece);
     const spots: [number, number][] = [];
@@ -586,8 +598,12 @@ side.addEventListener('click', (e) => {
     pending = null;
     draw();
   } else if (what === 'art') {
-    pieces[selected].art = v;
+    if (pieces[selected].kind === 'double' && inside) pieces[selected].art2 = v;
+    else pieces[selected].art = v;
     changed(true);
+  } else if (what === 'which') {
+    inside = v === '1';
+    draw();
   } else if (what === 'nudge') {
     const [dx, dz] = v.split(',').map(Number);
     moveTo(pieces[selected], pieces[selected].x + dx * 0.5, pieces[selected].z + dz * 0.5);
@@ -743,6 +759,7 @@ canvas.addEventListener('pointerdown', (e) => {
     const scale = (2 * (hit?.distance ?? camera.position.length()) * Math.tan((camera.fov * Math.PI) / 360)) / canvas.getBoundingClientRect().height;
     drag = { index, x: piece.x, z: piece.z, scale, moved: false, was: selected === index };
     if (selected !== index) {
+      inside = false;
       selected = index;
       draw();
     }
