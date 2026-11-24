@@ -208,9 +208,11 @@ export function quads(piece: Piece, open: number, lift = 0): Quad[] {
   const side = piece.x < 0 ? -1 : 1;
   const hinge = piece.z - piece.h / 2;
   const height = piece.kind === 'flap' ? 0.03 : 0.012;
-  const corner = (X: number, t: number): V3 => onPage(side, Math.abs(X), hinge + t * Math.cos(lift), height + t * Math.sin(lift), alpha);
   const x0 = piece.x - piece.w / 2;
   const x1 = piece.x + piece.w / 2;
+  // On a spread nothing flat may lie across the fold. On the cover, which has no fold, it may lie across the middle.
+  const across = x0 * x1 < 0;
+  const corner = (X: number, t: number): V3 => onPage(across ? 1 : side, across ? X : Math.abs(X), hinge + t * Math.cos(lift), height + t * Math.sin(lift), alpha);
   return [{ c: [corner(x0, piece.h), corner(x1, piece.h), corner(x1, 0), corner(x0, 0)], uv: [0, 0, 1, 1], art: true }];
 }
 
@@ -261,7 +263,17 @@ function crossing(a: Quad, b: Quad): boolean {
     [q.c[0], q.c[1], q.c[2]],
     [q.c[0], q.c[2], q.c[3]],
   ];
-  const edges = (q: Quad): [V3, V3][] => [0, 1, 2, 3].map((i) => [q.c[i], q.c[(i + 1) % 4]]);
+  // The edges, and lines across the inside as well: two pieces whose ends line up exactly
+  // cut through each other without any edge of one passing through the other.
+  const mix = (a: V3, b: V3, t: number): V3 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  const edges = (q: Quad): [V3, V3][] => {
+    const out: [V3, V3][] = [0, 1, 2, 3].map((i) => [q.c[i], q.c[(i + 1) % 4]]);
+    for (const t of [0.07, 0.25, 0.5, 0.75, 0.93]) {
+      out.push([mix(q.c[0], q.c[3], t), mix(q.c[1], q.c[2], t)]);
+      out.push([mix(q.c[0], q.c[1], t), mix(q.c[3], q.c[2], t)]);
+    }
+    return out;
+  };
   for (const [one, other] of [[a, b], [b, a]]) for (const [p, q] of edges(one)) for (const [t0, t1, t2] of tris(other)) if (pierces(p, q, t0, t1, t2)) return true;
   return false;
 }
@@ -274,14 +286,33 @@ function crossing(a: Quad, b: Quad): boolean {
 export function problems(spread: Spread): (string | null)[] {
   const out: (string | null)[] = spread.pieces.map(fits);
   const standing = spread.pieces.map((p, i) => ({ p, i })).filter(({ p }) => stands(p));
+  const BUMP = 'These two bump into each other as the book opens. Move one of them.';
+  const SPINE = 'These two are both glued to the same part of the fold in the middle. Slide one of them along.';
+  const clash = (a: number, b: number, why: string) => {
+    out[standing[a].i] ??= why;
+    out[standing[b].i] ??= why;
+  };
+  // What a piece takes up of the spine itself: a platform's middle leg stands along it;
+  // a V-fold and a stand-up are each glued at one point of it.
+  const onSpine = (p: Piece): [number, number] | null => (p.kind === 'platform' ? [p.z - p.w / 2, p.z + p.w / 2] : p.kind === 'tent' ? null : [p.z - 0.4, p.z + 0.4]);
+  for (let a = 0; a < standing.length; a++)
+    for (let b = a + 1; b < standing.length; b++) {
+      const sa = onSpine(standing[a].p);
+      const sb = onSpine(standing[b].p);
+      if (sa && sb && sa[0] < sb[1] && sb[0] < sa[1]) clash(a, b, SPINE);
+    }
+  // A tent is hollow, and something low may stand inside it; but nothing may pass through its ridge.
+  // So for this purpose each tent has a ceiling just under the ridge.
+  const solid = (p: Piece, open: number): Quad[] => {
+    const qs = quads(p, open);
+    if (p.kind !== 'tent') return qs;
+    const mix = (u: V3, v: V3): V3 => [u[0] + (v[0] - u[0]) * 0.96, u[1] + (v[1] - u[1]) * 0.96, u[2] + (v[2] - u[2]) * 0.96];
+    const [left, right] = qs;
+    return [...qs, { c: [mix(left.c[0], left.c[1]), mix(right.c[1], right.c[0]), mix(right.c[2], right.c[3]), mix(left.c[3], left.c[2])], uv: [0, 0, 1, 1], art: false }];
+  };
   for (const open of [1, 0.8, 0.6, 0.4, 0.2]) {
-    const at = standing.map(({ p }) => quads(p, open));
-    for (let a = 0; a < standing.length; a++)
-      for (let b = a + 1; b < standing.length; b++)
-        if (at[a].some((qa) => at[b].some((qb) => crossing(qa, qb)))) {
-          out[standing[a].i] ??= 'These two bump into each other as the book opens. Move one of them.';
-          out[standing[b].i] ??= 'These two bump into each other as the book opens. Move one of them.';
-        }
+    const at = standing.map(({ p }) => solid(p, open));
+    for (let a = 0; a < standing.length; a++) for (let b = a + 1; b < standing.length; b++) if (at[a].some((qa) => at[b].some((qb) => crossing(qa, qb)))) clash(a, b, BUMP);
   }
   return out;
 }

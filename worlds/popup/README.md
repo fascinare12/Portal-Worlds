@@ -13,7 +13,7 @@ sentence saying why:
 - it pokes out of the book when the book shuts;
 - its glue is not on the page;
 - a corner of it would be pushed through a page part way shut;
-- it would pass through another piece somewhere between shut and open.
+- it would pass through another piece somewhere between shut and open (a tent through a platform's top, for one), or two pieces are glued to the same stretch of the spine.
 
 ## The mechanisms
 
@@ -68,6 +68,16 @@ matching letters, and a sentence on how to put it in. It must be printed at
 **The printed sheets have not been made up in paper by anyone yet.** The
 geometry is the same as on the screen, but tab sizes, the platform's middle
 leg and the wording of the instructions are a first attempt.
+
+## The bookshelf and the covers
+
+The first screen is a bookshelf: the stories to build, the builder's own
+books (as many as wanted, each with a name), and a way to start a new one.
+Any book can be emptied to build it again, or an own book thrown away; both
+take two taps. Books are kept in this browser only.
+
+Every book comes off the shelf shut. Its front cover takes stickers, and an
+own book's cover has its title. The cover is printed with the rest.
 
 ## A book as a link
 
