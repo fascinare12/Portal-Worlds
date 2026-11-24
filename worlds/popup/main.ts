@@ -654,7 +654,10 @@ side.addEventListener('click', (e) => {
     keep();
     void turnTo(Math.max(0, at - 1));
   } else if (what === 'read') void read();
-  else if (what === 'print') print();
+  else if (what === 'print') {
+    b.textContent = 'Getting it ready…';
+    void print().then(() => draw());
+  }
   else if (what === 'link') {
     const url = `${location.origin}${location.pathname}#b=${pack(book())}`;
     const say = (t: string) => (b.textContent = t);
@@ -845,9 +848,25 @@ el('stop').onclick = () => {
 
 // ---- Printing ----
 
-function print(): void {
+/**
+ * The pictures on the sheets are images, and an image put on the page a moment
+ * ago may not have been drawn yet. Printing at once left most of them blank,
+ * so the printer is not called until every one of them is ready.
+ */
+async function print(): Promise<void> {
   const inStory = mode === 'story' && !visiting;
-  el('print').innerHTML = sheets(titleOf(), book(), inStory ? story.pages.map((p) => p.line) : [], coverNow());
+  const holder = el('print');
+  holder.innerHTML = sheets(titleOf(), book(), inStory ? story.pages.map((p) => p.line) : [], coverNow());
+  const urls = [...new Set(Array.from(holder.querySelectorAll('image')).map((i) => i.getAttribute('href') ?? ''))].filter(Boolean);
+  await Promise.all(
+    urls.map((url) => {
+      const img = new Image();
+      img.src = url;
+      return img.decode().catch(() => undefined);
+    }),
+  );
+  // And a moment for the page itself to lay them out.
+  await new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(done, 250))));
   window.print();
 }
 
