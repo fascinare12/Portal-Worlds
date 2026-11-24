@@ -22,6 +22,15 @@ interface Saved {
   /** The furthest spread of the story that has been reached. */
   reached: number;
   free: Spread[];
+  /** What is stuck on the front of the story's book. */
+  pigsCover?: Spread;
+  /** The builder's own books, each with its name and its cover. */
+  own?: Own[];
+}
+interface Own {
+  title: string;
+  cover: Spread;
+  spreads: Spread[];
 }
 const STORE = 'portal-worlds-popup-v1';
 const blank = (): Spread => ({ pieces: [] });
@@ -40,6 +49,13 @@ function load(): Saved {
 const saved = load();
 while (saved.pigs.length < PIGS.pages.length) saved.pigs.push(blank());
 if (!saved.free.length) saved.free.push(blank());
+saved.pigsCover ??= blank();
+// The one own book of the first version becomes the first on the shelf.
+saved.own ??= [{ title: 'My Pop-up Book', cover: blank(), spreads: saved.free }];
+if (!saved.own.length) saved.own.push({ title: 'My Pop-up Book', cover: blank(), spreads: [blank()] });
+/** Which of the builder's own books is open. */
+let ownAt = 0;
+const own = (): Own => saved.own![Math.min(ownAt, saved.own!.length - 1)];
 
 /** A book as a string short enough to go in a link. */
 // New kinds go on the end: a link holds each kind as its place in this list.
@@ -64,8 +80,14 @@ let mode: Mode = 'pigs';
 let at = 0;
 /** A book that came in a link is looked at without touching what is kept, until it is kept on purpose. */
 let visiting: Spread[] | null = null;
-const book = (): Spread[] => visiting ?? (mode === 'pigs' ? saved.pigs : saved.free);
-const spread = (): Spread => book()[at] ?? book()[0];
+const book = (): Spread[] => visiting ?? (mode === 'pigs' ? saved.pigs : own().spreads);
+/** The front cover is the page before the first: number −1. */
+const visitCover = blank();
+const coverNow = (): Spread => (visiting ? visitCover : mode === 'pigs' ? saved.pigsCover! : own().cover);
+const spread = (): Spread => (at < 0 ? coverNow() : (book()[at] ?? book()[0]));
+const titleOf = () => (visiting ? 'A book for you' : mode === 'pigs' ? PIGS.title : own().title);
+/** What is wrong on this spread. On the cover the only thing that can be is a sticker hanging off the edge. */
+const faultsNow = (): (string | null)[] => (at < 0 ? spread().pieces.map((q) => (Math.abs(q.x) + q.w / 2 > W / 2 + 0.01 || Math.abs(q.z) + q.h / 2 > L / 2 + 0.01 ? 'This hangs off the edge of the cover.' : null)) : problems(spread()));
 function keep(): void {
   if (visiting) return;
   try {
@@ -124,6 +146,60 @@ const halves = [-1, 1].map((side) => {
   scene.add(half);
   return { side, half };
 });
+
+// The shut book, seen from the front: what is shown for the cover.
+function coverFace(title: string): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = 520;
+  c.height = 760;
+  const g = c.getContext('2d');
+  if (!g) return c;
+  g.fillStyle = '#8a3340';
+  g.fillRect(0, 0, 520, 760);
+  // The weave of the cloth.
+  g.strokeStyle = 'rgba(255, 230, 220, 0.05)';
+  for (let i = 0; i < 760; i += 4) {
+    g.beginPath();
+    g.moveTo(0, i);
+    g.lineTo(520, i);
+    g.stroke();
+  }
+  g.strokeStyle = '#e9cf8f';
+  g.lineWidth = 4;
+  g.strokeRect(26, 26, 468, 708);
+  g.lineWidth = 1.5;
+  g.strokeRect(36, 36, 448, 688);
+  g.fillStyle = '#f4ead6';
+  g.textAlign = 'center';
+  g.font = '52px Georgia, serif';
+  // The title, on as many lines as it needs.
+  const lines: string[] = [];
+  let line = '';
+  for (const word of title.split(/\s+/).filter(Boolean)) {
+    if (line && g.measureText(`${line} ${word}`).width > 400) {
+      lines.push(line);
+      line = word;
+    } else line = line ? `${line} ${word}` : word;
+  }
+  if (line) lines.push(line);
+  lines.slice(0, 4).forEach((t, i) => g.fillText(t, 260, 130 + i * 62, 420));
+  return c;
+}
+const faceMap = new THREE.CanvasTexture(coverFace(''));
+faceMap.colorSpace = THREE.SRGBColorSpace;
+const shutBook = new THREE.Mesh(new THREE.BoxGeometry(W + 0.5, 1.1, L + 0.9), [coverMat, coverMat, new THREE.MeshLambertMaterial({ map: faceMap }), coverMat, pageMat, pageMat]);
+shutBook.position.y = -0.56;
+shutBook.castShadow = true;
+shutBook.receiveShadow = true;
+shutBook.visible = false;
+scene.add(shutBook);
+let faceTitle = '';
+function showTitle(): void {
+  if (faceTitle === titleOf()) return;
+  faceTitle = titleOf();
+  faceMap.image = coverFace(faceTitle);
+  faceMap.needsUpdate = true;
+}
 
 // ---- The pieces, as paper ----
 
@@ -206,20 +282,30 @@ function rebuild(): void {
   });
   while (lifts.length < made.length) lifts.push({ now: 0, want: 0 });
   lifts.length = made.length;
-  faults = problems(spread());
+  faults = faultsNow();
 }
 
 /** Puts every piece where it is at this moment: the book this far open, each flap this far lifted. */
 function place(): void {
-  const alpha = tilt(open);
-  for (const { side, half } of halves) half.rotation.z = side * alpha;
+  // The cover is a shut book lying flat: nothing on it folds.
+  const onCover = at < 0;
+  const shown = onCover ? 1 : open;
+  const alpha = tilt(shown);
+  for (const { side, half } of halves) {
+    half.rotation.z = side * alpha;
+    half.visible = !onCover;
+  }
+  shutBook.visible = onCover;
+  shutSlider.style.visibility = onCover ? 'hidden' : '';
+  gutter.visible = !onCover;
+  if (onCover) showTitle();
   const inHand = spread().pieces[selected];
   shade.visible = open > 0.9;
-  guide.visible = !!inHand && (inHand.kind === 'vfold' || inHand.kind === 'platform') && open > 0.97;
+  guide.visible = !onCover && !!inHand && (inHand.kind === 'vfold' || inHand.kind === 'platform') && open > 0.97;
   spread().pieces.forEach((piece, i) => {
     const m = made[i];
     if (!m) return;
-    const qs = quads(piece, open, lifts[i]?.now ?? 0);
+    const qs = quads(piece, shown, lifts[i]?.now ?? 0);
     const line = m.edge.geometry.getAttribute('position') as THREE.BufferAttribute;
     qs.forEach((q, k) => {
       const pos = m.meshes[k].geometry.getAttribute('position') as THREE.BufferAttribute;
@@ -277,6 +363,7 @@ async function turnTo(index: number): Promise<void> {
 
 const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const slider = el<HTMLInputElement>('open');
+const shutSlider = el('shut');
 const side = el('side');
 const banner = el('banner');
 const cover = el('cover');
@@ -309,7 +396,7 @@ const SLIDERS: Record<Kind, [keyof Piece, string, number, number][]> = {
 
 /** What the story asks of this spread, and whether it has it yet. */
 function need(): { ok: boolean; hint: string } {
-  if (mode !== 'pigs' || visiting) return { ok: true, hint: '' };
+  if (mode !== 'pigs' || visiting || at < 0) return { ok: true, hint: '' };
   if (faults.some(Boolean)) return { ok: false, hint: 'Something is edged in red. Tap it to see what is wrong.' };
   const hint = PIGS.pages[at].check(spread());
   return { ok: !hint, hint: hint ?? '' };
@@ -333,7 +420,7 @@ function under(flap: Piece): string {
 
 function changed(structure = false): void {
   if (structure) rebuild();
-  else faults = problems(spread());
+  else faults = faultsNow();
   keep();
   draw();
 }
@@ -343,12 +430,14 @@ function draw(): void {
   const story = mode === 'pigs' && !visiting;
   const state = need();
   const last = at === book().length - 1;
-  if (story) {
+  const onCover = at < 0;
+  if (onCover) banner.innerHTML = '<p class="need">The front cover. Decorate it with stickers.</p>';
+  else if (story) {
     const page = PIGS.pages[at];
     banner.innerHTML = `<p class="line">${page.line}</p><p class="need ${state.ok ? 'met' : ''}"><b>${state.ok ? '✓' : '✎'}</b> ${page.need}</p>${state.ok ? '' : `<p class="hint">${state.hint}</p>`}`;
   } else banner.innerHTML = visiting ? '<p class="need">A book someone sent you.</p>' : '';
   banner.hidden = !banner.innerHTML;
-  if (story && state.ok && at === saved.reached && at < PIGS.pages.length - 1) {
+  if (story && !onCover && state.ok && at === saved.reached && at < PIGS.pages.length - 1) {
     saved.reached = at + 1;
     keep();
   }
@@ -359,8 +448,11 @@ function draw(): void {
     ${
       sel || pending
         ? // With a piece in hand or the pictures open, the top corner goes back out of that, never to another page.
-          `<div class="nav"><button data-do="${sel ? 'done' : 'cancel'}" class="go">◀ ${sel && pending ? 'Back to the pictures' : 'Back to the pieces'}</button><span>Spread ${at + 1}</span></div>`
-        : `<div class="nav"><button data-do="prev"${at === 0 ? ' disabled' : ''}>◀ Page before</button><span>${at + 1} of ${book().length}</span>
+          `<div class="nav"><button data-do="${sel ? 'done' : 'cancel'}" class="go">◀ ${sel && pending ? 'Back to the pictures' : 'Back to the pieces'}</button><span>${onCover ? 'Cover' : `Spread ${at + 1}`}</span></div>`
+        : onCover
+          ? `<div class="nav"><button data-do="shelf">◀ Bookshelf</button><span>Cover</span><button data-do="next" class="go">Open it ▶</button></div>
+             ${mode === 'free' && !visiting ? `<label class="title">What is it called?<input type="text" data-title maxlength="48" value="${own().title.replace(/"/g, '&quot;')}"></label>` : ''}`
+          : `<div class="nav"><button data-do="prev">◀ ${at === 0 ? 'Front cover' : 'Page before'}</button><span>${at + 1} of ${book().length}</span>
       <button data-do="next" class="${story && state.ok ? 'go' : ''}"${canNext ? '' : ' disabled'}>${story && last ? 'The end ▶' : !story && last ? '＋ New page' : 'Next page ▶'}</button></div>`
     }
     ${fault ? `<p class="fault">${fault}</p>` : ''}
@@ -370,7 +462,7 @@ function draw(): void {
           <p class="say">This one is picked. Tap a picture to change it.</p>
           <div class="arts">${Object.entries(ART).map(([id, a]) => `<button data-do="art" data-v="${id}" class="${sel.art === id ? 'on' : ''}" style="background-image:url(${urlOf(id)})" aria-label="${a.name}"></button>`).join('')}</div>
           ${SLIDERS[sel.kind].map(([key, name, lo, hi]) => `<label>${name}<input type="range" data-key="${key}" min="${lo}" max="${hi}" step="0.25" value="${sel[key]}"></label>`).join('')}
-          <p class="tip">${sel.kind === 'vfold' || sel.kind === 'platform' ? `A ${KIND_NAME[sel.kind].toLowerCase()} sits on the fold in the middle of the book. Drag it, or tap the page, to slide it along the blue line.` : sel.kind === 'flap' ? 'Tap the flap again to lift it or let it down. Drag it, or tap the page, to move it.' : 'Drag it, or tap the page, to move it.'}</p>
+          <p class="tip">${sel.kind === 'vfold' || sel.kind === 'platform' ? `A ${KIND_NAME[sel.kind].toLowerCase()} sits on the fold in the middle of the book. Drag it to slide it along the blue line.` : sel.kind === 'flap' ? 'Tap the flap again to lift it or let it down. Drag it to move it.' : 'Drag it to move it.'}</p>
           <div class="row nudge"><span>Move it</span><button data-do="nudge" data-v="0,-1" aria-label="Further back">▲ back</button><button data-do="nudge" data-v="0,1" aria-label="Nearer">▼ nearer</button>${sel.kind === 'vfold' || sel.kind === 'platform' ? '' : '<button data-do="nudge" data-v="-1,0" aria-label="Left">◀</button><button data-do="nudge" data-v="1,0" aria-label="Right">▶</button>'}</div>
           ${sel.kind === 'flap' ? `<p class="say">${under(sel)}</p>` : ''}
           <div class="row">${sel.kind === 'flap' ? `<button data-do="lift" class="go">${lifts[selected]?.want ? 'Let it down' : 'Lift it up'}</button>` : ''}${sel.kind === 'vfold' ? '<button data-do="flip">Turn it round</button>' : sel.kind === 'stand' ? '<button data-do="flip">Brace on the other side</button>' : ''}<button data-do="copy">Another like it</button><button data-do="delete" class="warn">Take it off</button><button data-do="done" class="go">Done</button></div></div>`
@@ -379,19 +471,24 @@ function draw(): void {
               <div class="arts big">${Object.entries(ART).map(([id, a]) => `<button data-do="choose" data-v="${id}" style="background-image:url(${urlOf(id)})" aria-label="${a.name}"></button>`).join('')}</div>
               <p class="tip">${KIND_SAYS[pending.kind]} To change one that is already in the book, tap it on the page first, then tap a picture.</p>
               <div class="row"><button data-do="cancel">Back to the pieces</button></div></div>`
-          : `<h3 class="ask">Add something</h3><div class="tray">${TRAY.map((k) => `<button data-do="add" data-v="${k}"><svg viewBox="0 0 40 40">${ICONS[k]}</svg><b>${KIND_NAME[k]}</b><small>${KIND_SAYS[k]}</small></button>`).join('')}</div>
-          <div class="row menu">${pieces.some((q) => q.kind === 'flap') ? `<button data-do="flaps">${lifts.some((l, i) => pieces[i]?.kind === 'flap' && l.want) ? 'Shut the flaps' : 'Lift the flaps'}</button>` : ''}<button data-do="read">▶ Read the book</button><button data-do="print">Print it</button>${visiting ? '<button data-do="mine">Keep it as mine</button>' : mode === 'free' ? '<button data-do="link">Copy a link</button>' : ''}${mode === 'free' && !visiting && book().length > 1 ? '<button data-do="unpage" class="warn">Tear out this page</button>' : ''}<button data-do="cover">Front cover</button></div>
+          : `<h3 class="ask">Add something</h3><div class="tray">${(onCover ? (['sticker'] as Kind[]) : TRAY).map((k) => `<button data-do="add" data-v="${k}"><svg viewBox="0 0 40 40">${ICONS[k]}</svg><b>${KIND_NAME[k]}</b><small>${KIND_SAYS[k]}</small></button>`).join('')}</div>
+          <div class="row menu">${pieces.some((q) => q.kind === 'flap') ? `<button data-do="flaps">${lifts.some((l, i) => pieces[i]?.kind === 'flap' && l.want) ? 'Shut the flaps' : 'Lift the flaps'}</button>` : ''}<button data-do="read">▶ Read the book</button><button data-do="print">Print it</button>${visiting ? '<button data-do="mine">Keep it as mine</button>' : mode === 'free' ? '<button data-do="link">Copy a link</button>' : ''}${mode === 'free' && !visiting && book().length > 1 ? '<button data-do="unpage" class="warn">Tear out this page</button>' : ''}${onCover ? '' : '<button data-do="cover">Front cover</button>'}<button data-do="shelf">Bookshelf</button></div>
           <p class="tip">Tap a piece on the page to change it. Drag it to move it. Drag the table to look round. Slide the book shut to see how it folds.</p>`
     }`;
 }
 
 side.addEventListener('input', (e) => {
   const input = e.target as HTMLInputElement;
+  if (input.dataset.title !== undefined) {
+    own().title = input.value.trim() || 'My Pop-up Book';
+    keep();
+    return;
+  }
   const piece = spread().pieces[selected];
   if (!piece || !input.dataset.key) return;
   (piece as unknown as Record<string, number>)[input.dataset.key] = Number(input.value);
   if (piece.kind === 'stand') moveTo(piece, piece.x, piece.z);
-  faults = problems(spread());
+  faults = faultsNow();
   keep();
   // The panel is not drawn again while a slider is held, or the slider would be torn from under the finger.
   const small = side.querySelector('h3 small');
@@ -401,7 +498,10 @@ side.addEventListener('input', (e) => {
   const say = side.querySelector('.edit .say');
   if (say && piece.kind === 'flap') say.textContent = under(piece);
 });
-side.addEventListener('change', () => draw());
+side.addEventListener('change', (e) => {
+  // The title box keeps its place while it is typed in.
+  if ((e.target as HTMLElement).dataset.title === undefined) draw();
+});
 
 let armed = '';
 /** A piece being chosen, before it is on the page: first its kind, then what is on it, then where. */
@@ -423,6 +523,7 @@ side.addEventListener('click', (e) => {
     const spots: [number, number][] = [];
     if (piece.kind === 'stand') for (const z of [-3, 2, -6, 5, -1, 7, -8]) for (const x of [6.5, -6.5, 9.5, -9.5]) spots.push([x, z]);
     else if (!lying) for (const z of [0, -5, 5, -2.5, 2.5, 7, -7, -8.5, 8.5]) spots.push([0, z]);
+    else if (at < 0) for (const z of [3, -2, 7, -6]) for (const x of [0, -3.5, 3.5]) spots.push([x, z]);
     else for (const z of [4, -3, 7, -6, 0]) for (const x of [6.5, -6.5, 3.5, -3.5, 9.5, -9.5]) spots.push([x, z]);
     const free = (): boolean => {
       if (lying) return !pieces.some((q) => q.kind === piece.kind && Math.abs(q.x - piece.x) < (q.w + piece.w) / 2 && Math.abs(q.z - piece.z) < (q.h + piece.h) / 2);
@@ -483,11 +584,12 @@ side.addEventListener('click', (e) => {
     selected = -1;
     draw();
   } else if (what === 'prev') void turnTo(at - 1);
+  else if (what === 'next' && at < 0) void turnTo(0);
   else if (what === 'next') {
     if (at < book().length - 1) void turnTo(at + 1);
     else if (mode === 'pigs' && !visiting) void read();
     else if (!visiting) {
-      saved.free.push(blank());
+      own().spreads.push(blank());
       keep();
       void turnTo(at + 1);
     }
@@ -499,7 +601,7 @@ side.addEventListener('click', (e) => {
       return;
     }
     armed = '';
-    saved.free.splice(at, 1);
+    own().spreads.splice(at, 1);
     keep();
     void turnTo(Math.max(0, at - 1));
   } else if (what === 'read') void read();
@@ -512,16 +614,18 @@ side.addEventListener('click', (e) => {
   } else if (what === 'mine') {
     if (armed !== 'mine') {
       armed = 'mine';
-      b.textContent = 'This replaces your own book. Tap again';
+      b.textContent = 'Tap again to put it on your shelf';
       setTimeout(() => (armed = ''), 3000);
       return;
     }
-    saved.free = visiting!;
+    saved.own!.push({ title: 'A book I was sent', cover: blank(), spreads: visiting! });
+    ownAt = saved.own!.length - 1;
     visiting = null;
     history.replaceState(null, '', location.pathname);
     keep();
     draw();
-  } else if (what === 'cover') showCover();
+  } else if (what === 'cover') void turnTo(-1);
+  else if (what === 'shelf') showShelf();
 });
 
 slider.addEventListener('input', () => {
@@ -532,7 +636,6 @@ slider.addEventListener('input', () => {
 // ---- Touching the book ----
 
 const ray = new THREE.Raycaster();
-const flat = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 /** `was`: it was already the piece in hand when touched, so a tap means more than choosing it. */
 let drag: { index: number; x: number; z: number; scale: number; moved: boolean; was: boolean } | null = null;
 let look: { x: number; y: number } | null = null;
@@ -555,21 +658,55 @@ function moveTo(piece: Piece, x: number, z: number): void {
     const least = piece.w / 2 + STAND_CLEAR;
     const side = Math.abs(x) < 0.5 ? Math.sign(piece.x) || 1 : Math.sign(x);
     piece.x = side * snap(Math.max(least, Math.min(W - piece.w / 2, Math.abs(x))));
+  } else if (lying && at < 0) {
+    piece.x = snap(Math.max(-W / 2 + piece.w / 2, Math.min(W / 2 - piece.w / 2, x)));
   } else if (lying) {
     const side = Math.abs(x) < 0.3 ? Math.sign(piece.x) || 1 : Math.sign(x);
     piece.x = side * snap(Math.max(piece.w / 2 + 0.3, Math.min(W - piece.w / 2, Math.abs(x))));
   }
+}
+/** The piece whose outline on the screen is nearest the finger, if the finger is within a little of it; else −1. */
+function near(e: PointerEvent): number {
+  const r = canvas.getBoundingClientRect();
+  const v = new THREE.Vector3();
+  let best = -1;
+  let bestFar = Infinity;
+  spread().pieces.forEach((piece, i) => {
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    let y0 = Infinity;
+    let y1 = -Infinity;
+    for (const q of quads(piece, at < 0 ? 1 : open, lifts[i]?.now ?? 0))
+      for (const c of q.c) {
+        v.set(c[0], c[1], c[2]).project(camera);
+        const sx = r.left + ((v.x + 1) / 2) * r.width;
+        const sy = r.top + ((1 - v.y) / 2) * r.height;
+        x0 = Math.min(x0, sx);
+        x1 = Math.max(x1, sx);
+        y0 = Math.min(y0, sy);
+        y1 = Math.max(y1, sy);
+      }
+    const slack = 22;
+    if (e.clientX < x0 - slack || e.clientX > x1 + slack || e.clientY < y0 - slack || e.clientY > y1 + slack) return;
+    const far = Math.hypot(e.clientX - (x0 + x1) / 2, e.clientY - (y0 + y1) / 2);
+    if (far < bestFar) {
+      bestFar = far;
+      best = i;
+    }
+  });
+  return best;
 }
 canvas.addEventListener('pointerdown', (e) => {
   canvas.setPointerCapture(e.pointerId);
   downAt = { x: e.clientX, y: e.clientY };
   aim(e);
   const hit = reading ? null : ray.intersectObjects(made.flatMap((m) => m.meshes))[0];
-  if (hit) {
-    const index = hit.object.userData.index as number;
+  // A near miss still takes hold: a small or far-off piece is hard to touch exactly.
+  const index = hit ? (hit.object.userData.index as number) : reading ? -1 : near(e);
+  if (index >= 0) {
     const piece = spread().pieces[index];
     // How far across the table one step of the finger is, at the place that was touched.
-    const scale = (2 * hit.distance * Math.tan((camera.fov * Math.PI) / 360)) / canvas.getBoundingClientRect().height;
+    const scale = (2 * (hit?.distance ?? camera.position.length()) * Math.tan((camera.fov * Math.PI) / 360)) / canvas.getBoundingClientRect().height;
     drag = { index, x: piece.x, z: piece.z, scale, moved: false, was: selected === index };
     if (selected !== index) {
       selected = index;
@@ -587,7 +724,7 @@ canvas.addEventListener('pointermove', (e) => {
     const across = (e.clientX - downAt.x) * drag.scale;
     const away = ((downAt.y - e.clientY) * drag.scale) / Math.max(0.35, Math.sin(elevation));
     moveTo(spread().pieces[drag.index], drag.x + across * Math.cos(azimuth) - away * Math.sin(azimuth), drag.z - across * Math.sin(azimuth) - away * Math.cos(azimuth));
-    faults = problems(spread());
+    faults = faultsNow();
   } else if (look) {
     azimuth = Math.max(-1.3, Math.min(1.3, azimuth - (e.clientX - look.x) * 0.006));
     elevation = Math.max(0.2, Math.min(1.5, elevation + (e.clientY - look.y) * 0.005));
@@ -603,14 +740,10 @@ canvas.addEventListener('pointerup', () => {
       draw();
     }
     if (drag.moved) changed();
-  } else if (look && Math.hypot(downAt.x - look.x, downAt.y - look.y) < 6 && selected >= 0 && open > 0.97 && !reading) {
-    // A tap on the page puts the piece in hand there.
-    aim({ clientX: downAt.x, clientY: downAt.y });
-    const p = new THREE.Vector3();
-    if (ray.ray.intersectPlane(flat, p) && Math.abs(p.x) <= W + 1 && Math.abs(p.z) <= L / 2 + 1) {
-      moveTo(spread().pieces[selected], p.x, p.z);
-      changed();
-    }
+  } else if (look && Math.hypot(downAt.x - look.x, downAt.y - look.y) < 6 && selected >= 0 && !reading) {
+    // A tap on the bare page lets go of the piece in hand. It does not move it: that is what dragging is for.
+    selected = -1;
+    draw();
   }
   drag = null;
   look = null;
@@ -626,6 +759,13 @@ async function read(): Promise<void> {
   document.body.classList.add('reading');
   const story = mode === 'pigs' && !visiting;
   const token = () => reading;
+  // It begins shut, with its cover showing.
+  at = -1;
+  lifts = [];
+  rebuild();
+  caption.innerHTML = '';
+  await pause(2.2);
+  open = 0;
   for (let i = 0; i < book().length && token(); i++) {
     await swing(0, 0.6);
     if (!token()) break;
@@ -656,32 +796,84 @@ el('stop').onclick = () => {
 
 function print(): void {
   const story = mode === 'pigs' && !visiting;
-  el('print').innerHTML = sheets(story ? PIGS.title : 'My pop-up book', book(), story ? PIGS.pages.map((p) => p.line) : []);
+  el('print').innerHTML = sheets(titleOf(), book(), story ? PIGS.pages.map((p) => p.line) : [], coverNow());
   window.print();
 }
 
-// ---- The front cover ----
+// ---- The bookshelf: which book to work on ----
 
-function showCover(): void {
-  const started = saved.pigs.some((s) => s.pieces.length);
-  cover.innerHTML = `<div class="card"><h1>The Pop-up Book</h1><p>Build a book that stands up when it opens. Then print it, cut it out, and make the real one.</p>
-    <button data-go="pigs"><b>${PIGS.title}</b><small>${started ? 'Carry on with the story' : 'A story to build, a page at a time'}</small></button>
-    <button data-go="free"><b>My own book</b><small>Empty pages, and everything in the tray</small></button></div>`;
+let shelfArmed = '';
+function showShelf(): void {
+  const started = saved.pigs.some((q) => q.pieces.length);
+  const count = (spreads: Spread[]) => {
+    const n = spreads.reduce((sum, q) => sum + q.pieces.length, 0);
+    return n ? `${spreads.length} ${spreads.length === 1 ? 'spread' : 'spreads'}, ${n} ${n === 1 ? 'piece' : 'pieces'}` : 'Empty pages, and everything in the tray';
+  };
+  const again = (key: string, has: boolean) => (has ? `<button class="small warn" data-clear="${key}">${shelfArmed === key ? 'Tap again to empty it' : 'Start it again'}</button>` : '');
+  cover.innerHTML = `<div class="card"><h1>The Bookshelf</h1><p>Build a book that stands up when it opens. Then print it, cut it out, and make the real one.</p>
+    <h2>Stories to build</h2>
+    <div class="book"><button data-go="pigs"><b>${PIGS.title}</b><small>${started ? 'Carry on with the story' : 'A story to build, a page at a time'}</small></button>${again('pigs', started || saved.pigsCover!.pieces.length > 0)}</div>
+    <h2>Your own books</h2>
+    ${saved.own!.map((o, i) => `<div class="book"><button data-go="${i}"><b>${o.title.replace(/</g, '&lt;')}</b><small>${count(o.spreads)}</small></button>${again(String(i), o.spreads.some((q) => q.pieces.length) || o.cover.pieces.length > 0)}${saved.own!.length > 1 ? `<button class="small warn" data-drop="${i}">${shelfArmed === `drop${i}` ? 'Tap again to throw it away' : 'Throw away'}</button>` : ''}</div>`).join('')}
+    <button data-new="1" class="new">＋ A new book</button></div>`;
   cover.hidden = false;
 }
-cover.addEventListener('click', (e) => {
-  const b = (e.target as HTMLElement).closest<HTMLElement>('[data-go]');
-  if (!b) return;
-  mode = b.dataset.go as Mode;
+function openBook(): void {
   visiting = null;
-  at = mode === 'pigs' ? Math.min(saved.reached, PIGS.pages.length - 1) : 0;
+  // Every book is taken off the shelf shut, with its cover up.
+  at = -1;
   selected = -1;
+  pending = null;
   lifts = [];
   cover.hidden = true;
-  open = 0;
+  open = 1;
   rebuild();
   draw();
-  void swing(1, 1.2);
+}
+cover.addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLElement>('button');
+  if (!b) return;
+  // Emptying a book, or throwing one away, takes two taps.
+  const risky = b.dataset.clear !== undefined ? b.dataset.clear : b.dataset.drop !== undefined ? `drop${b.dataset.drop}` : null;
+  if (risky !== null && shelfArmed !== risky) {
+    shelfArmed = risky;
+    showShelf();
+    setTimeout(() => {
+      if (shelfArmed === risky) {
+        shelfArmed = '';
+        if (!cover.hidden) showShelf();
+      }
+    }, 3000);
+    return;
+  }
+  shelfArmed = '';
+  if (b.dataset.clear === 'pigs') {
+    saved.pigs = PIGS.pages.map(blank);
+    saved.pigsCover = blank();
+    saved.reached = 0;
+  } else if (b.dataset.clear !== undefined) {
+    const o = saved.own![Number(b.dataset.clear)];
+    o.spreads = [blank()];
+    o.cover = blank();
+  } else if (b.dataset.drop !== undefined) {
+    saved.own!.splice(Number(b.dataset.drop), 1);
+    ownAt = 0;
+  } else if (b.dataset.new) {
+    saved.own!.push({ title: 'My Pop-up Book', cover: blank(), spreads: [blank()] });
+    ownAt = saved.own!.length - 1;
+    mode = 'free';
+    keep();
+    return openBook();
+  } else if (b.dataset.go !== undefined) {
+    if (b.dataset.go === 'pigs') mode = 'pigs';
+    else {
+      mode = 'free';
+      ownAt = Number(b.dataset.go);
+    }
+    return openBook();
+  } else return;
+  keep();
+  showShelf();
 });
 el('home').onclick = () => {
   window.location.href = '../../index.html#from-popup';
@@ -716,7 +908,7 @@ if (got?.length) {
   visiting = got;
   mode = 'free';
   cover.hidden = true;
-} else showCover();
+} else showShelf();
 rebuild();
 draw();
 frame();

@@ -151,10 +151,15 @@ function net(p: Piece, name: string): { svg: string; w: number; h: number; note:
 }
 
 /** Everything needed to make the book, as sheets to print. */
-export function sheets(title: string, spreads: Spread[], lines: string[] = []): string {
+export function sheets(title: string, spreads: Spread[], lines: string[] = [], cover: Spread | null = null): string {
   let out = `<header class="sheet"><h1>${title}</h1><p><b>Print at 100% (not "fit to page")</b>, on card or heavy paper if you have it. A whole spread is ${2 * W} cm by ${L} cm.</p>
     <p><span class="k cut"></span> cut &nbsp; <span class="k fold"></span> fold &nbsp; <span class="k glue"></span> glue here</p>
     <p>For each spread: cut out the pages and fold them down the middle. Cut out the pieces. Each grey tab has a letter; glue it on the grey patch with the same letter. For pieces that go on both pages, glue one side, then shut the book on the other so it finds its own place.</p></header>`;
+  if (cover) {
+    // The front cover: the stickers where they were put, and the title. Glue it to the outside of the first spread.
+    const inner = `<rect x="0" y="0" width="${W}" height="${L}" ${cutLine}/>` + label(W / 2, 2.6, title, 0.9) + cover.pieces.map((p) => picture(p.art, W / 2 + p.x - p.w / 2, L / 2 + p.z - p.h / 2, p.w, p.h)).join('');
+    out += sheet(W, L, inner, 'The front cover. Glue it on the outside of the first spread, on the right-hand half.');
+  }
   spreads.forEach((spread, s) => {
     const names = spread.pieces.map((_, i) => LETTERS[i % LETTERS.length]);
     out += sheet(2 * W, L, base(spread, names), `Spread ${s + 1}: the pages${lines[s] ? `. <i>${lines[s]}</i>` : ''}`);
