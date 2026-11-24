@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import './popup.css';
-import { ART, canvasOf, pagePaper, urlOf } from './art';
+import { ART, canvasOf, loadPainted, pageArt, pagePaper, urlOf } from './art';
 import { L, STAND_CLEAR, W, checkFold, fits, fresh, moves, heightOf, problems, quads, stands, tilt } from './fold';
 import type { Kind, Piece, Spread } from './fold';
 import { sheets } from './print';
@@ -161,8 +161,40 @@ const halves = [-1, 1].map((side) => {
   cover.castShadow = true;
   half.add(page, cover);
   scene.add(half);
-  return { side, half };
+  // A painted background, where the spread has one: a printed sheet lying on the page.
+  const sheet = new THREE.Mesh(new THREE.PlaneGeometry(W, L), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+  sheet.rotation.x = -Math.PI / 2;
+  sheet.position.set((side * W) / 2, 0.004, 0);
+  sheet.receiveShadow = true;
+  sheet.visible = false;
+  half.add(sheet);
+  return { side, half, sheet };
 });
+let backdrop: string | undefined;
+/** Puts the spread's painted background on the pages, or takes it off. */
+function showBackdrop(): void {
+  const url = mode === 'story' && !visiting && at >= 0 ? pageArt(story.id, at) : undefined;
+  if (url === backdrop) return;
+  backdrop = url;
+  for (const { sheet } of halves) sheet.visible = false;
+  if (!url) return;
+  new THREE.TextureLoader().load(url, (whole) => {
+    if (backdrop !== url) return;
+    for (const { side, sheet } of halves) {
+      // Each page shows its own half of the one picture.
+      const map = whole.clone();
+      map.colorSpace = THREE.SRGBColorSpace;
+      map.repeat.set(0.5, 1);
+      map.offset.set(side < 0 ? 0 : 0.5, 0);
+      map.needsUpdate = true;
+      const mat = sheet.material as THREE.MeshLambertMaterial;
+      mat.map?.dispose();
+      mat.map = map;
+      mat.needsUpdate = true;
+      sheet.visible = true;
+    }
+  });
+}
 
 // The shut book, seen from the front: what is shown for the cover.
 function coverFace(title: string): HTMLCanvasElement {
@@ -297,6 +329,7 @@ function rebuild(): void {
     pieceRoot.add(edge);
     return { meshes, edge };
   });
+  showBackdrop();
   while (lifts.length < made.length) lifts.push({ now: 0, want: 0 });
   lifts.length = made.length;
   faults = faultsNow();
@@ -856,7 +889,7 @@ el('stop').onclick = () => {
 async function print(): Promise<void> {
   const inStory = mode === 'story' && !visiting;
   const holder = el('print');
-  holder.innerHTML = sheets(titleOf(), book(), inStory ? story.pages.map((p) => p.line) : [], coverNow());
+  holder.innerHTML = sheets(titleOf(), book(), inStory ? story.pages.map((p) => p.line) : [], coverNow(), inStory ? story.pages.map((_, i) => pageArt(story.id, i)) : []);
   const urls = [...new Set(Array.from(holder.querySelectorAll('image')).map((i) => i.getAttribute('href') ?? ''))].filter(Boolean);
   await Promise.all(
     urls.map((url) => {
@@ -987,6 +1020,12 @@ if (got?.length) {
 rebuild();
 draw();
 frame();
+// Painted pictures take the place of the drawn ones as they arrive.
+loadPainted((id) => {
+  const m = mats.get(id) as THREE.MeshLambertMaterial | undefined;
+  if (m?.map) m.map.needsUpdate = true;
+  draw();
+});
 
 (window as unknown as { popup: Record<string, unknown> }).popup = {
   check: checkFold,

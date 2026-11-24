@@ -186,7 +186,7 @@ function net(p: Piece, name: string): { svg: string; w: number; h: number; note:
 }
 
 /** Everything needed to make the book, as sheets to print. */
-export function sheets(title: string, spreads: Spread[], lines: string[] = [], cover: Spread | null = null): string {
+export function sheets(title: string, spreads: Spread[], lines: string[] = [], cover: Spread | null = null, backs: (string | undefined)[] = []): string {
   let out = `<header class="sheet"><h1>${title}</h1><p><b>Print at 100% (not "fit to page")</b>, on card or heavy paper if you have it. A whole spread is ${2 * W} cm by ${L} cm.</p>
     <p><span class="k cut"></span> cut &nbsp; <span class="k fold"></span> fold &nbsp; <span class="k glue"></span> glue here</p>
     <p>For each spread: cut out the pages and fold them down the middle. Cut out the pieces. Each grey tab has a letter; glue it on the grey patch with the same letter. For pieces that go on both pages, glue one side, then shut the book on the other so it finds its own place.</p></header>`;
@@ -197,7 +197,8 @@ export function sheets(title: string, spreads: Spread[], lines: string[] = [], c
   }
   spreads.forEach((spread, s) => {
     const names = spread.pieces.map((_, i) => LETTERS[i % LETTERS.length]);
-    out += sheet(2 * W, L, base(spread, names), `Spread ${s + 1}: the pages${lines[s] ? `. <i>${lines[s]}</i>` : ''}`);
+    const back = backs[s] ? `<image href="${backs[s]}" xlink:href="${backs[s]}" x="0" y="0" width="${2 * W}" height="${L}" preserveAspectRatio="none"/>` : '';
+    out += sheet(2 * W, L, back + base(spread, names), `Spread ${s + 1}: the pages${lines[s] ? `. <i>${lines[s]}</i>` : ''}`);
     const notes: string[] = [];
     spread.pieces.forEach((p, i) => {
       const made = net(p, names[i]);
