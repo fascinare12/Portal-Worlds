@@ -104,19 +104,26 @@ putting a file in `pictures/` (see the README there). The book loads whatever
 is there and keeps the drawing for the rest. Painted backgrounds are printed
 on the page sheets.
 
-**None have been made yet.** To make them:
+All 97 have been made (49 pictures, 8 papers, 40 page backgrounds) with
+`scripts/illustrate.mjs`, and each was looked at. To make one again:
 
 1. The Replicate token has to be in the session's environment as
    `REPLICATE_API_TOKEN`. It must never be committed or pasted into a chat.
-2. `node scripts/illustrate.mjs --list` shows the 97 pictures it would make
-   and the prompt for each, and makes nothing.
-3. Check the two model names at the top of the script against replicate.com:
-   it was written without a token to try them with.
-4. Try a few first (`node scripts/illustrate.mjs pig wolf tree`), look at
-   them in the book, and adjust the style line in the script before making
-   the rest. Then `node scripts/illustrate.mjs`.
-5. Look at every picture before committing. Delete and re-run any that is
-   wrong; a file that exists is left alone.
+2. Delete its file, then `node scripts/illustrate.mjs wolf`. A file that
+   exists is left alone. `--seed=12` paints it differently; several pictures
+   here are from a seed other than the script's own, chosen from a few tries.
+3. `node scripts/illustrate.mjs --list` shows what is missing and the prompt
+   for each, and makes nothing.
+4. Look at every picture before committing it.
+
+What the script does to a picture after it is painted: the background is
+taken away, anything not touching the thing itself is rubbed out (the painter
+likes to add a strip of grass underneath), and it is cut down to the thing,
+so that it stands on the fold at full size. A page background is cropped to
+26 by 19 and faded towards the page's cream, so that what pops up stands out.
+
+The painter sometimes refuses a harmless prompt ("User Input Error"); another
+seed or other words get past it.
 
 The fold checks still treat each picture as its whole square, and the
 stories still name pictures by the same ids, so nothing else changes.
