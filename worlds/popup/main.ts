@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import './popup.css';
 import { ART, canvasOf, pagePaper, urlOf } from './art';
-import { L, STAND_CLEAR, W, checkFold, fresh, heightOf, problems, quads, stands, tilt } from './fold';
+import { L, STAND_CLEAR, W, checkFold, fits, fresh, moves, heightOf, problems, quads, stands, tilt } from './fold';
 import type { Kind, Piece, Spread } from './fold';
 import { sheets } from './print';
-import { PIGS } from './story';
+import { STORIES } from './story';
+import type { Story } from './story';
 
 /**
  * The Pop-up Book: a book that is built, opened, shut, read, and printed.
@@ -24,8 +25,15 @@ interface Saved {
   free: Spread[];
   /** What is stuck on the front of the story's book. */
   pigsCover?: Spread;
+  /** Every story's book: its spreads, its cover, and how far it has been got through. */
+  tales?: Record<string, Tale>;
   /** The builder's own books, each with its name and its cover. */
   own?: Own[];
+}
+interface Tale {
+  spreads: Spread[];
+  cover: Spread;
+  reached: number;
 }
 interface Own {
   title: string;
@@ -44,12 +52,18 @@ function load(): Saved {
   } catch {
     // Private windows: the book still works, it is just not remembered.
   }
-  return { pigs: PIGS.pages.map(blank), reached: 0, free: [blank()] };
+  return { pigs: STORIES[0].pages.map(blank), reached: 0, free: [blank()] };
 }
 const saved = load();
-while (saved.pigs.length < PIGS.pages.length) saved.pigs.push(blank());
+while (saved.pigs.length < STORIES[0].pages.length) saved.pigs.push(blank());
 if (!saved.free.length) saved.free.push(blank());
 saved.pigsCover ??= blank();
+// The first version had the one story; it becomes the first of several.
+saved.tales ??= { pigs: { spreads: saved.pigs, cover: saved.pigsCover, reached: saved.reached } };
+for (const st of STORIES) {
+  const t = (saved.tales[st.id] ??= { spreads: [], cover: blank(), reached: 0 });
+  while (t.spreads.length < st.pages.length) t.spreads.push(blank());
+}
 // The one own book of the first version becomes the first on the shelf.
 saved.own ??= [{ title: 'My Pop-up Book', cover: blank(), spreads: saved.free }];
 if (!saved.own.length) saved.own.push({ title: 'My Pop-up Book', cover: blank(), spreads: [blank()] });
@@ -59,8 +73,8 @@ const own = (): Own => saved.own![Math.min(ownAt, saved.own!.length - 1)];
 
 /** A book as a string short enough to go in a link. */
 // New kinds go on the end: a link holds each kind as its place in this list.
-const KINDS: Kind[] = ['vfold', 'tent', 'platform', 'flap', 'sticker', 'stand'];
-const TRAY: Kind[] = ['vfold', 'stand', 'tent', 'platform', 'flap', 'sticker'];
+const KINDS: Kind[] = ['vfold', 'tent', 'platform', 'flap', 'sticker', 'stand', 'double', 'slide'];
+const TRAY: Kind[] = ['vfold', 'stand', 'double', 'tent', 'platform', 'flap', 'slide', 'sticker'];
 const r2 = (v: number) => Math.round(v * 100) / 100;
 const pack = (spreads: Spread[]) => btoa(JSON.stringify(spreads.map((s) => s.pieces.map((p) => [KINDS.indexOf(p.kind), p.art, r2(p.x), r2(p.z), r2(p.w), r2(p.h), r2(p.angle), r2(p.reach), p.flip ? 1 : 0])))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 function unpack(text: string): Spread[] | null {
@@ -75,17 +89,20 @@ function unpack(text: string): Spread[] | null {
   }
 }
 
-type Mode = 'pigs' | 'free';
-let mode: Mode = 'pigs';
+type Mode = 'story' | 'free';
+let mode: Mode = 'story';
+/** Which story is open, when one is. */
+let story: Story = STORIES[0];
+const tale = (): Tale => saved.tales![story.id];
 let at = 0;
 /** A book that came in a link is looked at without touching what is kept, until it is kept on purpose. */
 let visiting: Spread[] | null = null;
-const book = (): Spread[] => visiting ?? (mode === 'pigs' ? saved.pigs : own().spreads);
+const book = (): Spread[] => visiting ?? (mode === 'story' ? tale().spreads : own().spreads);
 /** The front cover is the page before the first: number −1. */
 const visitCover = blank();
-const coverNow = (): Spread => (visiting ? visitCover : mode === 'pigs' ? saved.pigsCover! : own().cover);
+const coverNow = (): Spread => (visiting ? visitCover : mode === 'story' ? tale().cover : own().cover);
 const spread = (): Spread => (at < 0 ? coverNow() : (book()[at] ?? book()[0]));
-const titleOf = () => (visiting ? 'A book for you' : mode === 'pigs' ? PIGS.title : own().title);
+const titleOf = () => (visiting ? 'A book for you' : mode === 'story' ? story.title : own().title);
 /** What is wrong on this spread. On the cover the only thing that can be is a sticker hanging off the edge. */
 const faultsNow = (): (string | null)[] => (at < 0 ? spread().pieces.map((q) => (Math.abs(q.x) + q.w / 2 > W / 2 + 0.01 || Math.abs(q.z) + q.h / 2 > L / 2 + 0.01 ? 'This hangs off the edge of the cover.' : null)) : problems(spread()));
 function keep(): void {
@@ -301,7 +318,7 @@ function place(): void {
   if (onCover) showTitle();
   const inHand = spread().pieces[selected];
   shade.visible = open > 0.9;
-  guide.visible = !onCover && !!inHand && (inHand.kind === 'vfold' || inHand.kind === 'platform') && open > 0.97;
+  guide.visible = !onCover && !!inHand && (inHand.kind === 'vfold' || inHand.kind === 'platform' || inHand.kind === 'double') && open > 0.97;
   spread().pieces.forEach((piece, i) => {
     const m = made[i];
     if (!m) return;
@@ -374,15 +391,19 @@ const ICONS: Record<Kind, string> = {
   platform: '<path d="M6 14h28M8 14v18M32 14v18M20 14v18" fill="none" stroke="#5a4632" stroke-width="2.4"/><path d="M2 32h36" stroke="#5a4632" stroke-width="2"/>',
   flap: '<rect x="8" y="16" width="24" height="16" fill="none" stroke="#5a4632" stroke-width="2" stroke-dasharray="3 2"/><path d="M8 16 14 4h24l-6 12Z" fill="#f4ead6" stroke="#5a4632" stroke-width="2" stroke-linejoin="round"/>',
   sticker: '<rect x="8" y="8" width="24" height="24" rx="4" fill="#f4ead6" stroke="#5a4632" stroke-width="2"/><circle cx="20" cy="20" r="6" fill="#e58f9c"/>',
+  double: '<path d="M2 34h36" stroke="#5a4632" stroke-width="2"/><path d="M4 30 20 8 36 30" fill="#f4ead6" stroke="#5a4632" stroke-width="2" stroke-linejoin="round"/><path d="M11 30 20 17 29 30" fill="#fffaf0" stroke="#5a4632" stroke-width="2" stroke-linejoin="round"/><path d="M20 8v22" stroke="#5a4632" stroke-width="1.6" stroke-dasharray="3 2"/>',
+  slide: '<rect x="17" y="6" width="6" height="30" rx="3" fill="none" stroke="#5a4632" stroke-width="1.6" stroke-dasharray="3 2"/><rect x="9" y="6" width="22" height="16" rx="3" fill="#f4ead6" stroke="#5a4632" stroke-width="2"/><path d="M20 26v8m-4-4 4 4 4-4" fill="none" stroke="#5a4632" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   stand: '<path d="M2 34h36" stroke="#5a4632" stroke-width="2"/><path d="M10 34v4" stroke="#5a4632" stroke-width="2" stroke-dasharray="2 2"/><rect x="20" y="8" width="14" height="26" fill="#f4ead6" stroke="#5a4632" stroke-width="2"/><path d="M10 34h10v-5Z" fill="#f4ead6" stroke="#5a4632" stroke-width="1.6" stroke-linejoin="round"/>',
 };
-const KIND_NAME: Record<Kind, string> = { stand: 'Stand-up', vfold: 'V-fold', tent: 'Tent', platform: 'Platform', flap: 'Flap', sticker: 'Sticker' };
+const KIND_NAME: Record<Kind, string> = { double: 'Double V', slide: 'Pull tab', stand: 'Stand-up', vfold: 'V-fold', tent: 'Tent', platform: 'Platform', flap: 'Flap', sticker: 'Sticker' };
 const KIND_SAYS: Record<Kind, string> = {
   vfold: 'Creased down the middle and glued to both pages in a V. It stands up when the book opens.',
   tent: 'A strip glued to both pages, with a ridge over the spine.',
   platform: 'A flat top that floats level above the pages.',
   flap: 'Lies flat on one page. Tap it to lift it and see what is under it.',
   sticker: 'A picture glued flat on a page.',
+  double: 'A V-fold with a second, smaller fold inside it. Both open together.',
+  slide: 'A picture that slides along the page when its tab is pulled. Tap it to pull it.',
   stand: 'Stands on one page, facing you, anywhere out from the middle. A small brace across the fold pulls it up.',
 };
 const SLIDERS: Record<Kind, [keyof Piece, string, number, number][]> = {
@@ -392,13 +413,23 @@ const SLIDERS: Record<Kind, [keyof Piece, string, number, number][]> = {
   flap: [['w', 'How wide', 1.5, 12], ['h', 'How tall', 1.5, 12]],
   sticker: [['w', 'How wide', 1, 12], ['h', 'How tall', 1, 12]],
   stand: [['h', 'How tall', 2, 13], ['w', 'How wide', 1.5, 10]],
+  double: [['h', 'How tall', 3, 13], ['w', 'How wide', 2, 9], ['angle', 'How open the V', 30, 70]],
+  slide: [['reach', 'How far it slides', 1, 12], ['w', 'How wide', 1, 9], ['h', 'How tall', 1, 9]],
 };
+
+/** Every picture, with the ones the open story uses first. */
+function artList(): [string, (typeof ART)[string]][] {
+  const all = Object.entries(ART);
+  if (mode !== 'story' || visiting) return all;
+  const first = story.arts.filter((id) => ART[id]);
+  return [...first.map((id): [string, (typeof ART)[string]] => [id, ART[id]]), ...all.filter(([id]) => !first.includes(id))];
+}
 
 /** What the story asks of this spread, and whether it has it yet. */
 function need(): { ok: boolean; hint: string } {
-  if (mode !== 'pigs' || visiting || at < 0) return { ok: true, hint: '' };
+  if (mode !== 'story' || visiting || at < 0) return { ok: true, hint: '' };
   if (faults.some(Boolean)) return { ok: false, hint: 'Something is edged in red. Tap it to see what is wrong.' };
-  const hint = PIGS.pages[at].check(spread());
+  const hint = story.pages[at].check(spread());
   return { ok: !hint, hint: hint ?? '' };
 }
 
@@ -427,21 +458,21 @@ function changed(structure = false): void {
 
 function draw(): void {
   const pieces = spread().pieces;
-  const story = mode === 'pigs' && !visiting;
+  const inStory = mode === 'story' && !visiting;
   const state = need();
   const last = at === book().length - 1;
   const onCover = at < 0;
   if (onCover) banner.innerHTML = '<p class="need">The front cover. Decorate it with stickers.</p>';
-  else if (story) {
-    const page = PIGS.pages[at];
+  else if (inStory) {
+    const page = story.pages[at];
     banner.innerHTML = `<p class="line">${page.line}</p><p class="need ${state.ok ? 'met' : ''}"><b>${state.ok ? '✓' : '✎'}</b> ${page.need}</p>${state.ok ? '' : `<p class="hint">${state.hint}</p>`}`;
   } else banner.innerHTML = visiting ? '<p class="need">A book someone sent you.</p>' : '';
   banner.hidden = !banner.innerHTML;
-  if (story && !onCover && state.ok && at === saved.reached && at < PIGS.pages.length - 1) {
-    saved.reached = at + 1;
+  if (inStory && !onCover && state.ok && at === tale().reached && at < story.pages.length - 1) {
+    tale().reached = at + 1;
     keep();
   }
-  const canNext = story ? at < saved.reached || (last && state.ok) : true;
+  const canNext = inStory ? at < tale().reached || (last && state.ok) : true;
   const sel = pieces[selected];
   const fault = selected >= 0 ? faults[selected] : faults.find(Boolean) ? 'Something is edged in red. Tap it to see what is wrong.' : null;
   side.innerHTML = `
@@ -453,26 +484,26 @@ function draw(): void {
           ? `<div class="nav"><button data-do="shelf">◀ Bookshelf</button><span>Cover</span><button data-do="next" class="go">Open it ▶</button></div>
              ${mode === 'free' && !visiting ? `<label class="title">What is it called?<input type="text" data-title maxlength="48" value="${own().title.replace(/"/g, '&quot;')}"></label>` : ''}`
           : `<div class="nav"><button data-do="prev">◀ ${at === 0 ? 'Front cover' : 'Page before'}</button><span>${at + 1} of ${book().length}</span>
-      <button data-do="next" class="${story && state.ok ? 'go' : ''}"${canNext ? '' : ' disabled'}>${story && last ? 'The end ▶' : !story && last ? '＋ New page' : 'Next page ▶'}</button></div>`
+      <button data-do="next" class="${inStory && state.ok ? 'go' : ''}"${canNext ? '' : ' disabled'}>${inStory && last ? 'The end ▶' : !inStory && last ? '＋ New page' : 'Next page ▶'}</button></div>`
     }
     ${fault ? `<p class="fault">${fault}</p>` : ''}
     ${
       sel
         ? `<div class="edit"><h3>${KIND_NAME[sel.kind]}${stands(sel) ? ` <small>${heightOf(sel).toFixed(1)} cm tall</small>` : ''}</h3>
           <p class="say">This one is picked. Tap a picture to change it.</p>
-          <div class="arts">${Object.entries(ART).map(([id, a]) => `<button data-do="art" data-v="${id}" class="${sel.art === id ? 'on' : ''}" style="background-image:url(${urlOf(id)})" aria-label="${a.name}"></button>`).join('')}</div>
+          <div class="arts">${artList().map(([id, a]) => `<button data-do="art" data-v="${id}" class="${sel.art === id ? 'on' : ''}" style="background-image:url(${urlOf(id)})" aria-label="${a.name}"></button>`).join('')}</div>
           ${SLIDERS[sel.kind].map(([key, name, lo, hi]) => `<label>${name}<input type="range" data-key="${key}" min="${lo}" max="${hi}" step="0.25" value="${sel[key]}"></label>`).join('')}
-          <p class="tip">${sel.kind === 'vfold' || sel.kind === 'platform' ? `A ${KIND_NAME[sel.kind].toLowerCase()} sits on the fold in the middle of the book. Drag it to slide it along the blue line.` : sel.kind === 'flap' ? 'Tap the flap again to lift it or let it down. Drag it to move it.' : 'Drag it to move it.'}</p>
-          <div class="row nudge"><span>Move it</span><button data-do="nudge" data-v="0,-1" aria-label="Further back">▲ back</button><button data-do="nudge" data-v="0,1" aria-label="Nearer">▼ nearer</button>${sel.kind === 'vfold' || sel.kind === 'platform' ? '' : '<button data-do="nudge" data-v="-1,0" aria-label="Left">◀</button><button data-do="nudge" data-v="1,0" aria-label="Right">▶</button>'}</div>
+          <p class="tip">${sel.kind === 'vfold' || sel.kind === 'platform' || sel.kind === 'double' ? `A ${KIND_NAME[sel.kind].toLowerCase()} sits on the fold in the middle of the book. Drag it to slide it along the blue line.` : sel.kind === 'flap' ? 'Tap the flap again to lift it or let it down. Drag it to move it.' : 'Drag it to move it.'}</p>
+          <div class="row nudge"><span>Move it</span><button data-do="nudge" data-v="0,-1" aria-label="Further back">▲ back</button><button data-do="nudge" data-v="0,1" aria-label="Nearer">▼ nearer</button>${sel.kind === 'vfold' || sel.kind === 'platform' || sel.kind === 'double' ? '' : '<button data-do="nudge" data-v="-1,0" aria-label="Left">◀</button><button data-do="nudge" data-v="1,0" aria-label="Right">▶</button>'}</div>
           ${sel.kind === 'flap' ? `<p class="say">${under(sel)}</p>` : ''}
-          <div class="row">${sel.kind === 'flap' ? `<button data-do="lift" class="go">${lifts[selected]?.want ? 'Let it down' : 'Lift it up'}</button>` : ''}${sel.kind === 'vfold' ? '<button data-do="flip">Turn it round</button>' : sel.kind === 'stand' ? '<button data-do="flip">Brace on the other side</button>' : ''}<button data-do="copy">Another like it</button><button data-do="delete" class="warn">Take it off</button><button data-do="done" class="go">Done</button></div></div>`
+          <div class="row">${moves(sel) ? `<button data-do="lift" class="go">${sel.kind === 'slide' ? (lifts[selected]?.want ? 'Push it back' : 'Pull it') : lifts[selected]?.want ? 'Let it down' : 'Lift it up'}</button>` : ''}${sel.kind === 'slide' ? `<button data-do="flip">${sel.flip ? 'Slide it down the page' : 'Slide it sideways'}</button>` : ''}${sel.kind === 'vfold' ? '<button data-do="flip">Turn it round</button>' : sel.kind === 'stand' ? '<button data-do="flip">Brace on the other side</button>' : ''}<button data-do="copy">Another like it</button><button data-do="delete" class="warn">Take it off</button><button data-do="done" class="go">Done</button></div></div>`
         : pending
           ? `<div class="edit"><h3>${KIND_NAME[pending.kind]}</h3><p class="say">Tap a picture to put one in the book. Tap another to add another.</p>
-              <div class="arts big">${Object.entries(ART).map(([id, a]) => `<button data-do="choose" data-v="${id}" style="background-image:url(${urlOf(id)})" aria-label="${a.name}"></button>`).join('')}</div>
+              <div class="arts big">${artList().map(([id, a]) => `<button data-do="choose" data-v="${id}" style="background-image:url(${urlOf(id)})" aria-label="${a.name}"></button>`).join('')}</div>
               <p class="tip">${KIND_SAYS[pending.kind]} To change one that is already in the book, tap it on the page first, then tap a picture.</p>
               <div class="row"><button data-do="cancel">Back to the pieces</button></div></div>`
           : `<h3 class="ask">Add something</h3><div class="tray">${(onCover ? (['sticker'] as Kind[]) : TRAY).map((k) => `<button data-do="add" data-v="${k}"><svg viewBox="0 0 40 40">${ICONS[k]}</svg><b>${KIND_NAME[k]}</b><small>${KIND_SAYS[k]}</small></button>`).join('')}</div>
-          <div class="row menu">${pieces.some((q) => q.kind === 'flap') ? `<button data-do="flaps">${lifts.some((l, i) => pieces[i]?.kind === 'flap' && l.want) ? 'Shut the flaps' : 'Lift the flaps'}</button>` : ''}<button data-do="read">▶ Read the book</button><button data-do="print">Print it</button>${visiting ? '<button data-do="mine">Keep it as mine</button>' : mode === 'free' ? '<button data-do="link">Copy a link</button>' : ''}${mode === 'free' && !visiting && book().length > 1 ? '<button data-do="unpage" class="warn">Tear out this page</button>' : ''}${onCover ? '' : '<button data-do="cover">Front cover</button>'}<button data-do="shelf">Bookshelf</button></div>
+          <div class="row menu">${pieces.some(moves) ? `<button data-do="flaps">${lifts.some((l, i) => pieces[i] && moves(pieces[i]) && l.want) ? 'Flaps and tabs back' : 'Lift the flaps, pull the tabs'}</button>` : ''}<button data-do="read">▶ Read the book</button><button data-do="print">Print it</button>${visiting ? '<button data-do="mine">Keep it as mine</button>' : mode === 'free' ? '<button data-do="link">Copy a link</button>' : ''}${mode === 'free' && !visiting && book().length > 1 ? '<button data-do="unpage" class="warn">Tear out this page</button>' : ''}${onCover ? '' : '<button data-do="cover">Front cover</button>'}<button data-do="shelf">Bookshelf</button></div>
           <p class="tip">Tap a piece on the page to change it. Drag it to move it. Drag the table to look round. Slide the book shut to see how it folds.</p>`
     }`;
 }
@@ -523,9 +554,11 @@ side.addEventListener('click', (e) => {
     const spots: [number, number][] = [];
     if (piece.kind === 'stand') for (const z of [-3, 2, -6, 5, -1, 7, -8]) for (const x of [6.5, -6.5, 9.5, -9.5]) spots.push([x, z]);
     else if (!lying) for (const z of [0, -5, 5, -2.5, 2.5, 7, -7, -8.5, 8.5]) spots.push([0, z]);
+    else if (piece.kind === 'slide') for (const z of [-3, -6, 0, -8]) for (const x of [5, -5, 8.5, -8.5]) spots.push([x, z]);
     else if (at < 0) for (const z of [3, -2, 7, -6]) for (const x of [0, -3.5, 3.5]) spots.push([x, z]);
     else for (const z of [4, -3, 7, -6, 0]) for (const x of [6.5, -6.5, 3.5, -3.5, 9.5, -9.5]) spots.push([x, z]);
     const free = (): boolean => {
+      if (piece.kind === 'slide' && fits(piece)) return false;
       if (lying) return !pieces.some((q) => q.kind === piece.kind && Math.abs(q.x - piece.x) < (q.w + piece.w) / 2 && Math.abs(q.z - piece.z) < (q.h + piece.h) / 2);
       // Two pieces in the very same place do not cut through each other, so that has to be asked separately.
       if (pieces.some((q) => stands(q) && Math.abs(q.z - piece.z) < 1.5 && (piece.kind !== 'stand' || q.kind !== 'stand' || Math.abs(q.x - piece.x) < 2))) return false;
@@ -563,8 +596,8 @@ side.addEventListener('click', (e) => {
     lifts[selected].want = lifts[selected].want ? 0 : 2.3;
     draw();
   } else if (what === 'flaps') {
-    const up = lifts.some((l, i) => pieces[i]?.kind === 'flap' && l.want);
-    lifts.forEach((l, i) => (l.want = pieces[i]?.kind === 'flap' && !up ? 2.3 : 0));
+    const up = lifts.some((l, i) => pieces[i] && moves(pieces[i]) && l.want);
+    lifts.forEach((l, i) => (l.want = pieces[i] && moves(pieces[i]) && !up ? 2.3 : 0));
     draw();
   } else if (what === 'flip') {
     pieces[selected].flip = !pieces[selected].flip;
@@ -587,7 +620,7 @@ side.addEventListener('click', (e) => {
   else if (what === 'next' && at < 0) void turnTo(0);
   else if (what === 'next') {
     if (at < book().length - 1) void turnTo(at + 1);
-    else if (mode === 'pigs' && !visiting) void read();
+    else if (mode === 'story' && !visiting) void read();
     else if (!visiting) {
       own().spreads.push(blank());
       keep();
@@ -648,11 +681,12 @@ function aim(e: { clientX: number; clientY: number }): void {
 function moveTo(piece: Piece, x: number, z: number): void {
   const snap = (v: number) => Math.round(v * 4) / 4;
   // What lies flat stays wholly on its page.
-  const lying = piece.kind === 'flap' || piece.kind === 'sticker';
+  const lying = piece.kind === 'flap' || piece.kind === 'sticker' || piece.kind === 'slide';
   const zMost = L / 2 - (lying ? piece.h / 2 : 0);
   piece.z = snap(Math.max(-zMost, Math.min(zMost, z)));
   // Only what is glued to one page, or a tent, can go across: a V-fold and a platform sit on the spine.
-  if (piece.kind === 'tent') piece.x = snap(Math.max(-piece.reach + 0.5, Math.min(piece.reach - 0.5, x)));
+  if (piece.kind === 'double') piece.x = 0;
+  else if (piece.kind === 'tent') piece.x = snap(Math.max(-piece.reach + 0.5, Math.min(piece.reach - 0.5, x)));
   else if (piece.kind === 'stand') {
     // Either page, but clear of the fold in the middle, where its brace goes.
     const least = piece.w / 2 + STAND_CLEAR;
@@ -735,7 +769,7 @@ canvas.addEventListener('pointerup', () => {
   if (drag) {
     const piece = spread().pieces[drag.index];
     // A tap on a flap lifts it, or lets it down.
-    if (!drag.moved && piece?.kind === 'flap' && open > 0.97 && drag.was) {
+    if (!drag.moved && piece && moves(piece) && open > 0.97 && drag.was) {
       lifts[drag.index].want = lifts[drag.index].want ? 0 : 2.3;
       draw();
     }
@@ -757,7 +791,7 @@ async function read(): Promise<void> {
   reading = true;
   selected = -1;
   document.body.classList.add('reading');
-  const story = mode === 'pigs' && !visiting;
+  const inStory = mode === 'story' && !visiting;
   const token = () => reading;
   // It begins shut, with its cover showing.
   at = -1;
@@ -772,12 +806,12 @@ async function read(): Promise<void> {
     at = i;
     lifts = [];
     rebuild();
-    caption.innerHTML = story ? `<p>${PIGS.pages[i].line}</p>` : '';
+    caption.innerHTML = inStory ? `<p>${story.pages[i].line}</p>` : '';
     await swing(1, 2.6);
     if (!token()) break;
     await pause(0.9);
-    for (const [k, p] of spread().pieces.entries()) if (p.kind === 'flap' && token()) lifts[k].want = 2.3;
-    await pause(story ? 3.4 : 2.2);
+    for (const [k, p] of spread().pieces.entries()) if (moves(p) && token()) lifts[k].want = 2.3;
+    await pause(inStory ? 3.4 : 2.2);
     for (const l of lifts) l.want = 0;
     await pause(0.5);
   }
@@ -795,8 +829,8 @@ el('stop').onclick = () => {
 // ---- Printing ----
 
 function print(): void {
-  const story = mode === 'pigs' && !visiting;
-  el('print').innerHTML = sheets(titleOf(), book(), story ? PIGS.pages.map((p) => p.line) : [], coverNow());
+  const inStory = mode === 'story' && !visiting;
+  el('print').innerHTML = sheets(titleOf(), book(), inStory ? story.pages.map((p) => p.line) : [], coverNow());
   window.print();
 }
 
@@ -804,7 +838,6 @@ function print(): void {
 
 let shelfArmed = '';
 function showShelf(): void {
-  const started = saved.pigs.some((q) => q.pieces.length);
   const count = (spreads: Spread[]) => {
     const n = spreads.reduce((sum, q) => sum + q.pieces.length, 0);
     return n ? `${spreads.length} ${spreads.length === 1 ? 'spread' : 'spreads'}, ${n} ${n === 1 ? 'piece' : 'pieces'}` : 'Empty pages, and everything in the tray';
@@ -812,7 +845,12 @@ function showShelf(): void {
   const again = (key: string, has: boolean) => (has ? `<button class="small warn" data-clear="${key}">${shelfArmed === key ? 'Tap again to empty it' : 'Start it again'}</button>` : '');
   cover.innerHTML = `<div class="card"><h1>The Bookshelf</h1><p>Build a book that stands up when it opens. Then print it, cut it out, and make the real one.</p>
     <h2>Stories to build</h2>
-    <div class="book"><button data-go="pigs"><b>${PIGS.title}</b><small>${started ? 'Carry on with the story' : 'A story to build, a page at a time'}</small></button>${again('pigs', started || saved.pigsCover!.pieces.length > 0)}</div>
+    ${STORIES.map((st) => {
+      const t = saved.tales![st.id];
+      const begun = t.spreads.some((q) => q.pieces.length) || t.cover.pieces.length > 0;
+      const done = t.reached >= st.pages.length - 1 && !st.pages[st.pages.length - 1].check(t.spreads[st.pages.length - 1]);
+      return `<div class="book"><button data-go="s:${st.id}" class="tale"><i style="background-image:url(${urlOf(st.art)})"></i><b>${st.title}</b><small>${st.from}${done ? ' · finished' : begun ? ` · spread ${Math.min(t.reached + 1, st.pages.length)} of ${st.pages.length}` : ''}</small></button>${again(`s:${st.id}`, begun)}</div>`;
+    }).join('')}
     <h2>Your own books</h2>
     ${saved.own!.map((o, i) => `<div class="book"><button data-go="${i}"><b>${o.title.replace(/</g, '&lt;')}</b><small>${count(o.spreads)}</small></button>${again(String(i), o.spreads.some((q) => q.pieces.length) || o.cover.pieces.length > 0)}${saved.own!.length > 1 ? `<button class="small warn" data-drop="${i}">${shelfArmed === `drop${i}` ? 'Tap again to throw it away' : 'Throw away'}</button>` : ''}</div>`).join('')}
     <button data-new="1" class="new">＋ A new book</button></div>`;
@@ -847,10 +885,9 @@ cover.addEventListener('click', (e) => {
     return;
   }
   shelfArmed = '';
-  if (b.dataset.clear === 'pigs') {
-    saved.pigs = PIGS.pages.map(blank);
-    saved.pigsCover = blank();
-    saved.reached = 0;
+  if (b.dataset.clear?.startsWith('s:')) {
+    const st = STORIES.find((q) => q.id === b.dataset.clear!.slice(2))!;
+    saved.tales![st.id] = { spreads: st.pages.map(blank), cover: blank(), reached: 0 };
   } else if (b.dataset.clear !== undefined) {
     const o = saved.own![Number(b.dataset.clear)];
     o.spreads = [blank()];
@@ -865,8 +902,10 @@ cover.addEventListener('click', (e) => {
     keep();
     return openBook();
   } else if (b.dataset.go !== undefined) {
-    if (b.dataset.go === 'pigs') mode = 'pigs';
-    else {
+    if (b.dataset.go.startsWith('s:')) {
+      mode = 'story';
+      story = STORIES.find((q) => q.id === b.dataset.go!.slice(2)) ?? STORIES[0];
+    } else {
       mode = 'free';
       ownAt = Number(b.dataset.go);
     }
@@ -915,7 +954,7 @@ frame();
 
 (window as unknown as { popup: Record<string, unknown> }).popup = {
   check: checkFold,
-  state: () => ({ mode, at, open, selected, reading, visiting: !!visiting, pieces: spread().pieces, faults, need: need(), reached: saved.reached }),
+  state: () => ({ mode, at, open, selected, reading, visiting: !!visiting, pieces: spread().pieces, faults, need: need(), reached: mode === 'story' ? tale().reached : 0, story: story.id }),
   add: (kind: Kind, art: string, props: Partial<Piece> = {}) => {
     spread().pieces.push({ ...fresh(kind, art), ...props });
     selected = -1;

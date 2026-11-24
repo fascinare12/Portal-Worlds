@@ -1,5 +1,5 @@
 import { ART, urlOf } from './art';
-import { BRACE_FOOT, L, STRIP, W, quads, standAngles, stands } from './fold';
+import { BRACE_FOOT, L, STRIP, W, inner, quads, standAngles, stands } from './fold';
 import type { Piece, Spread } from './fold';
 
 /**
@@ -38,7 +38,23 @@ function base(spread: Spread, names: string[]): string {
     if (p.kind === 'flap') {
       // The flap's tab is glued just beyond its far edge.
       out += `<rect x="${n(sx(p.x - p.w / 2))}" y="${n(sy(p.z - p.h / 2) - TAB)}" width="${n(p.w)}" height="${TAB}" ${glue}/>` + label(sx(p.x), sy(p.z - p.h / 2) - 0.35, name);
-    } else if (p.kind === 'vfold') {
+    } else if (p.kind === 'slide') {
+      // Two bands hold the strip to the page; it slides under them.
+      const [, track] = quads(p, 1, 0);
+      const xs = track.c.map((c) => c[0]);
+      const zs = track.c.map((c) => c[2]);
+      const x0 = Math.min(...xs);
+      const x1 = Math.max(...xs);
+      const z0 = Math.min(...zs);
+      const z1 = Math.max(...zs);
+      out += `<rect x="${n(sx(x0))}" y="${n(sy(z0))}" width="${n(x1 - x0)}" height="${n(z1 - z0)}" fill="none" stroke="#888" stroke-width="0.03" stroke-dasharray="0.15 0.15"/>`;
+      for (const f of [0.3, 0.7]) {
+        const bx = p.flip ? x0 + (x1 - x0) * f : (x0 + x1) / 2;
+        const bz = p.flip ? (z0 + z1) / 2 : z0 + (z1 - z0) * f;
+        const [bw, bh] = p.flip ? [0.8, 2.6] : [2.6, 0.8];
+        out += `<rect x="${n(sx(bx) - bw / 2)}" y="${n(sy(bz) - bh / 2)}" width="${bw}" height="${bh}" fill="none" stroke="#888" stroke-width="0.03"/>` + label(sx(bx), sy(bz) + 0.15, name, 0.32);
+      }
+    } else if (p.kind === 'vfold' || p.kind === 'double') {
       // A strip along each glue line, on the side the tab folds to.
       const [left, right] = quads(p, 1);
       for (const [q, tag, a, b] of [[left, name + '1', 1, 0], [right, name + '2', 0, 1]] as const) {
@@ -73,6 +89,25 @@ function base(spread: Spread, names: string[]): string {
 /** One piece, flat, with its folds and tabs: what to cut out. Returns the drawing and its size. */
 function net(p: Piece, name: string): { svg: string; w: number; h: number; note: string } | null {
   const pad = 0.3;
+  if (p.kind === 'slide') {
+    const len = p.reach + (p.flip ? p.w : p.h) + 2.2;
+    const svg =
+      `<rect x="${pad}" y="${pad}" width="0.9" height="${n(len)}" ${cutLine}/>` + label(pad + 0.45, pad + len - 0.4, 'pull', 0.28) +
+      picture(p.art, pad + 1.6, pad, p.w, p.h) + `<rect x="${n(pad + 1.6)}" y="${pad}" width="${n(p.w)}" height="${n(p.h)}" ${foldLine.replace('0.25 0.18', '0.06 0.12')}/>` +
+      [0, 1].map((i) => `<rect x="${n(pad + 2.2 + p.w + i * 1.3)}" y="${pad}" width="0.8" height="2.6" ${cutLine}/><rect x="${n(pad + 2.2 + p.w + i * 1.3)}" y="${pad}" width="0.8" height="0.6" ${glue}/><rect x="${n(pad + 2.2 + p.w + i * 1.3)}" y="${n(pad + 2)}" width="0.8" height="0.6" ${glue}/>`).join('');
+    return { svg, w: pad * 2 + 2.2 + p.w + 2.6, h: Math.max(len, p.h, 2.6) + 2 * pad, note: `${name}: a pull tab. Cut out the long strip, the picture and the two short bands. Glue the picture on one end of the strip. Lay the strip in the dotted track on the page, picture at the start, and glue the two bands over it by their grey ends only, at the boxes marked ${name}, so that the strip slides under them. Pull the other end.` };
+  }
+  if (p.kind === 'double') {
+    const small = inner(p);
+    const first = net({ ...p, kind: 'vfold', flip: !p.flip }, name)!;
+    const second = net({ ...p, kind: 'vfold', w: small.w, h: small.h, flip: true }, name + 'x')!;
+    return {
+      svg: first.svg + `<g transform="translate(${n(first.w + 0.4)} 0)">${second.svg}</g>`,
+      w: first.w + second.w + 0.4,
+      h: Math.max(first.h, second.h),
+      note: `${name}: a double V. The big piece is an ordinary V-fold: fold it down the middle and glue ${name}1 and ${name}2 to the pages, opening towards you. The small piece goes inside it, across the big one's fold: fold it down the middle, and glue ${name}x1 to the left wing and ${name}x2 to the right wing, ${small.up.toFixed(1)} cm up from the page, with its fold exactly on the big fold and its tabs pointing up at the same angle as the big piece's tabs make with the spine. Shut the big piece on it to let it find its place.`,
+    };
+  }
   if (p.kind === 'vfold') {
     const w = 2 * p.w;
     const cutOut = ART[p.art]?.paper === false;
