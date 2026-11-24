@@ -20,7 +20,7 @@ const cutLine = 'fill="none" stroke="#222" stroke-width="0.04"';
 const foldLine = 'fill="none" stroke="#222" stroke-width="0.04" stroke-dasharray="0.25 0.18"';
 const glue = 'fill="#d9d4c8" stroke="#888" stroke-width="0.03"';
 const label = (x: number, y: number, text: string, size = 0.42) => `<text x="${n(x)}" y="${n(y)}" font-size="${size}" text-anchor="middle" font-family="sans-serif" fill="#333">${text}</text>`;
-const picture = (art: string, x: number, y: number, w: number, h: number, extra = '') => `<image href="${urlOf(art)}" x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" preserveAspectRatio="none" ${extra}/>`;
+const picture = (art: string, x: number, y: number, w: number, h: number, extra = '') => `<image href="${urlOf(art)}" xlink:href="${urlOf(art)}" x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" preserveAspectRatio="none" ${extra}/>`;
 const sheet = (w: number, h: number, inner: string, caption: string) => `<figure class="sheet"><figcaption>${caption}</figcaption><svg xmlns="http://www.w3.org/2000/svg" width="${n(w)}cm" height="${n(h)}cm" viewBox="0 0 ${n(w)} ${n(h)}">${inner}</svg></figure>`;
 
 /** Where a point of the open book is on the printed spread: the spine down the middle, the reader at the bottom. */

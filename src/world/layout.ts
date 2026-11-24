@@ -67,9 +67,9 @@ function makePools(): Pool[] {
       p.scene = 7;
     }
     if (i === 10) {
-      // The ninth doorway, the cream of paper: a pop-up book to build, open, and print.
+      // The ninth doorway, the blue-green of the table a book lies open on: pop-up books to build, open, and print.
       p.open = true;
-      p.color = 0xf1e2c2;
+      p.color = 0x2fa39a;
       p.world = 'popup';
     }
     if (i % 3 === 0) {

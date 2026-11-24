@@ -37,7 +37,7 @@ in `vite.config.ts`, and set `world: '<name>'` on a pool in
 | The Spire | `worlds/canon/` | white; a band with one side turns in it, with ants walking round |
 | The Night Sky | `worlds/cosmos/` | dark blue; a field of stars, and the Milky Way when you lean in; shooting stars leave it now and then |
 | The Painted Cave | `worlds/cave/` | ochre red; a woolly mammoth wades out of it now and then, walks a turn round the bank, and goes back in |
-| The Pop-up Book | `worlds/popup/` | paper cream |
+| The Pop-up Book | `worlds/popup/` | blue-green; a pop-up book floats open on it, and now and then half shuts and opens again so that its straw house folds down and stands up |
 
 ## The folk of the wood
 

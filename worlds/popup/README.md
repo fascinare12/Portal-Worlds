@@ -109,7 +109,9 @@ Nothing is stored anywhere but in the link.
 - `story.ts`: the tale and what each spread needs.
 - `print.ts`: the sheets.
 - `main.ts`: the book on its table, and the controls.
-- In the wood: pool 10 in `src/world/layout.ts`.
+- In the wood: pool 10 in `src/world/layout.ts`, and the book that floats on it is
+  `src/world/creatures/popbook.ts`, which uses `fold.ts` so that its house folds
+  as one built here would (`?at=10&visit=now` makes it fold at once).
 
 ## Not done
 

@@ -94,13 +94,14 @@ button.warn { color: #a23a2e; }
 /* On paper: nothing but the sheets. */
 #print { display: none; }
 @media print {
-  @page { size: landscape; margin: 1cm; }
+  @page { size: landscape; margin: 0.6cm; }
   html, body { height: auto; overflow: visible; background: #fff; display: block; }
   #stage, #side, #cover { display: none !important; }
   #print { display: block; color: #000; font-family: sans-serif; font-size: 11pt; }
-  .sheet { break-inside: avoid; page-break-inside: avoid; margin: 0 0 0.6cm; }
-  figure.sheet { display: inline-block; vertical-align: top; margin-right: 0.5cm; }
-  figcaption { font-size: 9pt; color: #444; margin-bottom: 0.1cm; }
+  .sheet { break-inside: avoid; page-break-inside: avoid; margin: 0 0 0.25cm; }
+  figure.sheet { display: inline-block; vertical-align: top; margin-right: 0.4cm; line-height: 1; }
+  figure.sheet svg { display: block; }
+  figcaption { font-size: 8pt; line-height: 1.1; color: #444; margin-bottom: 0.05cm; max-width: 25cm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   header.sheet { break-after: page; page-break-after: always; }
   header h1 { font-size: 22pt; margin: 0 0 0.3cm; }
   .k { display: inline-block; width: 1.2cm; height: 0; vertical-align: middle; border-top: 1.5pt solid #222; }
