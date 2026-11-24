@@ -12,6 +12,7 @@ sentence saying why:
 
 - it pokes out of the book when the book shuts;
 - its glue is not on the page;
+- a corner of it would be pushed through a page part way shut;
 - it would pass through another piece somewhere between shut and open.
 
 ## The mechanisms
@@ -19,6 +20,7 @@ sentence saying why:
 | Piece | What it is | The rule it obeys |
 |---|---|---|
 | V-fold | Creased down the middle, glued to both pages along two lines that meet on the spine | The crease stays square to both glue lines; that fixes how far it leans at every angle |
+| Stand-up | A piece that stands on one page, facing the reader, anywhere out from the spine. It is one wing of a lopsided V-fold: its foot runs straight out from the spine, and a small triangular brace on the other page pulls it up | The brace's foot is at 30° to the spine; the crease is at atan(2 tan 30°) ≈ 49.1° to the piece's foot. With those two angles it is exactly upright when the book is flat and exactly flat when it is shut |
 | Tent | A strip with one ridge, glued to each page parallel to the spine | The longer side is glued nearer the spine, by exactly the difference in lengths |
 | Platform | A level top over the spine, on three legs of one height | The middle leg stands on the spine and stays upright; the top halves stay parallel to the pages |
 | Flap | Hinged to one page; lifted by a tap | Cannot cross the spine |
@@ -27,6 +29,13 @@ sentence saying why:
 Parallel ("box" or "step") folds are left out on purpose. They stand when a
 card is half open and lie flat when it is opened right out, and this is a
 book that opens right out.
+
+## Adding a piece
+
+Three steps, in order: choose the kind of piece, choose what is on it, then
+tap the page where it should go. Nothing is put on the page until that tap.
+A new piece that would not shut where it lands is turned or slid along until
+it does. A flap has a button to lift it and a line saying what is under it.
 
 ## How it is checked
 

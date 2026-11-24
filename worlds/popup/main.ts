@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import './popup.css';
 import { ART, canvasOf, pagePaper, urlOf } from './art';
-import { L, W, checkFold, fresh, heightOf, problems, quads, stands, tilt } from './fold';
+import { L, STAND_CLEAR, W, checkFold, fits, fresh, heightOf, problems, quads, stands, tilt } from './fold';
 import type { Kind, Piece, Spread } from './fold';
 import { sheets } from './print';
 import { PIGS } from './story';
@@ -42,7 +42,9 @@ while (saved.pigs.length < PIGS.pages.length) saved.pigs.push(blank());
 if (!saved.free.length) saved.free.push(blank());
 
 /** A book as a string short enough to go in a link. */
-const KINDS: Kind[] = ['vfold', 'tent', 'platform', 'flap', 'sticker'];
+// New kinds go on the end: a link holds each kind as its place in this list.
+const KINDS: Kind[] = ['vfold', 'tent', 'platform', 'flap', 'sticker', 'stand'];
+const TRAY: Kind[] = ['vfold', 'stand', 'tent', 'platform', 'flap', 'sticker'];
 const r2 = (v: number) => Math.round(v * 100) / 100;
 const pack = (spreads: Spread[]) => btoa(JSON.stringify(spreads.map((s) => s.pieces.map((p) => [KINDS.indexOf(p.kind), p.art, r2(p.x), r2(p.z), r2(p.w), r2(p.h), r2(p.angle), r2(p.reach), p.flip ? 1 : 0])))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 function unpack(text: string): Spread[] | null {
@@ -139,6 +141,18 @@ function matOf(art: string): THREE.Material {
   return m;
 }
 
+// The fold down the middle of the book: a real book shows it even when it lies quite flat.
+const gutter = new THREE.Group();
+const crease = new THREE.Mesh(new THREE.PlaneGeometry(0.1, L), new THREE.MeshBasicMaterial({ color: 0x8f7a5c, transparent: true, opacity: 0.75 }));
+const shade = new THREE.Mesh(new THREE.PlaneGeometry(1.6, L), new THREE.MeshBasicMaterial({ color: 0x6b5638, transparent: true, opacity: 0.1 }));
+crease.position.y = 0.008;
+shade.position.y = 0.005;
+for (const m of [shade, crease]) {
+  m.rotation.x = -Math.PI / 2;
+  gutter.add(m);
+}
+scene.add(gutter);
+
 /** The line a V-fold or a platform can slide along, shown while one is in hand. */
 const guide = new THREE.Mesh(new THREE.PlaneGeometry(0.22, L), new THREE.MeshBasicMaterial({ color: 0x2f7fd0, transparent: true, opacity: 0.7, depthTest: false }));
 guide.rotation.x = -Math.PI / 2;
@@ -198,6 +212,7 @@ function place(): void {
   const alpha = tilt(open);
   for (const { side, half } of halves) half.rotation.z = side * alpha;
   const inHand = spread().pieces[selected];
+  shade.visible = open > 0.9;
   guide.visible = !!inHand && (inHand.kind === 'vfold' || inHand.kind === 'platform') && open > 0.97;
   spread().pieces.forEach((piece, i) => {
     const m = made[i];
@@ -247,6 +262,7 @@ const pause = (seconds: number) => new Promise<void>((done) => setTimeout(done, 
 /** Shuts the book, changes the spread, and opens it again. */
 async function turnTo(index: number): Promise<void> {
   selected = -1;
+  pending = null;
   if (!(await swing(0, 0.45))) return;
   at = index;
   lifts = [];
@@ -269,22 +285,24 @@ const ICONS: Record<Kind, string> = {
   platform: '<path d="M6 14h28M8 14v18M32 14v18M20 14v18" fill="none" stroke="#5a4632" stroke-width="2.4"/><path d="M2 32h36" stroke="#5a4632" stroke-width="2"/>',
   flap: '<rect x="8" y="16" width="24" height="16" fill="none" stroke="#5a4632" stroke-width="2" stroke-dasharray="3 2"/><path d="M8 16 14 4h24l-6 12Z" fill="#f4ead6" stroke="#5a4632" stroke-width="2" stroke-linejoin="round"/>',
   sticker: '<rect x="8" y="8" width="24" height="24" rx="4" fill="#f4ead6" stroke="#5a4632" stroke-width="2"/><circle cx="20" cy="20" r="6" fill="#e58f9c"/>',
+  stand: '<path d="M2 34h36" stroke="#5a4632" stroke-width="2"/><path d="M10 34v4" stroke="#5a4632" stroke-width="2" stroke-dasharray="2 2"/><rect x="20" y="8" width="14" height="26" fill="#f4ead6" stroke="#5a4632" stroke-width="2"/><path d="M10 34h10v-5Z" fill="#f4ead6" stroke="#5a4632" stroke-width="1.6" stroke-linejoin="round"/>',
 };
-const KIND_NAME: Record<Kind, string> = { vfold: 'V-fold', tent: 'Tent', platform: 'Platform', flap: 'Flap', sticker: 'Sticker' };
+const KIND_NAME: Record<Kind, string> = { stand: 'Stand-up', vfold: 'V-fold', tent: 'Tent', platform: 'Platform', flap: 'Flap', sticker: 'Sticker' };
 const KIND_SAYS: Record<Kind, string> = {
   vfold: 'Creased down the middle and glued to both pages in a V. It stands up when the book opens.',
   tent: 'A strip glued to both pages, with a ridge over the spine.',
   platform: 'A flat top that floats level above the pages.',
   flap: 'Lies flat on one page. Tap it to lift it and see what is under it.',
   sticker: 'A picture glued flat on a page.',
+  stand: 'Stands on one page, facing you, anywhere out from the middle. A small brace across the fold pulls it up.',
 };
-const FIRST_ART: Record<Kind, string> = { vfold: 'tree', tent: 'grass', platform: 'water', flap: 'bush', sticker: 'pig' };
 const SLIDERS: Record<Kind, [keyof Piece, string, number, number][]> = {
   vfold: [['h', 'How tall', 2, 13], ['w', 'How wide', 1.5, 9], ['angle', 'How open the V', 30, 70]],
   tent: [['h', 'How tall', 0.5, 9], ['reach', 'How far apart', 1.5, 10], ['w', 'How long', 2, 18]],
   platform: [['h', 'How high', 1, 8], ['reach', 'How wide', 1.5, 10], ['w', 'How long', 2, 18]],
   flap: [['w', 'How wide', 1.5, 12], ['h', 'How tall', 1.5, 12]],
   sticker: [['w', 'How wide', 1, 12], ['h', 'How tall', 1, 12]],
+  stand: [['h', 'How tall', 2, 13], ['w', 'How wide', 1.5, 10]],
 };
 
 /** What the story asks of this spread, and whether it has it yet. */
@@ -293,6 +311,22 @@ function need(): { ok: boolean; hint: string } {
   if (faults.some(Boolean)) return { ok: false, hint: 'Something is edged in red. Tap it to see what is wrong.' };
   const hint = PIGS.pages[at].check(spread());
   return { ok: !hint, hint: hint ?? '' };
+}
+
+/** What a flap is hiding, in words. */
+function under(flap: Piece): string {
+  const names: string[] = [];
+  const part: string[] = [];
+  for (const p of spread().pieces) {
+    if (p.kind !== 'sticker' || Math.sign(p.x) !== Math.sign(flap.x)) continue;
+    const dx = Math.abs(p.x - flap.x);
+    const dz = Math.abs(p.z - flap.z);
+    const name = ART[p.art]?.name ?? 'something';
+    if (dx + p.w / 2 <= flap.w / 2 + 0.05 && dz + p.h / 2 <= flap.h / 2 + 0.05) names.push(name);
+    else if (dx < (p.w + flap.w) / 2 && dz < (p.h + flap.h) / 2) part.push(name);
+  }
+  if (!names.length && !part.length) return 'Nothing is under it yet. Put a sticker on the page and move the flap over it.';
+  return `${names.length ? `Hidden under it: the ${names.join(', the ')}. ` : ''}${part.length ? `Part of the ${part.join(' and the ')} still shows: make the flap bigger, or move it.` : ''}`;
 }
 
 function changed(structure = false): void {
@@ -328,11 +362,20 @@ function draw(): void {
         ? `<div class="edit"><h3>${KIND_NAME[sel.kind]}${stands(sel) ? ` <small>${heightOf(sel).toFixed(1)} cm tall</small>` : ''}</h3>
           <div class="arts">${Object.entries(ART).map(([id, a]) => `<button data-do="art" data-v="${id}" class="${sel.art === id ? 'on' : ''}" style="background-image:url(${urlOf(id)})" aria-label="${a.name}"></button>`).join('')}</div>
           ${SLIDERS[sel.kind].map(([key, name, lo, hi]) => `<label>${name}<input type="range" data-key="${key}" min="${lo}" max="${hi}" step="0.25" value="${sel[key]}"></label>`).join('')}
-          <p class="tip">${sel.kind === 'vfold' || sel.kind === 'platform' ? `A ${KIND_NAME[sel.kind].toLowerCase()} sits on the fold in the middle of the book. Drag it, or tap the page, to slide it along the blue line.` : 'Drag it, or tap the page, to move it.'}</p>
-          <div class="row">${sel.kind === 'vfold' ? '<button data-do="flip">Turn it round</button>' : ''}<button data-do="copy">Another like it</button><button data-do="delete" class="warn">Take it off</button><button data-do="done">Done</button></div></div>`
-        : `<div class="tray">${KINDS.map((k) => `<button data-do="add" data-v="${k}"><svg viewBox="0 0 40 40">${ICONS[k]}</svg><b>${KIND_NAME[k]}</b><small>${KIND_SAYS[k]}</small></button>`).join('')}</div>
-          <div class="row menu"><button data-do="read">▶ Read the book</button><button data-do="print">Print it</button>${visiting ? '<button data-do="mine">Keep it as mine</button>' : mode === 'free' ? '<button data-do="link">Copy a link</button>' : ''}${mode === 'free' && !visiting && book().length > 1 ? '<button data-do="unpage" class="warn">Tear out this page</button>' : ''}<button data-do="cover">Front cover</button></div>
-          <p class="tip">Drag a piece to move it. Drag the table to look round. Slide the book shut to see how it folds.</p>`
+          <p class="tip">${sel.kind === 'vfold' || sel.kind === 'platform' ? `A ${KIND_NAME[sel.kind].toLowerCase()} sits on the fold in the middle of the book. Drag it, or tap the page, to slide it along the blue line.` : sel.kind === 'flap' ? 'Tap the flap again to lift it or let it down. Drag it, or tap the page, to move it.' : 'Drag it, or tap the page, to move it.'}</p>
+          ${sel.kind === 'flap' ? `<p class="say">${under(sel)}</p>` : ''}
+          <div class="row">${sel.kind === 'flap' ? `<button data-do="lift" class="go">${lifts[selected]?.want ? 'Let it down' : 'Lift it up'}</button>` : ''}${sel.kind === 'vfold' ? '<button data-do="flip">Turn it round</button>' : sel.kind === 'stand' ? '<button data-do="flip">Brace on the other side</button>' : ''}<button data-do="copy">Another like it</button><button data-do="delete" class="warn">Take it off</button><button data-do="done">Done</button></div></div>`
+        : pending
+          ? pending.art === null
+            ? `<div class="edit"><h3>${KIND_NAME[pending.kind]}: of what?</h3><p class="tip">${KIND_SAYS[pending.kind]}</p>
+              <div class="arts big">${Object.entries(ART).map(([id, a]) => `<button data-do="choose" data-v="${id}" style="background-image:url(${urlOf(id)})" aria-label="${a.name}"></button>`).join('')}</div>
+              <div class="row"><button data-do="cancel">Back</button></div></div>`
+            : `<div class="edit"><h3>Now tap the page</h3><div class="chosen" style="background-image:url(${urlOf(pending.art)})"></div>
+              <p class="say">${pending.kind === 'vfold' || pending.kind === 'platform' ? `Tap where you want it. A ${KIND_NAME[pending.kind].toLowerCase()} sits on the fold in the middle, so it will go to the nearest place on the line.` : 'Tap where you want it to go.'}</p>
+              <div class="row"><button data-do="repick">A different picture</button><button data-do="cancel">Never mind</button></div></div>`
+          : `<h3 class="ask">Add something</h3><div class="tray">${TRAY.map((k) => `<button data-do="add" data-v="${k}"><svg viewBox="0 0 40 40">${ICONS[k]}</svg><b>${KIND_NAME[k]}</b><small>${KIND_SAYS[k]}</small></button>`).join('')}</div>
+          <div class="row menu">${pieces.some((q) => q.kind === 'flap') ? `<button data-do="flaps">${lifts.some((l, i) => pieces[i]?.kind === 'flap' && l.want) ? 'Shut the flaps' : 'Lift the flaps'}</button>` : ''}<button data-do="read">▶ Read the book</button><button data-do="print">Print it</button>${visiting ? '<button data-do="mine">Keep it as mine</button>' : mode === 'free' ? '<button data-do="link">Copy a link</button>' : ''}${mode === 'free' && !visiting && book().length > 1 ? '<button data-do="unpage" class="warn">Tear out this page</button>' : ''}<button data-do="cover">Front cover</button></div>
+          <p class="tip">Tap a piece on the page to change it. Drag it to move it. Drag the table to look round. Slide the book shut to see how it folds.</p>`
     }`;
 }
 
@@ -341,6 +384,7 @@ side.addEventListener('input', (e) => {
   const piece = spread().pieces[selected];
   if (!piece || !input.dataset.key) return;
   (piece as unknown as Record<string, number>)[input.dataset.key] = Number(input.value);
+  if (piece.kind === 'stand') moveTo(piece, piece.x, piece.z);
   faults = problems(spread());
   keep();
   // The panel is not drawn again while a slider is held, or the slider would be torn from under the finger.
@@ -348,10 +392,14 @@ side.addEventListener('input', (e) => {
   if (small) small.textContent = `${heightOf(piece).toFixed(1)} cm tall`;
   const fault = side.querySelector('.fault');
   if (fault) fault.textContent = faults[selected] ?? '';
+  const say = side.querySelector('.edit .say');
+  if (say && piece.kind === 'flap') say.textContent = under(piece);
 });
 side.addEventListener('change', () => draw());
 
 let armed = '';
+/** A piece being chosen, before it is on the page: first its kind, then what is on it, then where. */
+let pending: { kind: Kind; art: string | null } | null = null;
 side.addEventListener('click', (e) => {
   const b = (e.target as HTMLElement).closest<HTMLElement>('[data-do]');
   if (!b || b.hasAttribute('disabled')) return;
@@ -359,19 +407,27 @@ side.addEventListener('click', (e) => {
   const what = b.dataset.do!;
   const v = b.dataset.v ?? '';
   if (what === 'add') {
-    const piece = fresh(v as Kind, FIRST_ART[v as Kind]);
-    // Not on top of the last one of its kind.
-    const same = pieces.filter((p) => p.kind === piece.kind).length;
-    if (stands(piece)) piece.z = [0, -5, 5, -2.5, 2.5][same % 5];
-    else piece.z = [4, -4, 0][same % 3];
-    pieces.push(piece);
-    selected = pieces.length - 1;
-    changed(true);
-    // A new piece shows what it does: the book half shuts and opens again.
-    if (stands(piece)) void swing(0.45, 0.6).then((ok) => ok && swing(1, 0.7));
+    pending = { kind: v as Kind, art: null };
+    draw();
+  } else if (what === 'choose') {
+    if (pending) pending.art = v;
+    draw();
+  } else if (what === 'repick') {
+    if (pending) pending.art = null;
+    draw();
+  } else if (what === 'cancel') {
+    pending = null;
+    draw();
   } else if (what === 'art') {
     pieces[selected].art = v;
     changed(true);
+  } else if (what === 'lift') {
+    lifts[selected].want = lifts[selected].want ? 0 : 2.3;
+    draw();
+  } else if (what === 'flaps') {
+    const up = lifts.some((l, i) => pieces[i]?.kind === 'flap' && l.want);
+    lifts.forEach((l, i) => (l.want = pieces[i]?.kind === 'flap' && !up ? 2.3 : 0));
+    draw();
   } else if (what === 'flip') {
     pieces[selected].flip = !pieces[selected].flip;
     changed();
@@ -440,7 +496,8 @@ slider.addEventListener('input', () => {
 
 const ray = new THREE.Raycaster();
 const flat = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-let drag: { index: number; x: number; z: number; px: number; pz: number; moved: boolean } | null = null;
+/** `was`: it was already the piece in hand when touched, so a tap means more than choosing it. */
+let drag: { index: number; x: number; z: number; px: number; pz: number; moved: boolean; was: boolean } | null = null;
 let look: { x: number; y: number } | null = null;
 let downAt = { x: 0, y: 0 };
 function aim(e: { clientX: number; clientY: number }): void {
@@ -450,10 +507,21 @@ function aim(e: { clientX: number; clientY: number }): void {
 /** Puts a piece at a place on the open spread, as far as its kind allows. */
 function moveTo(piece: Piece, x: number, z: number): void {
   const snap = (v: number) => Math.round(v * 4) / 4;
-  piece.z = snap(Math.max(-L / 2, Math.min(L / 2, z)));
+  // What lies flat stays wholly on its page.
+  const lying = piece.kind === 'flap' || piece.kind === 'sticker';
+  const zMost = L / 2 - (lying ? piece.h / 2 : 0);
+  piece.z = snap(Math.max(-zMost, Math.min(zMost, z)));
   // Only what is glued to one page, or a tent, can go across: a V-fold and a platform sit on the spine.
   if (piece.kind === 'tent') piece.x = snap(Math.max(-piece.reach + 0.5, Math.min(piece.reach - 0.5, x)));
-  else if (!stands(piece)) piece.x = snap(Math.max(-W, Math.min(W, x)));
+  else if (piece.kind === 'stand') {
+    // Either page, but clear of the fold in the middle, where its brace goes.
+    const least = piece.w / 2 + STAND_CLEAR;
+    const side = Math.abs(x) < 0.5 ? Math.sign(piece.x) || 1 : Math.sign(x);
+    piece.x = side * snap(Math.max(least, Math.min(W - piece.w / 2, Math.abs(x))));
+  } else if (lying) {
+    const side = Math.abs(x) < 0.3 ? Math.sign(piece.x) || 1 : Math.sign(x);
+    piece.x = side * snap(Math.max(piece.w / 2 + 0.3, Math.min(W - piece.w / 2, Math.abs(x))));
+  }
 }
 canvas.addEventListener('pointerdown', (e) => {
   canvas.setPointerCapture(e.pointerId);
@@ -465,8 +533,9 @@ canvas.addEventListener('pointerdown', (e) => {
     const piece = spread().pieces[index];
     const p = new THREE.Vector3();
     ray.ray.intersectPlane(flat, p);
-    drag = { index, x: piece.x, z: piece.z, px: p.x, pz: p.z, moved: false };
-    if (selected !== index) {
+    drag = { index, x: piece.x, z: piece.z, px: p.x, pz: p.z, moved: false, was: selected === index && !pending };
+    if (selected !== index || pending) {
+      pending = null;
       selected = index;
       draw();
     }
@@ -491,8 +560,34 @@ canvas.addEventListener('pointerup', () => {
   if (drag) {
     const piece = spread().pieces[drag.index];
     // A tap on a flap lifts it, or lets it down.
-    if (!drag.moved && piece?.kind === 'flap' && open > 0.97) lifts[drag.index].want = lifts[drag.index].want ? 0 : 2.3;
+    if (!drag.moved && piece?.kind === 'flap' && open > 0.97 && drag.was) {
+      lifts[drag.index].want = lifts[drag.index].want ? 0 : 2.3;
+      draw();
+    }
     if (drag.moved) changed();
+  } else if (look && Math.hypot(downAt.x - look.x, downAt.y - look.y) < 6 && pending?.art && open > 0.97 && !reading) {
+    // The piece that was chosen goes where the page is tapped.
+    aim({ clientX: downAt.x, clientY: downAt.y });
+    const p = new THREE.Vector3();
+    if (ray.ray.intersectPlane(flat, p) && Math.abs(p.x) <= W + 1 && Math.abs(p.z) <= L / 2 + 1) {
+      const piece = fresh(pending.kind, pending.art);
+      if (!stands(piece) || piece.kind === 'stand') piece.x = p.x < 0 ? -Math.abs(piece.x) : Math.abs(piece.x);
+      moveTo(piece, p.x, p.z);
+      // A new piece should work where it lands: if it would not shut there, it is turned, or slid towards the middle of the page.
+      if (stands(piece) && fits(piece)) {
+        if (piece.kind === 'vfold') {
+          piece.flip = !piece.flip;
+          if (fits(piece)) piece.flip = !piece.flip;
+        }
+        while (fits(piece) && Math.abs(piece.z) > 0.2) piece.z -= Math.sign(piece.z) * 0.25;
+      }
+      spread().pieces.push(piece);
+      selected = spread().pieces.length - 1;
+      pending = null;
+      changed(true);
+      // A new piece shows what it does: the book half shuts and opens again.
+      if (stands(piece)) void swing(0.45, 0.6).then((ok) => ok && swing(1, 0.7));
+    }
   } else if (look && Math.hypot(downAt.x - look.x, downAt.y - look.y) < 6 && selected >= 0 && open > 0.97 && !reading) {
     // A tap on the page puts the piece in hand there.
     aim({ clientX: downAt.x, clientY: downAt.y });

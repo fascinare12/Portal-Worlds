@@ -18,6 +18,11 @@
  *    by exactly the difference in the two lengths.
  *  - Platform: a flat top held up level over the spine by three legs of the
  *    same height, one of them on the spine itself.
+ *  - Stand-up: a piece that stands on one page, facing the reader, anywhere
+ *    out from the spine. It is one wing of a lopsided V-fold: its glue line
+ *    runs straight out from the spine, and a small brace on the other page
+ *    pulls it upright. The angles are chosen so that it is exactly upright
+ *    when the book is flat, and exactly flat when the book is shut.
  *  - Flap: a piece hinged to one page, lifted by hand.
  *  - Sticker: a picture glued flat.
  */
@@ -26,12 +31,12 @@
 export const W = 13;
 export const L = 19;
 
-export type Kind = 'vfold' | 'tent' | 'platform' | 'flap' | 'sticker';
+export type Kind = 'vfold' | 'tent' | 'platform' | 'flap' | 'sticker' | 'stand';
 export interface Piece {
   kind: Kind;
   /** What is drawn on it. */
   art: string;
-  /** Across the spread: for a flap or sticker, where it is; for a tent, how far off-centre. */
+  /** Across the spread: for a flap, sticker or stand-up, where it is; for a tent, how far off-centre. */
   x: number;
   /** Along the spine. */
   z: number;
@@ -60,7 +65,7 @@ export interface Quad {
   art: boolean;
 }
 
-export const STANDS: Kind[] = ['vfold', 'tent', 'platform'];
+export const STANDS: Kind[] = ['vfold', 'tent', 'platform', 'stand'];
 export const stands = (p: Piece) => STANDS.includes(p.kind);
 
 /** How far each page is tilted up from flat, when the book is `open` (0 shut, 1 flat). */
@@ -96,10 +101,67 @@ function ridge(a: number, b: number, extra: number, alpha: number): { A: V3; B: 
   return { A, B, P: [A[0] + (dx / d) * along + nx * up, A[1] + (dy / d) * along + ny * up, 0], p, q };
 }
 
+// ---- The stand-up ----
+
+/** The brace's glue line makes this angle with the spine. */
+const BRACE = Math.PI / 6;
+/**
+ * The angle, on the piece, between its foot and the crease. With the foot
+ * running straight out from the spine, the piece is upright in the open book
+ * exactly when tan(this) = 2 tan(brace angle).
+ */
+const LEAN = Math.atan(2 * Math.tan(BRACE));
+/** And the brace's own corner: what makes the two shut flat together. */
+const BRACE_CORNER = Math.PI / 2 + LEAN - BRACE;
+/** How high the low strip is that joins the picture to the crease, and how long the brace's foot is. */
+export const STRIP = 1.5;
+export const BRACE_FOOT = 3;
+export const standAngles = { brace: BRACE, lean: LEAN, corner: BRACE_CORNER };
+/** The nearest the picture's inner edge may come to the spine: clear of the crease. */
+export const STAND_CLEAR = STRIP / Math.tan(LEAN) + 0.2;
+
+const dot = (a: V3, b: V3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+
+function standUp(piece: Piece, alpha: number): Quad[] {
+  const sd = piece.x < 0 ? -1 : 1;
+  const s = piece.flip ? 1 : -1;
+  const V: V3 = [0, 0, piece.z];
+  // The foot runs straight out across its page; the brace's foot slants across the other.
+  const foot: V3 = [sd * Math.cos(alpha), Math.sin(alpha), 0];
+  const brace: V3 = [-sd * Math.sin(BRACE) * Math.cos(alpha), Math.sin(BRACE) * Math.sin(alpha), s * Math.cos(BRACE)];
+  // The crease keeps its angle to both feet. That leaves two directions; it is the upper one.
+  const d = dot(foot, brace);
+  const a = (Math.cos(LEAN) - d * Math.cos(BRACE_CORNER)) / (1 - d * d);
+  const b = (Math.cos(BRACE_CORNER) - d * Math.cos(LEAN)) / (1 - d * d);
+  const flatPart = add([foot[0] * a, foot[1] * a, foot[2] * a], brace, b);
+  const out = cross(foot, brace);
+  const t = Math.sqrt(Math.max(0, 1 - dot(flatPart, flatPart)) / Math.max(1e-12, dot(out, out)));
+  const crease = add(flatPart, out, out[1] >= 0 ? t : -t);
+  // Up the piece, square to its foot.
+  const up: V3 = [(crease[0] - Math.cos(LEAN) * foot[0]) / Math.sin(LEAN), (crease[1] - Math.cos(LEAN) * foot[1]) / Math.sin(LEAN), (crease[2] - Math.cos(LEAN) * foot[2]) / Math.sin(LEAN)];
+  const on = (p: number, q: number): V3 => add(add(V, foot, p), up, q);
+  const mid = Math.abs(piece.x);
+  const near = mid - piece.w / 2;
+  const far = mid + piece.w / 2;
+  // The picture, the right way round for the reader whichever page it is on.
+  const [l, r] = sd > 0 ? [near, far] : [far, near];
+  const k = Math.min(STRIP, piece.h);
+  const top = add(V, crease, k / Math.sin(LEAN));
+  return [
+    { c: [on(l, 0), on(r, 0), on(r, piece.h), on(l, piece.h)], uv: [0, 0, 1, 1], art: true },
+    // The low strip from the spine to the picture, cut slantwise where the crease is.
+    { c: [V, on(near, 0), on(near, k), top], uv: [0, 0, 1, 1], art: false },
+    // The brace: a triangle.
+    { c: [V, add(V, brace, BRACE_FOOT), top, top], uv: [0, 0, 1, 1], art: false },
+  ];
+}
+
 /** The flat pieces of paper a mechanism is made of, where they are when the book is `open` by this much. */
 export function quads(piece: Piece, open: number, lift = 0): Quad[] {
   const alpha = tilt(open);
   const at = (v: V3, z: number): V3 => [v[0], v[1], z];
+  if (piece.kind === 'stand') return standUp(piece, alpha);
   if (piece.kind === 'vfold') {
     const beta = (piece.angle * Math.PI) / 180;
     const s = piece.flip ? 1 : -1;
@@ -166,8 +228,14 @@ export function fits(piece: Piece): string | null {
     if (Math.max(Math.abs(x0), Math.abs(x1)) > W || Math.abs(piece.z) + piece.h / 2 > L / 2) return 'This hangs off the edge of the page.';
     return null;
   }
-  if (piece.kind !== 'vfold' && (piece.reach - Math.abs(piece.x) < 0.5 || piece.reach + Math.abs(piece.x) > W)) return 'Its glue has to be on the pages, one side on each.';
+  if (piece.kind === 'stand' && Math.abs(piece.x) - piece.w / 2 < STAND_CLEAR - 1e-6) return 'This is too near the fold in the middle. Move it out a little: for the middle itself, use a V-fold.';
+  if ((piece.kind === 'tent' || piece.kind === 'platform') && (piece.reach - Math.abs(piece.x) < 0.5 || piece.reach + Math.abs(piece.x) > W)) return 'Its glue has to be on the pages, one side on each.';
   for (const q of quads(piece, 1)) for (const c of q.c) if (Math.abs(c[1]) < 1e-6 && (Math.abs(c[0]) > W + 1e-6 || Math.abs(c[2]) > L / 2 + 1e-6)) return 'Its glue has to be on the pages.';
+  // Part way shut, no corner may be pushed through a page.
+  for (let open = 0.05; open < 1; open += 0.05) {
+    const a = tilt(open);
+    for (const q of quads(piece, open)) for (const c of q.c) if (c[1] * Math.cos(a) - Math.abs(c[0]) * Math.sin(a) < -0.02) return 'A corner of this catches on the other page as the book shuts. Move it out from the middle, or make it shorter.';
+  }
   for (const q of quads(piece, 0)) for (const c of q.c) if (c[1] > W + 1e-6 || c[1] < -1e-6 || Math.abs(c[2]) > L / 2 + 1e-6) return 'This pokes out of the book when it shuts. Make it shorter, or move it.';
   return null;
 }
@@ -229,6 +297,7 @@ export function fresh(kind: Kind, art: string): Piece {
   if (kind === 'vfold') return { ...base, w: 4, h: 6 };
   if (kind === 'tent') return { ...base, w: 6, h: 2.5, reach: 3.5 };
   if (kind === 'platform') return { ...base, w: 6, h: 2.5 };
+  if (kind === 'stand') return { ...base, x: 6, z: -2, w: 4, h: 6 };
   if (kind === 'flap') return { ...base, x: 6.5, z: 4, w: 5, h: 4 };
   return { ...base, x: -6.5, z: 4, w: 3.5, h: 3.5 };
 }
@@ -249,8 +318,8 @@ export function checkFold(): string[] {
   };
   const dist = (a: V3, b: V3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
   for (let n = 0; n < 200; n++) {
-    const kind = STANDS[n % 3];
-    const piece: Piece = { kind, art: '', x: kind === 'tent' ? (rand() - 0.5) * 3 : 0, z: (rand() - 0.5) * 6, w: 2 + rand() * 4, h: 1 + rand() * 5, angle: 30 + rand() * 40, reach: 2.5 + rand() * 3, flip: rand() < 0.5 };
+    const kind = STANDS[n % 4];
+    const piece: Piece = { kind, art: '', x: kind === 'tent' ? (rand() - 0.5) * 3 : kind === 'stand' ? (rand() < 0.5 ? -1 : 1) * (5 + rand() * 4) : 0, z: (rand() - 0.5) * 6, w: 2 + rand() * 4, h: 1 + rand() * 5, angle: 30 + rand() * 40, reach: 2.5 + rand() * 3, flip: rand() < 0.5 };
     const flat = quads(piece, 1);
     for (const open of [0, 0.13, 0.37, 0.5, 0.71, 0.9]) {
       const now = quads(piece, open);
@@ -269,8 +338,10 @@ export function checkFold(): string[] {
         }
       });
       // Pieces that share a fold still meet along it.
-      if (kind !== 'platform' && dist(now[0].c[kind === 'vfold' ? 1 : 1], now[1].c[0]) > 1e-6) bad.push(`${kind}: tore along its fold at ${open}`);
+      if (kind !== 'platform' && kind !== 'stand' && dist(now[0].c[kind === 'vfold' ? 1 : 1], now[1].c[0]) > 1e-6) bad.push(`${kind}: tore along its fold at ${open}`);
     }
   }
+  // A stand-up is exactly upright in the open book, and faces straight down the spine.
+  for (const x of [-8, 5]) for (const q of quads({ kind: 'stand', art: '', x, z: 1, w: 4, h: 6, angle: 50, reach: 4, flip: false }, 1).slice(0, 2)) for (const c of q.c) if (Math.abs(c[2] - 1) > 1e-9) bad.push('stand-up: not upright when the book is open');
   return [...new Set(bad)];
 }

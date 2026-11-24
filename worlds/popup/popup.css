@@ -48,6 +48,10 @@ button.warn { color: #a23a2e; }
 .arts { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 6px; margin-bottom: 8px; }
 .arts button { aspect-ratio: 1; padding: 0; background-color: #e9dcc0; background-size: 86%; background-position: center; background-repeat: no-repeat; }
 .arts button.on { outline: 3px solid #2f7fd0; outline-offset: 1px; }
+.arts.big { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); }
+.chosen { width: 96px; height: 96px; margin: 0 auto 6px; background-size: contain; background-repeat: no-repeat; background-position: center; background-color: #e9dcc0; border-radius: 6px; }
+.say { margin: 0 0 8px; font-family: 'Trebuchet MS', sans-serif; font-size: 16px; }
+.ask { margin: 0; font-weight: normal; font-size: 19px; }
 .edit label { display: block; font-family: 'Trebuchet MS', sans-serif; font-size: 14px; color: #5a4632; margin: 4px 0; }
 .edit input[type='range'] { display: block; width: 100%; height: 30px; accent-color: #b9523f; }
 
@@ -64,10 +68,10 @@ button.warn { color: #a23a2e; }
 /* A narrow screen: the book above, the tray below. */
 @media (max-aspect-ratio: 1/1) {
   body { grid-template-columns: 1fr; grid-template-rows: 54dvh 1fr; }
-  .tray { display: grid; grid-template-columns: repeat(5, 1fr); }
+  .tray { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
   .tray button { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: 6px 2px; }
   .tray svg { grid-row: auto; width: 38px; height: 38px; }
-  .tray b { font-size: 13px; }
+  .tray b { font-size: 11.5px; }
   .tray small { display: none; }
   .line { font-size: 15px; }
   #banner { top: 8px; padding: 6px 10px; }

@@ -1,5 +1,5 @@
 import { ART, urlOf } from './art';
-import { L, W, quads, stands } from './fold';
+import { BRACE_FOOT, L, STRIP, W, quads, standAngles, stands } from './fold';
 import type { Piece, Spread } from './fold';
 
 /**
@@ -49,6 +49,15 @@ function base(spread: Spread, names: string[]): string {
         // The tab may fold to either side of this line; the line itself is what has to be right.
         out += `<g transform="translate(${n(sx(x0))} ${n(sy(z0))}) rotate(${n(ang)})"><rect x="0" y="-0.2" width="${n(len)}" height="0.4" ${glue}/></g>` + label(sx((x0 + x1) / 2), sy((z0 + z1) / 2) + 0.15, tag);
       }
+    } else if (p.kind === 'stand') {
+      // The foot runs straight out from the spine; the brace's foot slants across the other page.
+      const sd = p.x < 0 ? -1 : 1;
+      const far = Math.abs(p.x) + p.w / 2;
+      out += `<rect x="${n(sx(sd > 0 ? 0.3 : -far))}" y="${n(sy(p.z) - 0.2)}" width="${n(far - 0.3)}" height="0.4" ${glue}/>` + label(sx((sd * far) / 2), sy(p.z) - 0.3, name + '1');
+      const [, , braceQuad] = quads(p, 1);
+      const [bx, , bz] = braceQuad.c[1];
+      const ang = (Math.atan2(bz - p.z, bx) * 180) / Math.PI;
+      out += `<g transform="translate(${n(sx(0))} ${n(sy(p.z))}) rotate(${n(ang)})"><rect x="0.3" y="-0.2" width="${n(BRACE_FOOT - 0.3)}" height="0.4" ${glue}/></g>` + label(sx(bx / 2) - sd * 0.6, sy((p.z + bz) / 2), name + '2');
     } else if (stands(p)) {
       const a = p.kind === 'tent' ? p.reach - p.x : p.reach;
       const b = p.kind === 'tent' ? p.reach + p.x : p.reach;
@@ -109,6 +118,30 @@ function net(p: Piece, name: string): { svg: string; w: number; h: number; note:
       label(legX + TAB / 2, pad + p.w / 2, name + '3') +
       label(legX + TAB + p.h + TAB / 2, pad + p.w / 2, 'top');
     return { svg, w: legX + p.h + 2 * TAB + pad, h: p.w + 2 * pad, note: `${name}: a platform. Fold the long strip into a table with a crease across the middle of its top, and glue ${name}1 and ${name}2 to the pages. The short strip is the middle leg: glue its "top" tab under the crease, fold tab ${name}3 in half along its length, and glue half to each page across the spine.` };
+  }
+  if (p.kind === 'stand') {
+    // Laid flat: the brace unfolds to the far side of the crease from the picture.
+    const { lean, corner } = standAngles;
+    const k = Math.min(STRIP, p.h);
+    const near = Math.abs(p.x) - p.w / 2;
+    const far = Math.abs(p.x) + p.w / 2;
+    const tip = [k / Math.tan(lean), k];
+    const end = [BRACE_FOOT * Math.cos(lean + corner), BRACE_FOOT * Math.sin(lean + corner)];
+    const left = -end[0] + TAB + pad;
+    const X = (v: number) => n(left + v);
+    const Y = (v: number) => n(pad + p.h - v);
+    // The brace's tab, standing out square from its foot.
+    const along = [end[0] / BRACE_FOOT, end[1] / BRACE_FOOT];
+    const off = [-along[1] * TAB, along[0] * TAB];
+    const svg =
+      picture(p.art, left + near, pad, p.w, p.h) +
+      `<path d="M${X(0)} ${Y(0)}H${X(far)}V${Y(p.h)}H${X(near)}V${Y(k)}H${X(tip[0])}L${X(end[0])} ${Y(end[1])}Z" ${cutLine}/>` +
+      `<path d="M${X(0)} ${Y(0)}L${X(tip[0])} ${Y(tip[1])}" ${foldLine}/><path d="M${X(0.3)} ${Y(0)}H${X(far)}" ${foldLine}/>` +
+      `<rect x="${X(0.3)}" y="${Y(0)}" width="${n(far - 0.3)}" height="${TAB}" ${glue}/>` +
+      `<path d="M${X(along[0] * 0.3)} ${Y(along[1] * 0.3)}L${X(end[0])} ${Y(end[1])}L${X(end[0] + off[0])} ${Y(end[1] + off[1])}L${X(along[0] * 0.3 + off[0])} ${Y(along[1] * 0.3 + off[1])}Z" ${glue}/>` +
+      label(left + far / 2, pad + p.h + 0.65, name + '1') +
+      label(left + end[0] / 2 + off[0] / 2, pad + p.h - end[1] / 2 - off[1] / 2 + 0.15, name + '2');
+    return { svg, w: left + far + pad, h: p.h + TAB + 2 * pad, note: `${name}: a stand-up. Fold the slanting line so that the small triangle goes behind the picture. Fold both tabs. Glue ${name}1 along its grey line, with the corner of the piece exactly on the spine, then shut the book on ${name}2 so that the brace finds its own place.` };
   }
   if (p.kind === 'flap') {
     const svg = picture(p.art, pad, pad + TAB, p.w, p.h) + `<rect x="${pad}" y="${pad}" width="${n(p.w)}" height="${n(p.h + TAB)}" ${cutLine}/><path d="M${pad} ${n(pad + TAB)}H${n(pad + p.w)}" ${foldLine}/><rect x="${pad}" y="${pad}" width="${n(p.w)}" height="${TAB}" ${glue}/>` + label(pad + p.w / 2, pad + 0.65, name);
