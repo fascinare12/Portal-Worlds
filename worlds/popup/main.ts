@@ -366,6 +366,7 @@ function draw(): void {
           <div class="arts">${Object.entries(ART).map(([id, a]) => `<button data-do="art" data-v="${id}" class="${sel.art === id ? 'on' : ''}" style="background-image:url(${urlOf(id)})" aria-label="${a.name}"></button>`).join('')}</div>
           ${SLIDERS[sel.kind].map(([key, name, lo, hi]) => `<label>${name}<input type="range" data-key="${key}" min="${lo}" max="${hi}" step="0.25" value="${sel[key]}"></label>`).join('')}
           <p class="tip">${sel.kind === 'vfold' || sel.kind === 'platform' ? `A ${KIND_NAME[sel.kind].toLowerCase()} sits on the fold in the middle of the book. Drag it, or tap the page, to slide it along the blue line.` : sel.kind === 'flap' ? 'Tap the flap again to lift it or let it down. Drag it, or tap the page, to move it.' : 'Drag it, or tap the page, to move it.'}</p>
+          <div class="row nudge"><span>Move it</span><button data-do="nudge" data-v="0,-1" aria-label="Further back">▲ back</button><button data-do="nudge" data-v="0,1" aria-label="Nearer">▼ nearer</button>${sel.kind === 'vfold' || sel.kind === 'platform' ? '' : '<button data-do="nudge" data-v="-1,0" aria-label="Left">◀</button><button data-do="nudge" data-v="1,0" aria-label="Right">▶</button>'}</div>
           ${sel.kind === 'flap' ? `<p class="say">${under(sel)}</p>` : ''}
           <div class="row">${sel.kind === 'flap' ? `<button data-do="lift" class="go">${lifts[selected]?.want ? 'Let it down' : 'Lift it up'}</button>` : ''}${sel.kind === 'vfold' ? '<button data-do="flip">Turn it round</button>' : sel.kind === 'stand' ? '<button data-do="flip">Brace on the other side</button>' : ''}<button data-do="copy">Another like it</button><button data-do="delete" class="warn">Take it off</button><button data-do="done" class="go">Done</button></div></div>`
         : pending
@@ -448,6 +449,10 @@ side.addEventListener('click', (e) => {
   } else if (what === 'art') {
     pieces[selected].art = v;
     changed(true);
+  } else if (what === 'nudge') {
+    const [dx, dz] = v.split(',').map(Number);
+    moveTo(pieces[selected], pieces[selected].x + dx * 0.5, pieces[selected].z + dz * 0.5);
+    changed();
   } else if (what === 'lift') {
     lifts[selected].want = lifts[selected].want ? 0 : 2.3;
     draw();
@@ -524,7 +529,7 @@ slider.addEventListener('input', () => {
 const ray = new THREE.Raycaster();
 const flat = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 /** `was`: it was already the piece in hand when touched, so a tap means more than choosing it. */
-let drag: { index: number; x: number; z: number; px: number; pz: number; moved: boolean; was: boolean } | null = null;
+let drag: { index: number; x: number; z: number; scale: number; moved: boolean; was: boolean } | null = null;
 let look: { x: number; y: number } | null = null;
 let downAt = { x: 0, y: 0 };
 function aim(e: { clientX: number; clientY: number }): void {
@@ -558,9 +563,9 @@ canvas.addEventListener('pointerdown', (e) => {
   if (hit) {
     const index = hit.object.userData.index as number;
     const piece = spread().pieces[index];
-    const p = new THREE.Vector3();
-    ray.ray.intersectPlane(flat, p);
-    drag = { index, x: piece.x, z: piece.z, px: p.x, pz: p.z, moved: false, was: selected === index };
+    // How far across the table one step of the finger is, at the place that was touched.
+    const scale = (2 * hit.distance * Math.tan((camera.fov * Math.PI) / 360)) / canvas.getBoundingClientRect().height;
+    drag = { index, x: piece.x, z: piece.z, scale, moved: false, was: selected === index };
     if (selected !== index) {
       selected = index;
       draw();
@@ -571,10 +576,12 @@ canvas.addEventListener('pointermove', (e) => {
   if (drag && open > 0.97) {
     if (Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6 && !drag.moved) return;
     drag.moved = true;
-    aim(e);
-    const p = new THREE.Vector3();
-    if (!ray.ray.intersectPlane(flat, p)) return;
-    moveTo(spread().pieces[drag.index], drag.x + p.x - drag.px, drag.z + p.z - drag.pz);
+    // The piece goes the way the finger goes: across the screen is across the table, up the screen is away.
+    // This is reckoned from the finger's own travel, so it works wherever a tall piece is taken hold of
+    // and however low the table is looked at from.
+    const across = (e.clientX - downAt.x) * drag.scale;
+    const away = ((downAt.y - e.clientY) * drag.scale) / Math.max(0.35, Math.sin(elevation));
+    moveTo(spread().pieces[drag.index], drag.x + across * Math.cos(azimuth) - away * Math.sin(azimuth), drag.z - across * Math.sin(azimuth) - away * Math.cos(azimuth));
     faults = problems(spread());
   } else if (look) {
     azimuth = Math.max(-1.3, Math.min(1.3, azimuth - (e.clientX - look.x) * 0.006));
