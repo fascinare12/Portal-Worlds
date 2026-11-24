@@ -32,10 +32,11 @@ book that opens right out.
 
 ## Adding a piece
 
-Three steps, in order: choose the kind of piece, choose what is on it, then
-tap the page where it should go. Nothing is put on the page until that tap.
-A new piece that would not shut where it lands is turned or slid along until
-it does. A flap has a button to lift it and a line saying what is under it.
+Tap a kind of piece and its pictures open. Each tap on a picture puts one
+more piece of that kind into the book, in the first free place where it
+works, edged green for a moment so it can be found. To change a piece that is
+already in the book, tap it on the page (it is edged blue), then tap a
+picture. A flap has a button to lift it and a line saying what is under it.
 
 ## How it is checked
 

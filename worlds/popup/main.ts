@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import './popup.css';
 import { ART, canvasOf, pagePaper, urlOf } from './art';
-import { L, STAND_CLEAR, W, checkFold, fits, fresh, heightOf, problems, quads, stands, tilt } from './fold';
+import { L, STAND_CLEAR, W, checkFold, fresh, heightOf, problems, quads, stands, tilt } from './fold';
 import type { Kind, Piece, Spread } from './fold';
 import { sheets } from './print';
 import { PIGS } from './story';
@@ -170,6 +170,8 @@ let made: Made[] = [];
 let lifts: { now: number; want: number }[] = [];
 let open = 1;
 let selected = -1;
+/** The piece just put in, shown edged for a moment so that it can be found. */
+let just = -1;
 let faults: (string | null)[] = [];
 
 /** Makes the paper for the spread on show, from nothing. Called whenever a piece is added, taken away or re-covered. */
@@ -232,8 +234,8 @@ function place(): void {
     });
     line.needsUpdate = true;
     const bad = !!faults[i];
-    m.edge.visible = bad || i === selected;
-    (m.edge.material as THREE.LineBasicMaterial).color.set(bad ? 0xd9342b : 0x2f7fd0);
+    m.edge.visible = bad || i === selected || i === just;
+    (m.edge.material as THREE.LineBasicMaterial).color.set(bad ? 0xd9342b : i === selected ? 0x2f7fd0 : 0x58994f);
   });
 }
 
@@ -360,19 +362,17 @@ function draw(): void {
     ${
       sel
         ? `<div class="edit"><h3>${KIND_NAME[sel.kind]}${stands(sel) ? ` <small>${heightOf(sel).toFixed(1)} cm tall</small>` : ''}</h3>
+          <p class="say">This one is picked. Tap a picture to change it.</p>
           <div class="arts">${Object.entries(ART).map(([id, a]) => `<button data-do="art" data-v="${id}" class="${sel.art === id ? 'on' : ''}" style="background-image:url(${urlOf(id)})" aria-label="${a.name}"></button>`).join('')}</div>
           ${SLIDERS[sel.kind].map(([key, name, lo, hi]) => `<label>${name}<input type="range" data-key="${key}" min="${lo}" max="${hi}" step="0.25" value="${sel[key]}"></label>`).join('')}
           <p class="tip">${sel.kind === 'vfold' || sel.kind === 'platform' ? `A ${KIND_NAME[sel.kind].toLowerCase()} sits on the fold in the middle of the book. Drag it, or tap the page, to slide it along the blue line.` : sel.kind === 'flap' ? 'Tap the flap again to lift it or let it down. Drag it, or tap the page, to move it.' : 'Drag it, or tap the page, to move it.'}</p>
           ${sel.kind === 'flap' ? `<p class="say">${under(sel)}</p>` : ''}
-          <div class="row">${sel.kind === 'flap' ? `<button data-do="lift" class="go">${lifts[selected]?.want ? 'Let it down' : 'Lift it up'}</button>` : ''}${sel.kind === 'vfold' ? '<button data-do="flip">Turn it round</button>' : sel.kind === 'stand' ? '<button data-do="flip">Brace on the other side</button>' : ''}<button data-do="copy">Another like it</button><button data-do="delete" class="warn">Take it off</button><button data-do="done">Done</button></div></div>`
+          <div class="row">${sel.kind === 'flap' ? `<button data-do="lift" class="go">${lifts[selected]?.want ? 'Let it down' : 'Lift it up'}</button>` : ''}${sel.kind === 'vfold' ? '<button data-do="flip">Turn it round</button>' : sel.kind === 'stand' ? '<button data-do="flip">Brace on the other side</button>' : ''}<button data-do="copy">Another like it</button><button data-do="delete" class="warn">Take it off</button><button data-do="done" class="go">Done</button></div></div>`
         : pending
-          ? pending.art === null
-            ? `<div class="edit"><h3>${KIND_NAME[pending.kind]}: of what?</h3><p class="tip">${KIND_SAYS[pending.kind]}</p>
+          ? `<div class="edit"><h3>${KIND_NAME[pending.kind]}</h3><p class="say">Tap a picture to put one in the book. Tap another to add another.</p>
               <div class="arts big">${Object.entries(ART).map(([id, a]) => `<button data-do="choose" data-v="${id}" style="background-image:url(${urlOf(id)})" aria-label="${a.name}"></button>`).join('')}</div>
-              <div class="row"><button data-do="cancel">Back</button></div></div>`
-            : `<div class="edit"><h3>Now tap the page</h3><div class="chosen" style="background-image:url(${urlOf(pending.art)})"></div>
-              <p class="say">${pending.kind === 'vfold' || pending.kind === 'platform' ? `Tap where you want it. A ${KIND_NAME[pending.kind].toLowerCase()} sits on the fold in the middle, so it will go to the nearest place on the line.` : 'Tap where you want it to go.'}</p>
-              <div class="row"><button data-do="repick">A different picture</button><button data-do="cancel">Never mind</button></div></div>`
+              <p class="tip">${KIND_SAYS[pending.kind]} To change one that is already in the book, tap it on the page first, then tap a picture.</p>
+              <div class="row"><button data-do="cancel">Back to the pieces</button></div></div>`
           : `<h3 class="ask">Add something</h3><div class="tray">${TRAY.map((k) => `<button data-do="add" data-v="${k}"><svg viewBox="0 0 40 40">${ICONS[k]}</svg><b>${KIND_NAME[k]}</b><small>${KIND_SAYS[k]}</small></button>`).join('')}</div>
           <div class="row menu">${pieces.some((q) => q.kind === 'flap') ? `<button data-do="flaps">${lifts.some((l, i) => pieces[i]?.kind === 'flap' && l.want) ? 'Shut the flaps' : 'Lift the flaps'}</button>` : ''}<button data-do="read">▶ Read the book</button><button data-do="print">Print it</button>${visiting ? '<button data-do="mine">Keep it as mine</button>' : mode === 'free' ? '<button data-do="link">Copy a link</button>' : ''}${mode === 'free' && !visiting && book().length > 1 ? '<button data-do="unpage" class="warn">Tear out this page</button>' : ''}<button data-do="cover">Front cover</button></div>
           <p class="tip">Tap a piece on the page to change it. Drag it to move it. Drag the table to look round. Slide the book shut to see how it folds.</p>`
@@ -399,7 +399,7 @@ side.addEventListener('change', () => draw());
 
 let armed = '';
 /** A piece being chosen, before it is on the page: first its kind, then what is on it, then where. */
-let pending: { kind: Kind; art: string | null } | null = null;
+let pending: { kind: Kind } | null = null;
 side.addEventListener('click', (e) => {
   const b = (e.target as HTMLElement).closest<HTMLElement>('[data-do]');
   if (!b || b.hasAttribute('disabled')) return;
@@ -407,14 +407,41 @@ side.addEventListener('click', (e) => {
   const what = b.dataset.do!;
   const v = b.dataset.v ?? '';
   if (what === 'add') {
-    pending = { kind: v as Kind, art: null };
+    pending = { kind: v as Kind };
     draw();
-  } else if (what === 'choose') {
-    if (pending) pending.art = v;
-    draw();
-  } else if (what === 'repick') {
-    if (pending) pending.art = null;
-    draw();
+  } else if (what === 'choose' && pending) {
+    // One tap, one piece: it goes straight into the book, at a place where it works.
+    const piece = fresh(pending.kind, v);
+    // It goes in the first free place: where it shuts, hits nothing, and does not lie on another of its kind.
+    const lying = !stands(piece);
+    const spots: [number, number][] = [];
+    if (piece.kind === 'stand') for (const z of [-3, 2, -6, 5, -1, 7, -8]) for (const x of [6.5, -6.5, 9.5, -9.5]) spots.push([x, z]);
+    else if (!lying) for (const z of [0, -5, 5, -2.5, 2.5, 7, -7, -8.5, 8.5]) spots.push([0, z]);
+    else for (const z of [4, -3, 7, -6, 0]) for (const x of [6.5, -6.5, 3.5, -3.5, 9.5, -9.5]) spots.push([x, z]);
+    const free = (): boolean => {
+      if (lying) return !pieces.some((q) => q.kind === piece.kind && Math.abs(q.x - piece.x) < (q.w + piece.w) / 2 && Math.abs(q.z - piece.z) < (q.h + piece.h) / 2);
+      // Two pieces in the very same place do not cut through each other, so that has to be asked separately.
+      if (pieces.some((q) => stands(q) && Math.abs(q.z - piece.z) < 1.5 && (piece.kind !== 'stand' || q.kind !== 'stand' || Math.abs(q.x - piece.x) < 2))) return false;
+      for (const flip of piece.kind === 'vfold' ? [false, true] : [piece.flip]) {
+        piece.flip = flip;
+        if (!problems({ pieces: [...pieces, piece] })[pieces.length]) return true;
+      }
+      return false;
+    };
+    moveTo(piece, spots[0][0], spots[0][1]);
+    for (const [x, z] of spots) {
+      moveTo(piece, x, z);
+      if (free()) break;
+    }
+    if (!free()) {
+      piece.flip = false;
+      moveTo(piece, spots[0][0], spots[0][1]);
+    }
+    pieces.push(piece);
+    just = pieces.length - 1;
+    setTimeout(() => (just = -1), 1600);
+    changed(true);
+    if (stands(piece)) void swing(0.45, 0.6).then((ok) => ok && swing(1, 0.7));
   } else if (what === 'cancel') {
     pending = null;
     draw();
@@ -533,9 +560,8 @@ canvas.addEventListener('pointerdown', (e) => {
     const piece = spread().pieces[index];
     const p = new THREE.Vector3();
     ray.ray.intersectPlane(flat, p);
-    drag = { index, x: piece.x, z: piece.z, px: p.x, pz: p.z, moved: false, was: selected === index && !pending };
-    if (selected !== index || pending) {
-      pending = null;
+    drag = { index, x: piece.x, z: piece.z, px: p.x, pz: p.z, moved: false, was: selected === index };
+    if (selected !== index) {
       selected = index;
       draw();
     }
@@ -565,29 +591,6 @@ canvas.addEventListener('pointerup', () => {
       draw();
     }
     if (drag.moved) changed();
-  } else if (look && Math.hypot(downAt.x - look.x, downAt.y - look.y) < 6 && pending?.art && open > 0.97 && !reading) {
-    // The piece that was chosen goes where the page is tapped.
-    aim({ clientX: downAt.x, clientY: downAt.y });
-    const p = new THREE.Vector3();
-    if (ray.ray.intersectPlane(flat, p) && Math.abs(p.x) <= W + 1 && Math.abs(p.z) <= L / 2 + 1) {
-      const piece = fresh(pending.kind, pending.art);
-      if (!stands(piece) || piece.kind === 'stand') piece.x = p.x < 0 ? -Math.abs(piece.x) : Math.abs(piece.x);
-      moveTo(piece, p.x, p.z);
-      // A new piece should work where it lands: if it would not shut there, it is turned, or slid towards the middle of the page.
-      if (stands(piece) && fits(piece)) {
-        if (piece.kind === 'vfold') {
-          piece.flip = !piece.flip;
-          if (fits(piece)) piece.flip = !piece.flip;
-        }
-        while (fits(piece) && Math.abs(piece.z) > 0.2) piece.z -= Math.sign(piece.z) * 0.25;
-      }
-      spread().pieces.push(piece);
-      selected = spread().pieces.length - 1;
-      pending = null;
-      changed(true);
-      // A new piece shows what it does: the book half shuts and opens again.
-      if (stands(piece)) void swing(0.45, 0.6).then((ok) => ok && swing(1, 0.7));
-    }
   } else if (look && Math.hypot(downAt.x - look.x, downAt.y - look.y) < 6 && selected >= 0 && open > 0.97 && !reading) {
     // A tap on the page puts the piece in hand there.
     aim({ clientX: downAt.x, clientY: downAt.y });
