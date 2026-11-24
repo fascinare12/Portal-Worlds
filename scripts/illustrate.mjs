@@ -21,15 +21,20 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
 
 /** Makes the picture. */
 const PAINTER = 'black-forest-labs/flux-schnell';
 /** Takes the background away, so that a picture can be cut out round its edge. */
-const CUTTER = '851-labs/background-remover';
+const CUTTER = 'recraft-ai/recraft-remove-background';
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'worlds', 'popup', 'pictures');
 const STYLE = 'soft pastel storybook illustration for young children, gouache and coloured pencil, gentle rounded shapes, warm muted colours, friendly, hand-painted texture, no text, no lettering';
-const ALONE = 'a single subject, whole and centred, seen from the front, standing on nothing, plain pure white background, no shadow on the ground, no border, no frame';
+const ALONE = 'a single subject, whole and centred, seen from the front, large, filling the picture, plain pure white background, nothing under it: no ground, no grass, no shadow, no border, no frame';
+/** The cream of the book's pages (CREAM in worlds/popup/art.ts). Page backgrounds are faded towards it. */
+const CREAM = '#f4ead6';
+/** How far a page background is faded towards the cream: 0 leaves it as painted, 1 is plain cream. */
+const FADE = 0.45;
 
 /** Each picture: what it is of. The names are the ones in worlds/popup/art.ts. */
 const PICTURES = {
@@ -114,10 +119,10 @@ const only = args.filter((a) => !a.startsWith('--'));
 const jobs = [];
 if (!args.includes('--pages')) {
   for (const [id, what] of Object.entries(PICTURES)) jobs.push({ file: `${id}.png`, id, prompt: `${what}. ${STYLE}. ${ALONE}.`, shape: '1:1', cut: true });
-  for (const [id, what] of Object.entries(PAPERS)) jobs.push({ file: `${id}.jpg`, id, prompt: `a flat seamless pattern of ${what}, filling the whole picture edge to edge, seen straight on. ${STYLE}.`, shape: '1:1', cut: false });
+  for (const [id, what] of Object.entries(PAPERS)) jobs.push({ file: `${id}.jpg`, id, prompt: `a close-up of ${what}, a hand-painted texture covering the whole picture from edge to edge, seen straight on, flat even light, nothing else in the picture. ${STYLE}.`, shape: '1:1', cut: false });
 }
 if (!only.length || args.includes('--pages'))
-  for (const [story, pages] of Object.entries(PAGES)) pages.forEach((what, i) => jobs.push({ file: `page-${story}-${i + 1}.jpg`, id: `page-${story}-${i + 1}`, prompt: `${what}, seen from above at a slant like a stage floor, empty of people, animals and buildings, plenty of open ground in the middle. ${STYLE}. Very pale and soft, low contrast, so that things placed on top stand out.`, shape: '4:3', cut: false }));
+  for (const [story, pages] of Object.entries(PAGES)) pages.forEach((what, i) => jobs.push({ file: `page-${story}-${i + 1}.jpg`, id: `page-${story}-${i + 1}`, prompt: `the ground of ${what}, looking straight down on it from above like a map or a play mat, flat, only the ground and small low things lying on it, no horizon, no sky, no tall trees or trunks, no people, animals or buildings, open and simple in the middle. ${STYLE}. Pale, soft and quiet.`, shape: '4:3', cut: false, page: true }));
 
 const todo = jobs.filter((j) => (!only.length || only.includes(j.id)) && !existsSync(join(OUT, j.file)));
 if (args.includes('--list')) {
@@ -148,13 +153,44 @@ async function run(model, input) {
   return Array.isArray(job.output) ? job.output[0] : job.output;
 }
 
+/**
+ * Cuts a picture down to the thing itself, as a true PNG. The book stands a
+ * picture on the fold by the bottom edge of its file, so any clear margin
+ * would leave it small and floating.
+ */
+async function trimmed(bytes) {
+  const { data, info } = await sharp(bytes).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  let x0 = info.width, y0 = info.height, x1 = -1, y1 = -1;
+  for (let y = 0; y < info.height; y++)
+    for (let x = 0; x < info.width; x++)
+      if (data[(y * info.width + x) * 4 + 3] > 40) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+  if (x1 < 0) throw new Error('nothing was left after the background was taken away');
+  return sharp(bytes).ensureAlpha().extract({ left: x0, top: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 }).png().toBuffer();
+}
+
+/** Crops a page background to the open book's shape, 26 to 19, and fades it towards the page's cream. */
+async function faded(bytes) {
+  const w = 1300, h = 950;
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(CREAM.slice(i, i + 2), 16));
+  const wash = await sharp({ create: { width: w, height: h, channels: 4, background: { r, g, b, alpha: FADE } } }).png().toBuffer();
+  return sharp(bytes).resize(w, h, { fit: 'cover' }).composite([{ input: wash }]).jpeg({ quality: 88 }).toBuffer();
+}
+
 mkdirSync(OUT, { recursive: true });
 let made = 0;
 for (const j of todo) {
   try {
     let url = await run(PAINTER, { prompt: j.prompt, aspect_ratio: j.shape, output_format: j.cut ? 'png' : 'jpg', num_outputs: 1, seed: 7 });
     if (j.cut) url = await run(CUTTER, { image: url });
-    writeFileSync(join(OUT, j.file), Buffer.from(await (await fetch(url)).arrayBuffer()));
+    let bytes = Buffer.from(await (await fetch(url)).arrayBuffer());
+    if (j.cut) bytes = await trimmed(bytes);
+    else if (j.page) bytes = await faded(bytes);
+    writeFileSync(join(OUT, j.file), bytes);
     made++;
     console.log(`made ${j.file}`);
   } catch (e) {
