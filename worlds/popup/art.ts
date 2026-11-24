@@ -452,7 +452,19 @@ export const ART: Record<string, Art> = {
       cut(g, '#8a5c38', box(20, 70, 22, 170));
       cut(g, '#8a5c38', box(214, 130, 22, 110));
       cut(g, '#f6f1e6', box(42, 150, 172, 60));
-      cut(g, '#ffffff', (c) => c.roundRect(46, 118, 64, 40, 14));
+      // The pillow: a box with its corners rounded by hand, since not every browser can round them itself.
+      cut(g, '#ffffff', (c) => {
+        c.moveTo(60, 118);
+        c.lineTo(96, 118);
+        c.quadraticCurveTo(110, 118, 110, 132);
+        c.lineTo(110, 144);
+        c.quadraticCurveTo(110, 158, 96, 158);
+        c.lineTo(60, 158);
+        c.quadraticCurveTo(46, 158, 46, 144);
+        c.lineTo(46, 132);
+        c.quadraticCurveTo(46, 118, 60, 118);
+        c.closePath();
+      });
       cut(g, '#7b9fc9', poly(96, 150, 214, 150, 214, 214, 96, 214));
       lines(g, '#bfe3ef', 3, [[110, 166, 200, 166], [110, 182, 200, 182], [110, 198, 200, 198]]);
     },
@@ -948,7 +960,12 @@ export function canvasOf(id: string): HTMLCanvasElement {
     c = document.createElement('canvas');
     c.width = c.height = SIZE;
     const g = c.getContext('2d');
-    if (g) (ART[id] ?? ART.plain).draw(g);
+    // One picture that a browser cannot draw must not take the rest down with it.
+    try {
+      if (g) (ART[id] ?? ART.plain).draw(g);
+    } catch {
+      if (g) ART.plain.draw(g);
+    }
     made.set(id, c);
   }
   return c;
