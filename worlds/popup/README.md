@@ -21,6 +21,8 @@ sentence saying why:
 |---|---|---|
 | V-fold | Creased down the middle, glued to both pages along two lines that meet on the spine | The crease stays square to both glue lines; that fixes how far it leans at every angle |
 | Stand-up | A piece that stands on one page, facing the reader, anywhere out from the spine. It is one wing of a lopsided V-fold: its foot runs straight out from the spine, and a small triangular brace on the other page pulls it up | The brace's foot is at 30° to the spine; the crease is at atan(2 tan 30°) ≈ 49.1° to the piece's foot. With those two angles it is exactly upright when the book is flat and exactly flat when it is shut |
+| Double V | A V-fold with a second, smaller V-fold glued across its own crease, a third of the way up | The first fold's wings are to the second what the pages are to the first, and the same rule moves it. The second is kept short enough that its tip clears the page |
+| Pull tab | A picture on a strip that slides along one page; a tap pulls it and pushes it back | Its whole travel, and its tab, must stay on the one page |
 | Tent | A strip with one ridge, glued to each page parallel to the spine | The longer side is glued nearer the spine, by exactly the difference in lengths |
 | Platform | A level top over the spine, on three legs of one height | The middle leg stands on the spine and stays upright; the top halves stay parallel to the pages |
 | Flap | Hinged to one page; lifted by a tap | Cannot cross the spine |
@@ -46,14 +48,29 @@ its length, that every glued corner is still on its page, that folds do not
 tear, and that with the book shut everything lies in one plane.
 `window.popup.check()` runs it on the page.
 
-## The story
+## The stories
 
-`story.ts` holds The Three Little Pigs as five spreads. Each has a line of
-the tale and one thing the scene needs: two things standing; something of
-straw that stands; a wolf hidden under a flap; something of sticks taller
-than 5 cm; something of bricks at least 8 cm tall, and a pig. The check looks
-at what stands, what is hidden and how tall, never at which mechanism was
-used. The next spread opens when the need is met and nothing is edged in red.
+`story.ts` holds eight tales, five spreads each. Every spread has a line of
+the tale and one thing the scene needs. The check looks at what stands, what
+is hidden, what slides and how tall; it asks for one particular kind of piece
+only where trying that piece is the point of the spread. The next spread
+opens when the need is met and nothing is edged in red.
+
+| Tale | From | What it makes the builder try |
+|---|---|---|
+| The Three Little Pigs | English | standing things, a hidden wolf, height |
+| Jack and the Beanstalk | English | the tallest thing that still shuts; a pull tab; a double V |
+| The Three Billy Goats Gruff | Norwegian | a bridge with something under it; three sizes |
+| Little Red Riding Hood | French and German | depth: near and far |
+| Rapunzel | German | a tower; hair let down on a pull tab |
+| Momotaro, the Peach Boy | Japanese | a peach that floats, and opens |
+| Anansi and the Pot of Wisdom | Akan, Ghana | the tallest tree; father and son |
+| Stone Soup | told with travelling monks | a village; a table; a feast |
+
+The tales are told in this book's own words. Stone Soup with monks follows
+the setting Jon J Muth gave it in 2003 and takes nothing else from his book.
+A test builds a solution to every one of the forty spreads and requires that
+it passes with nothing edged in red, and that an empty page never passes.
 
 "My own book" is the same tray with empty pages and no needs.
 
@@ -96,9 +113,6 @@ Nothing is stored anywhere but in the link.
 
 ## Not done
 
-- The other tales (Jack and the Beanstalk, Billy Goats Gruff, Red Riding
-  Hood, Rapunzel).
-- Pull tabs.
 - Standing one piece on another, such as a house on a platform.
 - Pictures are cut out round a rectangle on screen for the fault checks, not
   round their true outline, so the checks are slightly strict.
