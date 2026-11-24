@@ -70,7 +70,7 @@ button.warn { color: #a23a2e; }
 .card button b { display: block; font-size: 19px; font-family: Georgia, serif; }
 .card button small { color: #6d5a42; }
 .card h2 { margin: 16px 0 0; font-weight: normal; font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; color: #7d6a50; text-align: left; font-family: 'Trebuchet MS', sans-serif; }
-.card { max-height: 92dvh; overflow-y: auto; box-sizing: border-box; }
+.card { max-height: 92vh; max-height: 92dvh; overflow-y: auto; box-sizing: border-box; }
 .book { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
 .book > button:first-child { flex: 1 1 100%; margin-top: 0; }
 .card button.small { display: inline-block; width: auto; margin: 0; padding: 5px 10px; font-size: 13px; }
@@ -81,7 +81,7 @@ button.warn { color: #a23a2e; }
 
 /* A narrow screen: the book above, the tray below. */
 @media (max-aspect-ratio: 1/1) {
-  body { grid-template-columns: 1fr; grid-template-rows: 54dvh 1fr; }
+  body { grid-template-columns: 1fr; grid-template-rows: 54vh 1fr; grid-template-rows: 54dvh 1fr; }
   .tray { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
   .tray button { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: 6px 2px; }
   .tray svg { grid-row: auto; width: 38px; height: 38px; }
