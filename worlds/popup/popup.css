@@ -55,6 +55,7 @@ button.warn { color: #a23a2e; }
 .nudge { align-items: center; margin: 4px 0 6px; font-family: 'Trebuchet MS', sans-serif; font-size: 14px; color: #5a4632; }
 .nudge button { padding: 6px 10px; }
 .title { display: block; font-family: 'Trebuchet MS', sans-serif; font-size: 14px; color: #5a4632; }
+.title textarea { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; font: inherit; font-family: Georgia, serif; font-size: 16px; line-height: 1.35; padding: 7px 9px; border: 1px solid #cdbb96; border-radius: 5px; background: #fffaf0; resize: vertical; }
 .title input { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; font: inherit; font-family: Georgia, serif; font-size: 18px; padding: 7px 9px; border: 1px solid #cdbb96; border-radius: 5px; background: #fffaf0; }
 .edit .switch { margin-bottom: 8px; }
 .edit label { display: block; font-family: 'Trebuchet MS', sans-serif; font-size: 14px; color: #5a4632; margin: 4px 0; }

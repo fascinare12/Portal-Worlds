@@ -59,6 +59,8 @@ export interface Piece {
 }
 export interface Spread {
   pieces: Piece[];
+  /** The words of the tale on this spread, when the builder has written some ("My own book"). */
+  words?: string;
 }
 
 export type V3 = [number, number, number];

@@ -6,7 +6,8 @@ import type { Piece, Spread } from './fold';
  * The Pop-up Book, on real paper.
  *
  * For each spread: one sheet that is the two pages, with the flat pictures
- * printed in place and every glue patch marked with a letter; then the pieces
+ * printed in place, the words of the tale along the bottom, and every glue
+ * patch marked with a letter; then the pieces
  * themselves, each with its folds, its glue tabs and the same letters.
  *
  * Everything is drawn at its true size, in centimetres, so the sheets must be
@@ -22,6 +23,41 @@ const glue = 'fill="#d9d4c8" stroke="#888" stroke-width="0.03"';
 const label = (x: number, y: number, text: string, size = 0.42) => `<text x="${n(x)}" y="${n(y)}" font-size="${size}" text-anchor="middle" font-family="sans-serif" fill="#333">${text}</text>`;
 const picture = (art: string, x: number, y: number, w: number, h: number, extra = '') => `<image href="${urlOf(art)}" xlink:href="${urlOf(art)}" x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" preserveAspectRatio="none" ${extra}/>`;
 const sheet = (w: number, h: number, inner: string, caption: string) => `<figure class="sheet"><figcaption>${caption}</figcaption><svg xmlns="http://www.w3.org/2000/svg" width="${n(w)}cm" height="${n(h)}cm" viewBox="0 0 ${n(w)} ${n(h)}">${inner}</svg></figure>`;
+
+/** Letters and marks that mean something in a drawing, made safe to print as words. */
+const plain = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const WORD_SIZE = 0.42;
+const WORD_LEAD = 0.62;
+/** About how many letters of the tale fit across one page at that size, with a margin each side. */
+const WORD_WIDE = 50;
+/**
+ * The words of the tale, printed on the pages themselves so that the paper
+ * book can be read: along the bottom edge, nearest the reader, on a band of
+ * plain cream so that they can be read over a painted background. They begin
+ * on the left page and go on to the right one, and never cross the fold.
+ */
+function words(text: string): string {
+  const rows: string[] = [];
+  let row = '';
+  for (const word of text.trim().split(/\s+/)) {
+    if (row && row.length + 1 + word.length > WORD_WIDE) {
+      rows.push(row);
+      row = word;
+    } else row = row ? `${row} ${word}` : word;
+  }
+  if (row) rows.push(row);
+  if (!rows.length) return '';
+  const first = rows.length <= 2 ? rows.length : Math.ceil(rows.length / 2);
+  let out = '';
+  [rows.slice(0, first), rows.slice(first)].forEach((part, side) => {
+    if (!part.length) return;
+    const high = part.length * WORD_LEAD + 0.4;
+    const top = L - 0.5 - high;
+    out += `<rect x="${n(side * W + 0.7)}" y="${n(top)}" width="${n(W - 1.4)}" height="${n(high)}" rx="0.25" fill="#f4ead6" fill-opacity="0.9"/>`;
+    part.forEach((t, i) => (out += `<text x="${n(side * W + W / 2)}" y="${n(top + 0.2 + WORD_LEAD * (i + 0.72))}" font-size="${WORD_SIZE}" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" fill="#2a2018">${plain(t)}</text>`));
+  });
+  return out;
+}
 
 /** Where a point of the open book is on the printed spread: the spine down the middle, the reader at the bottom. */
 const sx = (x: number) => W + x;
@@ -198,7 +234,8 @@ export function sheets(title: string, spreads: Spread[], lines: string[] = [], c
   spreads.forEach((spread, s) => {
     const names = spread.pieces.map((_, i) => LETTERS[i % LETTERS.length]);
     const back = backs[s] ? `<image href="${backs[s]}" xlink:href="${backs[s]}" x="0" y="0" width="${2 * W}" height="${L}" preserveAspectRatio="none"/>` : '';
-    out += sheet(2 * W, L, back + base(spread, names), `Spread ${s + 1}: the pages${lines[s] ? `. <i>${lines[s]}</i>` : ''}`);
+    // The words go under the glue patches and their letters, which have to stay readable to make the book.
+    out += sheet(2 * W, L, back + words(lines[s] ?? '') + base(spread, names), `Spread ${s + 1}: the pages${lines[s] ? `. <i>${plain(lines[s])}</i>` : ''}`);
     const notes: string[] = [];
     spread.pieces.forEach((p, i) => {
       const made = net(p, names[i]);

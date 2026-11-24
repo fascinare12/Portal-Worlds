@@ -72,13 +72,17 @@ the setting Jon J Muth gave it in 2003 and takes nothing else from his book.
 A test builds a solution to every one of the forty spreads and requires that
 it passes with nothing edged in red, and that an empty page never passes.
 
-"My own book" is the same tray with empty pages and no needs.
+"My own book" is the same tray with empty pages and no needs. Each spread has
+a box for its words (up to 300 letters). They show above the book as a
+story's line does, are read out in "Read the book", are printed on the page,
+and travel in a copied link.
 
 ## Printing
 
 `print.ts` draws every spread at its true size (26 cm by 19 cm): the pages,
-with stickers printed in place and a lettered grey patch wherever something
-is glued; then each piece flat, with cut lines, fold lines, glue tabs and the
+with stickers printed in place, the words of the tale along the bottom edge
+(on a band of cream, left page first, never across the fold) and a lettered
+grey patch wherever something is glued; then each piece flat, with cut lines, fold lines, glue tabs and the
 matching letters, and a sentence on how to put it in. It must be printed at
 100%.
 

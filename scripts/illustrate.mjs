@@ -160,7 +160,8 @@ async function run(model, input) {
 /**
  * Cuts a picture down to the thing itself, as a true PNG. The book stands a
  * picture on the fold by the bottom edge of its file, so any clear margin
- * would leave it small and floating.
+ * would leave it small and floating. The book draws a picture 512 across, so
+ * it is kept no bigger than 640.
  */
 async function trimmed(bytes) {
   const { data, info } = await sharp(bytes).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -205,7 +206,7 @@ async function trimmed(bytes) {
       if (y > y1) y1 = y;
     } else data[i * 4 + 3] = 0;
   }
-  return sharp(data, { raw: { width: W, height: H, channels: 4 } }).extract({ left: x0, top: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 }).png().toBuffer();
+  return sharp(data, { raw: { width: W, height: H, channels: 4 } }).extract({ left: x0, top: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 }).resize(640, 640, { fit: 'inside', withoutEnlargement: true }).png({ compressionLevel: 9 }).toBuffer();
 }
 
 /** Crops a page background to the open book's shape, 26 to 19, and fades it towards the page's cream. */

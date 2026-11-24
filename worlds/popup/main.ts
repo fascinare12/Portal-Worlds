@@ -76,13 +76,16 @@ const own = (): Own => saved.own![Math.min(ownAt, saved.own!.length - 1)];
 const KINDS: Kind[] = ['vfold', 'tent', 'platform', 'flap', 'sticker', 'stand', 'double', 'slide'];
 const TRAY: Kind[] = ['vfold', 'stand', 'double', 'tent', 'platform', 'flap', 'slide', 'sticker'];
 const r2 = (v: number) => Math.round(v * 100) / 100;
-const pack = (spreads: Spread[]) => btoa(JSON.stringify(spreads.map((s) => s.pieces.map((p) => [KINDS.indexOf(p.kind), p.art, r2(p.x), r2(p.z), r2(p.w), r2(p.h), r2(p.angle), r2(p.reach), p.flip ? 1 : 0, ...(p.art2 ? [p.art2] : [])])))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+// A spread's words, when it has any, go after its pieces as one string. Letters beyond the plain ones are
+// written as \u escapes first, since btoa takes nothing else.
+const pack = (spreads: Spread[]) => btoa(JSON.stringify(spreads.map((s) => [...s.pieces.map((p) => [KINDS.indexOf(p.kind), p.art, r2(p.x), r2(p.z), r2(p.w), r2(p.h), r2(p.angle), r2(p.reach), p.flip ? 1 : 0, ...(p.art2 ? [p.art2] : [])]), ...(s.words ? [s.words] : [])])).replace(/[\u0080-\uffff]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 function unpack(text: string): Spread[] | null {
   try {
-    const rows = JSON.parse(atob(text.replace(/-/g, '+').replace(/_/g, '/'))) as (number | string)[][][];
+    const rows = JSON.parse(atob(text.replace(/-/g, '+').replace(/_/g, '/'))) as ((number | string)[] | string)[][];
     const num = (v: unknown, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number(v) || 0));
     return rows.slice(0, 24).map((row) => ({
-      pieces: row.slice(0, 40).map((a) => ({ kind: KINDS[Number(a[0])] ?? 'sticker', art: ART[String(a[1])] ? String(a[1]) : 'plain', x: num(a[2], -W, W), z: num(a[3], -L, L), w: num(a[4], 0.5, 20), h: num(a[5], 0.5, 20), angle: num(a[6], 30, 70), reach: num(a[7], 1, W), flip: !!a[8], ...(a[9] && ART[String(a[9])] ? { art2: String(a[9]) } : {}) })),
+      ...(typeof row[row.length - 1] === 'string' ? { words: (row[row.length - 1] as string).slice(0, WORDS_MOST) } : {}),
+      pieces: (row.filter((a) => Array.isArray(a)) as (number | string)[][]).slice(0, 40).map((a) => ({ kind: KINDS[Number(a[0])] ?? 'sticker', art: ART[String(a[1])] ? String(a[1]) : 'plain', x: num(a[2], -W, W), z: num(a[3], -L, L), w: num(a[4], 0.5, 20), h: num(a[5], 0.5, 20), angle: num(a[6], 30, 70), reach: num(a[7], 1, W), flip: !!a[8], ...(a[9] && ART[String(a[9])] ? { art2: String(a[9]) } : {}) })),
     }));
   } catch {
     return null;
@@ -102,6 +105,11 @@ const book = (): Spread[] => visiting ?? (mode === 'story' ? tale().spreads : ow
 const visitCover = blank();
 const coverNow = (): Spread => (visiting ? visitCover : mode === 'story' ? tale().cover : own().cover);
 const spread = (): Spread => (at < 0 ? coverNow() : (book()[at] ?? book()[0]));
+/** The longest the words of one spread may be: about what fits along the bottom of the printed pages. */
+const WORDS_MOST = 300;
+const safe = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+/** The words of the tale on a spread: the story's own line, or what the builder wrote in their own book. */
+const wordsOf = (i: number): string => (mode === 'story' && !visiting ? (story.pages[i]?.line ?? '') : (book()[i]?.words ?? '').trim());
 const titleOf = () => (visiting ? 'A book for you' : mode === 'story' ? story.title : own().title);
 /** What is wrong on this spread. On the cover the only thing that can be is a sticker hanging off the edge. */
 const faultsNow = (): (string | null)[] => (at < 0 ? spread().pieces.map((q) => (Math.abs(q.x) + q.w / 2 > W / 2 + 0.01 || Math.abs(q.z) + q.h / 2 > L / 2 + 0.01 ? 'This hangs off the edge of the cover.' : null)) : problems(spread()));
@@ -502,7 +510,7 @@ function draw(): void {
   else if (inStory) {
     const page = story.pages[at];
     banner.innerHTML = `<p class="line">${page.line}</p><p class="need ${state.ok ? 'met' : ''}"><b>${state.ok ? '✓' : '✎'}</b> ${page.need}</p>${state.ok ? '' : `<p class="hint">${state.hint}</p>`}`;
-  } else banner.innerHTML = visiting ? '<p class="need">A book someone sent you.</p>' : '';
+  } else banner.innerHTML = (wordsOf(at) ? `<p class="line">${safe(wordsOf(at))}</p>` : '') + (visiting ? '<p class="need">A book someone sent you.</p>' : '');
   banner.hidden = !banner.innerHTML;
   if (inStory && !onCover && state.ok && at === tale().reached && at < story.pages.length - 1) {
     tale().reached = at + 1;
@@ -520,7 +528,8 @@ function draw(): void {
           ? `<div class="nav"><button data-do="shelf">◀ Bookshelf</button><span>Cover</span><button data-do="next" class="go">Open it ▶</button></div>
              ${mode === 'free' && !visiting ? `<label class="title">What is it called?<input type="text" data-title maxlength="48" value="${own().title.replace(/"/g, '&quot;')}"></label>` : ''}`
           : `<div class="nav"><button data-do="prev">◀ ${at === 0 ? 'Front cover' : 'Page before'}</button><span>${at + 1} of ${book().length}</span>
-      <button data-do="next" class="${inStory && state.ok ? 'go' : ''}"${canNext ? '' : ' disabled'}>${inStory && last ? 'The end ▶' : !inStory && last ? '＋ New page' : 'Next page ▶'}</button></div>`
+      <button data-do="next" class="${inStory && state.ok ? 'go' : ''}"${canNext ? '' : ' disabled'}>${inStory && last ? 'The end ▶' : !inStory && last ? '＋ New page' : 'Next page ▶'}</button></div>
+      ${mode === 'free' && !visiting ? `<label class="title">The words on this page<textarea data-words rows="3" maxlength="${WORDS_MOST}" placeholder="Once upon a time…">${safe(spread().words ?? '')}</textarea></label>` : ''}`
     }
     ${fault ? `<p class="fault">${fault}</p>` : ''}
     ${
@@ -555,6 +564,15 @@ side.addEventListener('input', (e) => {
     keep();
     return;
   }
+  if (input.dataset.words !== undefined) {
+    // The words show above the book as they are typed, as a story's line does.
+    if (input.value.trim()) spread().words = input.value;
+    else delete spread().words;
+    keep();
+    banner.innerHTML = wordsOf(at) ? `<p class="line">${safe(wordsOf(at))}</p>` : '';
+    banner.hidden = !banner.innerHTML;
+    return;
+  }
   const piece = spread().pieces[selected];
   if (!piece || !input.dataset.key) return;
   (piece as unknown as Record<string, number>)[input.dataset.key] = Number(input.value);
@@ -570,8 +588,9 @@ side.addEventListener('input', (e) => {
   if (say && piece.kind === 'flap') say.textContent = under(piece);
 });
 side.addEventListener('change', (e) => {
-  // The title box keeps its place while it is typed in.
-  if ((e.target as HTMLElement).dataset.title === undefined) draw();
+  // The title box and the words box keep their place while they are typed in.
+  const data = (e.target as HTMLElement).dataset;
+  if (data.title === undefined && data.words === undefined) draw();
 });
 
 let armed = '';
@@ -859,12 +878,12 @@ async function read(): Promise<void> {
     at = i;
     lifts = [];
     rebuild();
-    caption.innerHTML = inStory ? `<p>${story.pages[i].line}</p>` : '';
+    caption.innerHTML = inStory ? `<p>${story.pages[i].line}</p>` : wordsOf(i) ? `<p>${safe(wordsOf(i))}</p>` : '';
     await swing(1, 2.6);
     if (!token()) break;
     await pause(0.9);
     for (const [k, p] of spread().pieces.entries()) if (moves(p) && token()) lifts[k].want = 2.3;
-    await pause(inStory ? 3.4 : 2.2);
+    await pause(inStory || wordsOf(i) ? 3.4 : 2.2);
     for (const l of lifts) l.want = 0;
     await pause(0.5);
   }
@@ -889,7 +908,7 @@ el('stop').onclick = () => {
 async function print(): Promise<void> {
   const inStory = mode === 'story' && !visiting;
   const holder = el('print');
-  holder.innerHTML = sheets(titleOf(), book(), inStory ? story.pages.map((p) => p.line) : [], coverNow(), inStory ? story.pages.map((_, i) => pageArt(story.id, i)) : []);
+  holder.innerHTML = sheets(titleOf(), book(), book().map((_, i) => wordsOf(i)), coverNow(), inStory ? story.pages.map((_, i) => pageArt(story.id, i)) : []);
   const urls = [...new Set(Array.from(holder.querySelectorAll('image')).map((i) => i.getAttribute('href') ?? ''))].filter(Boolean);
   await Promise.all(
     urls.map((url) => {
