@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 /**
  * The Pop-up Book: what is on the paper.
  *
@@ -957,6 +958,50 @@ export function urlOf(id: string): string {
   if (!urls.has(id)) urls.set(id, canvasOf(id).toDataURL('image/png'));
   return urls.get(id)!;
 }
+
+// ---- Painted pictures ----
+
+/**
+ * Any picture or paper can be replaced by a painted one: a file in
+ * `pictures/` named after it (`pig.png`, `straw.jpg`). A picture needs a
+ * clear background, since it is cut out round its edge. Until its file has
+ * loaded, and if there is none, the cut-paper drawing above is used.
+ *
+ * A spread of a story can have a painted background too: a file named
+ * `page-<story>-<number>.jpg`, as wide to tall as the open book (26 to 19).
+ *
+ * `scripts/illustrate.mjs` makes these files.
+ */
+const FILES = import.meta.glob('./pictures/*.{png,jpg,webp}', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const fileOf = (name: string): string | undefined => FILES[`./pictures/${name}.png`] ?? FILES[`./pictures/${name}.webp`] ?? FILES[`./pictures/${name}.jpg`];
+const watchers: ((id: string) => void)[] = [];
+/** Loads every painted picture there is, and tells `changed` as each one replaces its drawing. */
+export function loadPainted(changed: (id: string) => void): void {
+  watchers.push(changed);
+  for (const id of Object.keys(ART)) {
+    const url = fileOf(id);
+    if (!url) continue;
+    const img = new Image();
+    img.onload = () => {
+      const c = canvasOf(id);
+      c.width = c.height = 512;
+      const g = c.getContext('2d');
+      if (!g) return;
+      g.clearRect(0, 0, 512, 512);
+      if (ART[id].paper) g.drawImage(img, 0, 0, 512, 512);
+      else {
+        // Whole, and as large as will fit, standing on the bottom edge.
+        const k = Math.min(512 / img.width, 512 / img.height);
+        g.drawImage(img, (512 - img.width * k) / 2, 512 - img.height * k, img.width * k, img.height * k);
+      }
+      urls.delete(id);
+      for (const w of watchers) w(id);
+    };
+    img.src = url;
+  }
+}
+/** The painted background of a story's spread, if it has one. */
+export const pageArt = (story: string, spread: number): string | undefined => fileOf(`page-${story}-${spread + 1}`);
 
 /** Cream paper with a few fibres in it, for the pages. */
 export function pagePaper(): HTMLCanvasElement {

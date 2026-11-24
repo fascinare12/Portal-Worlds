@@ -96,6 +96,31 @@ take two taps. Books are kept in this browser only.
 Every book comes off the shelf shut. Its front cover takes stickers, and an
 own book's cover has its title. The cover is printed with the rest.
 
+## Painted pictures and page backgrounds
+
+The pictures are drawn in code as cut paper. Any of them can be replaced by a
+painted one, and any spread of a story can have a painted background, by
+putting a file in `pictures/` (see the README there). The book loads whatever
+is there and keeps the drawing for the rest. Painted backgrounds are printed
+on the page sheets.
+
+**None have been made yet.** To make them:
+
+1. The Replicate token has to be in the session's environment as
+   `REPLICATE_API_TOKEN`. It must never be committed or pasted into a chat.
+2. `node scripts/illustrate.mjs --list` shows the 97 pictures it would make
+   and the prompt for each, and makes nothing.
+3. Check the two model names at the top of the script against replicate.com:
+   it was written without a token to try them with.
+4. Try a few first (`node scripts/illustrate.mjs pig wolf tree`), look at
+   them in the book, and adjust the style line in the script before making
+   the rest. Then `node scripts/illustrate.mjs`.
+5. Look at every picture before committing. Delete and re-run any that is
+   wrong; a file that exists is left alone.
+
+The fold checks still treat each picture as its whole square, and the
+stories still name pictures by the same ids, so nothing else changes.
+
 ## A book as a link
 
 In "My own book", "Copy a link" puts the whole book into the address. Whoever
